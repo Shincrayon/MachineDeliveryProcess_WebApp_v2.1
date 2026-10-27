@@ -448,7 +448,7 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
     </div>
     <div class="kpis">
       <div class="kpi" style="--accent:var(--sky)" onclick="showKPI('all')"><span class="ic">⚙️</span><div class="lbl" style="display:flex;align-items:center;gap:8px">Total equipment<select id="kpiYear" style="padding:2px 6px;font-size:11px;border-radius:7px;border:1px solid var(--border);background:var(--field);color:var(--txt);outline:none;cursor:pointer"></select></div><div class="val" id="kpiN">0</div><div class="note" id="kpiNote"></div></div>
-      <div class="kpi" style="--accent:var(--violet)" onclick="showKPI('value')"><span class="ic">💰</span><div class="lbl">Total value</div><div class="val"><span id="kpiVal">0</span> B ₫</div><div class="note" id="kpiValNote"></div></div>
+      <div class="kpi" style="--accent:var(--violet)" onclick="showKPI('value')"><span class="ic">💰</span><div class="lbl">Total value</div><div class="val"><span id="kpiValPre"></span><span id="kpiVal">0</span><span id="kpiValUnit"></span></div><div class="note" id="kpiValNote"></div></div>
       <div class="kpi" style="--accent:var(--blue)" onclick="showKPI('waiting')"><span class="ic">⏳</span><div class="lbl">Awaiting</div><div class="val" id="kpiWait">0</div><div class="note">expected in more than 15 days</div></div>
       <div class="kpi" style="--accent:var(--amber)" onclick="showKPI('soon')"><span class="ic">🚢</span><div class="lbl">Arriving soon</div><div class="val" id="kpiSoon">0</div><div class="note">within 15 days · get ready to receive</div></div>
       <div class="kpi" style="--accent:var(--red)" onclick="showKPI('late')"><span class="ic">🔴</span><div class="lbl">Late</div><div class="val" id="kpiDelay">0</div><div class="note">in-transit machines running late (excludes arrived)</div></div>
@@ -1035,6 +1035,8 @@ document.querySelectorAll('[data-count]').forEach(el=>{
       el.textContent = (from+(target-from)*e).toLocaleString(NUMLOC,{minimumFractionDigits:dec||0,maximumFractionDigits:dec||0});
       if(pr<1) requestAnimationFrame(tick); })(t0);
   }
+  kpiValPre.textContent = tr('$', '');
+  kpiValUnit.textContent = tr('M', ' tỷ ₫');
   function upd(){
     const y = kpiYear.value;
     const rows = DATA.filter(x=>x.vedukienn && (!y || x.vedukienn.slice(0,4)===y));
@@ -1043,8 +1045,14 @@ document.querySelectorAll('[data-count]').forEach(el=>{
     animTo(kpiN, rows.length);
     kpiNote.textContent = units + tr(' units by quantity · ',' máy theo số lượng · ') + tag;
     const vnd = rows.reduce((s,x)=>s+x.vnd,0), usd = rows.reduce((s,x)=>s+x.usd,0);
-    animTo(kpiVal, vnd/1e9, 1);
-    kpiValNote.textContent = '≈ ' + (usd/1e6).toLocaleString(NUMLOC,{maximumFractionDigits:2}) + tr('M USD · ',' triệu USD · ') + tag;
+    // tiếng Việt: số chính là tỷ ₫, dòng phụ là USD; tiếng Anh thì ngược lại
+    if(LANG==='vi'){
+      animTo(kpiVal, vnd/1e9, 1);
+      kpiValNote.textContent = '≈ ' + (usd/1e6).toLocaleString(NUMLOC,{maximumFractionDigits:2}) + ' triệu USD · ' + tag;
+    } else {
+      animTo(kpiVal, usd/1e6, 2);
+      kpiValNote.textContent = '≈ ' + (vnd/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1}) + ' B ₫ · ' + tag;
+    }
     const arr = rows.filter(x=>x.status==='arrived').length;
     animTo(kpiArr, arr);
     kpiArrNote.textContent = (rows.length? Math.round(arr/rows.length*100):0) + tr('% of equipment · ','% thiết bị · ') + tag;
@@ -1891,7 +1899,6 @@ const STATIC_VI = new Map([
   ['Sign out','Đăng xuất'],
   ['Total equipment','Tổng thiết bị'],
   ['Total value','Tổng giá trị'],
-  ['B ₫','tỷ ₫'],
   ['Awaiting','Đang chờ về'],
   ['expected in more than 15 days','dự kiến về sau 15 ngày'],
   ['Arriving soon','Sắp về'],
