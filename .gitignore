@@ -1,0 +1,18 @@
+# =====================================================
+#  Những file KHÔNG được đưa lên GitHub (repo Public)
+# =====================================================
+
+# Script SQL — chỉ chạy trên Supabase, có file chứa dữ liệu thật
+supabase/
+*.sql
+
+# File dữ liệu
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+
+# File tạm của Office / Windows
+~$*
+desktop.ini
+Thumbs.db
