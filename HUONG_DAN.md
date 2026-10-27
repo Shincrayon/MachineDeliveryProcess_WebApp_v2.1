@@ -18,7 +18,7 @@ Giao diện giữ nguyên dashboard `Dashboard_TienDoMayVe.html`. Dữ liệu l�
 - `editor`: xem, nhập máy, sửa, xoá, nạp Excel.
 - `admin`: như editor, thêm **Thùng rác** (khôi phục hoặc xoá hẳn máy).
 - Người chưa được cấp quyền đăng nhập vào cũng không thấy dữ liệu nào.
-- Chỉ cấp quyền được cho email `@duytanrecycling.com`. Muốn thêm tên miền khác thì sửa dòng `check` trong `01_schema.sql`.
+- Chỉ cấp quyền được cho email `@duytanrecycling.com`, trừ email ngoại lệ `tiendungvo98@gmail.com`. Muốn thêm tên miền hoặc email ngoại lệ khác thì sửa dòng `check` trong `01_schema.sql`.
 
 **Những gì bản v2 bảo vệ thêm**
 - **Xoá mềm:** xoá máy chỉ chuyển vào thùng rác, admin khôi phục được.
