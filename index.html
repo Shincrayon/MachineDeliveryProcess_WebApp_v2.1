@@ -37,9 +37,9 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:
   border-bottom:1px solid var(--border);background:var(--topbar);backdrop-filter:blur(8px);z-index:10}
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
 .brand .logo{font-size:22px}
-.brand h1{font-size:clamp(15px,1.6vw,19px);font-weight:800;letter-spacing:.3px;white-space:nowrap;
+.brand h1{font-size:clamp(15px,1.2vw,19px);font-weight:800;letter-spacing:.3px;white-space:nowrap;
   background:linear-gradient(90deg,#7dd3fc,#a78bfa 55%,#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent}
-.tabs{display:flex;gap:6px;margin-left:auto}
+.tabs{display:flex;gap:2px;margin-left:auto}
 .tab{padding:9px 18px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--muted);
   font-size:13.5px;font-weight:600;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:7px}
 .tab:hover{color:var(--txt);background:rgba(96,165,250,.08)}
@@ -363,8 +363,10 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 .login-card button{padding:11px;border-radius:10px;border:0;background:linear-gradient(160deg,#60a5fa,#a78bfa);color:#0b1220;font-weight:800;font-size:14px;cursor:pointer}
 .login-card button:disabled{opacity:.6;cursor:wait}
 .login-card .err{color:var(--red);font-size:13px;min-height:1em}
-.tab{white-space:nowrap;padding:9px 11px}
-.upd-btn{padding-left:12px;padding-right:12px}
+.tab{white-space:nowrap;padding:9px 9px}
+.upd-btn{padding-left:10px;padding-right:10px}
+.topbar .updated{padding:6px 10px}
+@media(max-width:1400px){.tab{padding:9px 7px}.upd-btn{padding-left:8px;padding-right:8px}.brand .logo{display:none}}
 .pw-wrap{position:relative;display:flex}
 .pw-wrap input{flex:1;min-width:0;padding-right:46px}
 .login-card .pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:transparent;border:0;
@@ -372,9 +374,9 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 .login-card .pw-eye:hover{background:rgba(148,163,184,.12)}
 .login-card .pw-eye:focus-visible{outline:2px solid rgba(96,165,250,.6)}
 .pw-caps{font-size:12.5px;color:var(--amber);margin-top:-4px}
-.topbar{flex-wrap:wrap;gap:10px 8px}
+.topbar{flex-wrap:wrap;gap:10px 6px}
 .topbar .tabs{margin-left:auto}
-#btnUpd,#btnTrash,#btnLogout{padding-left:11px;padding-right:11px}
+#btnUpd,#btnTrash,#btnPw,#btnLogout{padding-left:11px;padding-right:11px}
 .hx-list{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow:auto}
 .hx-item{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--panel2)}
 .hx-head{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline;font-size:12.5px;color:var(--muted)}
@@ -430,6 +432,7 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
   <button class="upd-btn" id="btnAdd" style="border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.12);color:var(--blue)" title="Add a new machine">➕ Add</button>
   <button class="upd-btn" id="btnExport" hidden title="Download the full list as an Excel file (can be re-imported with 📂 Import Excel)">⬇️ Excel</button>
   <button class="upd-btn" id="btnTrash" hidden title="Deleted machines — restore or delete permanently">🗑</button>
+  <button class="upd-btn" id="btnPw" hidden title="Change password">🔑</button>
   <button class="upd-btn" id="btnLogout" hidden title="Sign out">⎋</button>
   <button class="upd-btn theme-btn" id="btnLang" title="Chuyển sang tiếng Việt">VI</button>
   <button class="upd-btn theme-btn" id="btnTheme" title="Switch to light theme">☀️</button>
@@ -1819,6 +1822,51 @@ window.showHistory = async i => {
   }catch(err){ mBody.innerHTML = `<div class="m-gt">${dbErrText(err)}</div>`; }
 };
 
+/* ---- Đổi mật khẩu (người dùng tự đổi khi đã đăng nhập) ---- */
+function pwErrText(e){
+  const c = e && e.code, m = String((e && e.message) || '');
+  if(c==='same_password' || /different from the old/i.test(m))
+    return tr('The new password must be different from the current one.','Mật khẩu mới phải khác mật khẩu hiện tại.');
+  if(c==='weak_password' || /weak|at least/i.test(m))
+    return tr('This password is too weak. Use a longer one with letters and numbers.','Mật khẩu quá yếu. Hãy dùng mật khẩu dài hơn, có cả chữ và số.');
+  if(c==='reauthentication_needed' || /reauthenticat/i.test(m))
+    return tr('For security, please sign out, sign in again, then change your password.','Để bảo mật, hãy đăng xuất, đăng nhập lại rồi đổi mật khẩu.');
+  return dbErrText(e);
+}
+function openChangePw(){
+  mTitle.textContent = tr('🔑 Change password','🔑 Đổi mật khẩu');
+  mSub.textContent = (window.__userEmail || '') + ' · ' + tr('at least 6 characters','tối thiểu 6 ký tự');
+  mBody.innerHTML = `<form id="pwForm" novalidate>
+    <div class="add-grid" style="grid-template-columns:1fr;margin-top:4px">
+      <label>${tr('New password','Mật khẩu mới')}<input id="pwNew" type="password" autocomplete="new-password" required></label>
+      <label>${tr('Confirm new password','Nhập lại mật khẩu mới')}<input id="pwNew2" type="password" autocomplete="new-password" required></label>
+      <label style="flex-direction:row;align-items:center;gap:8px;font-weight:400;cursor:pointer"><input id="pwShow" type="checkbox" style="width:auto;padding:0"> ${tr('Show passwords','Hiện mật khẩu')}</label>
+    </div>
+    <div id="pwMsg" style="min-height:1.2em;font-size:13px;margin-bottom:10px"></div>
+    <div class="add-actions"><button type="button" class="nbtn2 ghost" id="pwCancel">${tr('Cancel','Hủy')}</button>
+      <button type="submit" class="nbtn2" id="pwSave">${tr('💾 Save new password','💾 Lưu mật khẩu mới')}</button></div>
+  </form>`;
+  openM();
+  const a = document.getElementById('pwNew'), b = document.getElementById('pwNew2'), msg = document.getElementById('pwMsg'),
+        save = document.getElementById('pwSave'), show = document.getElementById('pwShow');
+  const err = t => { msg.style.color = 'var(--red)'; msg.textContent = t; };
+  show.onchange = ()=>{ a.type = b.type = show.checked ? 'text' : 'password'; };
+  document.getElementById('pwCancel').onclick = ()=> mBg.classList.remove('show');
+  document.getElementById('pwForm').onsubmit = async e=>{
+    e.preventDefault();
+    if(a.value.length < 6) return err(tr('The password must be at least 6 characters.','Mật khẩu phải có ít nhất 6 ký tự.'));
+    if(a.value !== b.value) return err(tr('The two passwords do not match.','Hai mật khẩu không khớp.'));
+    save.disabled = true; msg.style.color = 'var(--muted)'; msg.textContent = tr('Saving…','Đang lưu…');
+    try{
+      const { error } = await window.__sb.auth.updateUser({ password: a.value });
+      if(error) throw error;
+      mBody.innerHTML = `<div class="m-ok">✅ ${tr('Password changed. Use the new password the next time you sign in.','Đã đổi mật khẩu. Lần đăng nhập sau hãy dùng mật khẩu mới.')}</div>`;
+    }catch(ex){ err(pwErrText(ex)); }
+    finally{ save.disabled = false; }
+  };
+  setTimeout(()=>a.focus(), 50);
+}
+
 /* ---- Thùng rác (admin) ---- */
 async function openTrash(){
   mTitle.textContent = tr('🗑 Trash','🗑 Thùng rác');
@@ -1866,7 +1914,8 @@ window.purgeTrash = j => {
   if(window.__canWrite===false){ btnAdd.hidden = true; btnPick.hidden = true; }
   if(window.__canWrite){ btnExport.hidden = false; btnExport.onclick = ()=>{ try{ exportExcel('TienDoMayVe'); }catch(e){ showNotice({type:'error', title:tr('Could not export the file','Chưa xuất được file'), sub:escH(e.message)}); } }; }
   if(window.__role==='admin'){ btnTrash.hidden = false; btnTrash.onclick = openTrash; }
-  if(window.__userEmail){ btnLogout.hidden = false; btnLogout.title = tr('Sign out (','Đăng xuất (') + window.__userEmail + ')'; }
+  if(window.__userEmail){ btnLogout.hidden = false; btnLogout.title = tr('Sign out (','Đăng xuất (') + window.__userEmail + ')';
+    btnPw.hidden = false; btnPw.onclick = openChangePw; }
   btnLogout.onclick = async ()=>{ try{ await window.__sb.auth.signOut(); }catch(e){} location.reload(); };
   const note = window.__DB_NOTE;
   if(note==='empty' && window.__canWrite) showBanner(tr('No data yet. Press <b>📂 Import Excel</b> to load the TienDoMayVe.xlsx file.','Chưa có dữ liệu. Bấm <b>📂 Nạp Excel</b> để nạp file TienDoMayVe.xlsx.'), 'warn');
@@ -1897,6 +1946,7 @@ const STATIC_VI = new Map([
   ['Download the full list as an Excel file (can be re-imported with 📂 Import Excel)','Tải toàn bộ danh sách ra file Excel (nạp lại được bằng 📂 Nạp Excel)'],
   ['Deleted machines — restore or delete permanently','Máy đã xoá — khôi phục hoặc xoá hẳn'],
   ['Sign out','Đăng xuất'],
+  ['Change password','Đổi mật khẩu'],
   ['Total equipment','Tổng thiết bị'],
   ['Total value','Tổng giá trị'],
   ['Awaiting','Đang chờ về'],
