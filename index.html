@@ -1916,7 +1916,7 @@ window.purgeTrash = j => {
   if(window.__role==='admin'){ btnTrash.hidden = false; btnTrash.onclick = openTrash; }
   if(window.__userEmail){ btnLogout.hidden = false; btnLogout.title = tr('Sign out (','Đăng xuất (') + window.__userEmail + ')';
     btnPw.hidden = false; btnPw.onclick = openChangePw; }
-  btnLogout.onclick = async ()=>{ try{ await window.__sb.auth.signOut(); }catch(e){} location.reload(); };
+  btnLogout.onclick = async ()=>{ await appSignOut(); location.reload(); };
   const note = window.__DB_NOTE;
   if(note==='empty' && window.__canWrite) showBanner(tr('No data yet. Press <b>📂 Import Excel</b> to load the TienDoMayVe.xlsx file.','Chưa có dữ liệu. Bấm <b>📂 Nạp Excel</b> để nạp file TienDoMayVe.xlsx.'), 'warn');
   else if(note==='empty') showBanner(tr('No machine data yet.','Chưa có dữ liệu máy nào.'), 'warn');
@@ -2039,6 +2039,14 @@ function switchLang(){
   location.reload();
 }
 btnLang.onclick = switchLang;
+
+/* ===== đăng xuất =====
+   signOut() của supabase-js giữ nguyên phiên nếu gọi máy chủ lỗi (vd. mạng chập chờn), nên tải lại trang
+   lại tự đăng nhập tài khoản cũ. scope 'local' = chỉ đăng xuất trình duyệt này; sau đó luôn xoá phiên đã lưu. */
+async function appSignOut(){
+  try{ if(window.__sb) await window.__sb.auth.signOut({ scope:'local' }); }catch(e){}
+  try{ Object.keys(localStorage).filter(k=>/^sb-.+-auth-token/.test(k)).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+}
 
 /* ===== giao diện sáng / tối ===== */
 function cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
@@ -2170,7 +2178,7 @@ function showBanner(html, kind, withReload){
     const bg = card(tr(`<h2>No access yet</h2><p>The account <b>${esc(session.user.email)}</b> is signed in but is not on the app's user list. Ask an administrator to add this email, then reload the page.</p>`,
       `<h2>Chưa được cấp quyền</h2><p>Tài khoản <b>${esc(session.user.email)}</b> đã đăng nhập nhưng chưa có trong danh sách người dùng của app. Nhờ quản trị thêm email này rồi tải lại trang.</p>`)
       + `<button type="button" id="lgOut">${tr('Sign out','Đăng xuất')}</button>`);
-    bg.querySelector('#lgOut').onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
+    bg.querySelector('#lgOut').onclick = async ()=>{ await appSignOut(); location.reload(); };
     return;
   }
   window.__role = me.role;
