@@ -556,7 +556,7 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
       <label>Clearance &amp; pickup, plan (days)<input id="f_lm" type="number" value="0"></label>
       <label>Clearance &amp; pickup, actual (days)<input id="f_lmtt" type="number"></label>
       <label>Confirmed/expected ex-works date<input id="f_xxg" type="date"></label>
-      <label>CTM days<input id="f_ctm" type="number" value="0"></label>
+      <label>Manufacturing days (CTM)<input id="f_ctm" type="number" value="0"></label>
       <label>Working day (count business days only?)<select id="f_wd"><option value="no">no</option><option value="yes">yes</option></select></label>
       <div class="calc-box" id="addCalc"></div>
       <label class="full">Delay note<textarea id="f_gt" rows="2"></textarea></label>
@@ -880,7 +880,7 @@ function updCalc(){
   const nd = k => n(k) + (LANG==='vi' ? ' ngày' : (k===1 ? ' day' : ' days'));
   ['f_dttt','f_lmtt'].forEach((id,k)=>{ document.getElementById(id).placeholder = tr('empty = plan: ','trống = KH: ') + n(k ? c.lm : c.dt); });
   const kh = c.veKH
-    ? `<b>${D(c.veKH)}</b><small>${tr('order date','ngày đặt hàng')} + ${n(c.ctu)} + ${n(c.dt)} + ${n(c.lm)}${days} + ${n(c.ctm)}${c.wd==='yes' ? tr(' working days',' ngày làm việc') : days}</small>`
+    ? `<b>${D(c.veKH)}</b><small>${tr('order date','ngày đặt hàng')} + ${n(c.ctu)} + ${n(c.dt)} + ${n(c.lm)}${days} + ${n(c.ctm)}${c.wd==='yes' ? tr(' working days',' ngày làm việc') : days} ${tr('manufacturing','chế tạo máy')}</small>`
     : `<span class="muted">${tr('enter the order date','nhập ngày đặt hàng')}</span>`;
   const nm = c.veNM
     ? `<b>${D(c.veNM)}</b><small>${tr('ex-works','xuất xưởng')} + ${n(c.dtTT)} + ${n(c.lmTT)}${days}</small>`
@@ -959,7 +959,7 @@ async function submitAdd(){
     </div>
     <div class="paste-box">
       <h5>${tr(`📥 Step 3 — paste the remaining block`,`📥 Bước 3 — dán khối còn lại`)}</h5>
-      <div class="hint">${tr(`Click the <b>column R cell of the new row</b> and paste the block below (columns R → U: ex-works date, CTM days, working day, delay note):`,`Bấm ô <b>cột R của dòng mới</b> rồi dán khối dưới đây (cột R → U: xuất xưởng, số ngày CTM, working day, giải trình):`)}</div>
+      <div class="hint">${tr(`Click the <b>column R cell of the new row</b> and paste the block below (columns R → U: ex-works date, manufacturing days (CTM), working day, delay note):`,`Bấm ô <b>cột R của dòng mới</b> rồi dán khối dưới đây (cột R → U: xuất xưởng, số ngày chế tạo máy (CTM), working day, giải trình):`)}</div>
       <textarea id="pasteCN2" rows="2" readonly>${capnhatRU.replace(/</g,'&lt;')}</textarea>
       <button class="copy-btn" onclick="copyBox('pasteCN2')">${tr(`📋 Copy block R→U`,`📋 Sao chép khối R→U`)}</button>
     </div>
@@ -1628,7 +1628,7 @@ window.showDetail = i => {
       it(tr('Advance-payment wait (plan)','TG chờ tạm ứng KH'), Dy(x.ctu)),
       it(tr('Shipping time (plan)','TG đi tàu KH'), Dy(x.ditaukh)),
       it(tr('Clearance & pickup (plan)','TG lãnh máy KH'), Dy(x.lanhkh)),
-      it(tr('CTM days','Số ngày CTM'), Dy(ctm)),
+      it(tr('Manufacturing days (CTM)','Số ngày chế tạo máy (CTM)'), Dy(ctm)),
       it('Working day', T(x.workingday)),
       it(tr('Planned arrival date','Ngày dự kiến máy về (KH)'), `<b>${fmtD(x.vekh)}</b>`,'hl')])}
     ${sec(tr('Actual schedule','Tiến độ thực tế (TT)'),[
@@ -1647,8 +1647,8 @@ window.showDetail = i => {
       <button class="nbtn2 ghost" onclick="showHistory(${i})">${tr(`🕘 History`,`🕘 Lịch sử`)}</button>
       ${window.__canWrite ? `<button class="nbtn2 ghost" onclick="askDelete(${i})">${tr(`🗑 Delete machine`,`🗑 Xoá máy`)}</button>
       <button class="nbtn2" onclick="editMachine(${i})">${tr(`✏️ Edit`,`✏️ Sửa thông tin`)}</button>` : ''}</div>
-    <div class="dt-note">${tr(`Planned arrival date = Order date + advance-payment wait (plan) + shipping time (plan) + clearance &amp; pickup (plan) + CTM days.<br>
-    Expected arrival at plant = Confirmed/expected ex-works + shipping time (actual) + clearance &amp; pickup (actual).`,`Ngày dự kiến máy về (KH) = Ngày đặt hàng + TG chờ tạm ứng KH + TG đi tàu KH + TG lãnh máy KH + Số ngày CTM.<br>
+    <div class="dt-note">${tr(`Planned arrival date = Order date + advance-payment wait (plan) + shipping time (plan) + clearance &amp; pickup (plan) + manufacturing days (CTM).<br>
+    Expected arrival at plant = Confirmed/expected ex-works + shipping time (actual) + clearance &amp; pickup (actual).`,`Ngày dự kiến máy về (KH) = Ngày đặt hàng + TG chờ tạm ứng KH + TG đi tàu KH + TG lãnh máy KH + Số ngày chế tạo máy (CTM).<br>
     Ngày dự kiến máy về NM = Xác nhận/dự kiến xuất xưởng + TG đi tàu TT + TG lãnh máy TT.`)}</div>
   </div>`;
   openM(1);
@@ -1723,7 +1723,7 @@ const REC_LABEL = {ten:'Tên máy', phutrach:'Người phụ trách', sl:'Số l
 const REC_LABEL_EN = {ten:'Machine name', phutrach:'Person in charge', sl:'Quantity', congsuat:'Capacity', noilapdat:'Installation site',
   ncc:'Supplier', xuatxu:'Origin', vnd:'Total value (VND)', usd:'Total value (USD)', duyet:'Proposal approval date',
   dathang:'Order date', vekh:'Planned arrival date', vedukienn:'Expected arrival at plant', danhgia:'Rating',
-  sonagyctm:'CTM days', giaitrinh:'Delay note', ctu:'Advance-payment wait, plan (days)', tamungtt:'Advance-payment date, actual',
+  sonagyctm:'Manufacturing days (CTM)', giaitrinh:'Delay note', ctu:'Advance-payment wait, plan (days)', tamungtt:'Advance-payment date, actual',
   ditaukh:'Shipping time, plan (days)', ditautt:'Shipping time, actual (days)', lanhkh:'Clearance & pickup, plan (days)', lanhtt:'Clearance & pickup, actual (days)',
   xuatxuong:'Confirmed/expected ex-works', workingday:'Working day'};
 const DATE_KEYS = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong'];
@@ -2065,7 +2065,7 @@ const STATIC_VI = new Map([
   ['Clearance & pickup, plan (days)','TG lãnh máy KH (ngày)'],
   ['Clearance & pickup, actual (days)','TG lãnh máy TT (ngày)'],
   ['Confirmed/expected ex-works date','Xác nhận/dự kiến xuất xưởng'],
-  ['CTM days','Số ngày CTM'],
+  ['Manufacturing days (CTM)','Số ngày chế tạo máy (CTM)'],
   ['Working day (count business days only?)','Working day (tính theo ngày làm việc?)'],
   ['Delay note','Giải trình'],
   ['Cancel','Hủy'],
