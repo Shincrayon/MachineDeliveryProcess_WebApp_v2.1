@@ -458,7 +458,7 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
       <div class="kpi" style="--accent:var(--violet)" onclick="showKPI('value')"><span class="ic">💰</span><div class="lbl">Total value</div><div class="val"><span id="kpiValPre"></span><span id="kpiVal">0</span><span id="kpiValUnit"></span></div><div class="note" id="kpiValNote"></div></div>
       <div class="kpi" style="--accent:var(--blue)" onclick="showKPI('waiting')"><span class="ic">⏳</span><div class="lbl">Awaiting</div><div class="val" id="kpiWait">0</div><div class="note">expected in more than 15 days</div></div>
       <div class="kpi" style="--accent:var(--amber)" onclick="showKPI('soon')"><span class="ic">🚢</span><div class="lbl">Arriving soon</div><div class="val" id="kpiSoon">0</div><div class="note">within 15 days · get ready to receive</div></div>
-      <div class="kpi" style="--accent:var(--red)" onclick="showKPI('late')"><span class="ic">🔴</span><div class="lbl">Late</div><div class="val" id="kpiDelay">0</div><div class="note">in-transit machines running late (excludes arrived)</div></div>
+      <div class="kpi" style="--accent:var(--red)" onclick="showKPI('late')"><span class="ic">🔴</span><div class="lbl">Late</div><div class="val" id="kpiDelay">0</div><div class="note">arrival at plant later than plan (incl. arrived)</div></div>
       <div class="kpi" style="--accent:var(--green)" onclick="showKPI('arrived')"><span class="ic">✅</span><div class="lbl">Arrived at plant</div><div class="val" id="kpiArr">0</div><div class="note" id="kpiArrNote"></div></div>
     </div>
     <div class="grid2">
@@ -1112,7 +1112,7 @@ document.querySelectorAll('[data-count]').forEach(el=>{
     kpiArrNote.textContent = (rows.length? Math.round(arr/rows.length*100):0) + tr('% of equipment · ','% thiết bị · ') + tag;
     animTo(kpiSoon, rows.filter(x=>x.status==='soon').length);
     animTo(kpiWait, rows.filter(x=>x.status==='waiting').length);
-    animTo(kpiDelay, rows.filter(x=>x.danhgia==='Trễ' && x.status!=='arrived').length);
+    animTo(kpiDelay, rows.filter(isLate).length);
   }
   kpiYear.onclick = e=>e.stopPropagation();
   kpiYear.onchange = upd; upd();
@@ -1120,6 +1120,8 @@ document.querySelectorAll('[data-count]').forEach(el=>{
 
 /* ===== page 1 charts ===== */
 let stChart = null;
+/* trễ = ngày về NM (thực tế/dự kiến) muộn hơn ngày về KH, kể cả máy đã về */
+function isLate(x){ return !!(x.vekh && x.vedukienn && x.vedukienn.slice(0,10) > x.vekh.slice(0,10)); }
 const DG = ['Sớm','Đúng tiến độ','Trễ'];
 const DGC = {'Sớm':'#2dd4bf','Đúng tiến độ':'#a78bfa','Trễ':'#f87171'};
 /* giá trị Đánh giá lưu tiếng Việt trong dữ liệu -> khi chọn tiếng Anh thì hiển thị tiếng Anh */
@@ -1569,10 +1571,10 @@ window.goPage = p => { pageNo = p; render(); };
 window.showKPI = kind => {
   const y = kpiYear.value;
   let rows = DATA.filter(x=>x.vedukienn && (!y || x.vedukienn.slice(0,4)===y));
-  const T = tr({all:'Total equipment', value:'Total value', waiting:'Awaiting', soon:'Arriving soon (≤15 days)', late:'Rated Late', arrived:'Arrived at plant'},
-    {all:'Tổng thiết bị', value:'Tổng giá trị', waiting:'Đang chờ về', soon:'Sắp về (≤15 ngày)', late:'Đánh giá Trễ', arrived:'Đã về nhà máy'});
+  const T = tr({all:'Total equipment', value:'Total value', waiting:'Awaiting', soon:'Arriving soon (≤15 days)', late:'Late vs plan', arrived:'Arrived at plant'},
+    {all:'Tổng thiết bị', value:'Tổng giá trị', waiting:'Đang chờ về', soon:'Sắp về (≤15 ngày)', late:'Về trễ so với kế hoạch', arrived:'Đã về nhà máy'});
   if(kind==='waiting'||kind==='soon'||kind==='arrived') rows = rows.filter(x=>x.status===kind);
-  if(kind==='late') rows = rows.filter(x=>x.danhgia==='Trễ' && x.status!=='arrived');
+  if(kind==='late') rows = rows.filter(isLate);
   rows = [...rows].sort((a,b)=>{
     const d = (PRIO[a.status]??9)-(PRIO[b.status]??9);
     if(d) return d;
@@ -2006,7 +2008,7 @@ const STATIC_VI = new Map([
   ['Arriving soon','Sắp về'],
   ['within 15 days · get ready to receive','trong 15 ngày · cần chuẩn bị tiếp nhận'],
   ['Late','Trễ'],
-  ['in-transit machines running late (excludes arrived)','máy đang về bị trễ (không tính máy đã về)'],
+  ['arrival at plant later than plan (incl. arrived)','ngày về NM trễ hơn kế hoạch (tính cả máy đã về)'],
   ['Arrived at plant','Đã về nhà máy'],
   ['Equipment status','Trạng thái thiết bị'],
   ['Month: All','Tháng: Tất cả'],
