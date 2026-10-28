@@ -299,6 +299,10 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 .add-grid input:focus,.add-grid select:focus,.add-grid textarea:focus{border-color:var(--blue)}
 .add-grid input[required],.add-grid .req{border-color:rgba(96,165,250,.5)}
 .add-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.calc-box{grid-column:1/-1;margin:4px 0 2px}
+.calc-box h5{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--sky);margin:0 0 7px}
+.calc-box .dt-v small{display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:2px}
+.calc-box .muted{color:var(--muted);font-weight:400}
 .nbtn2{padding:10px 22px;border:none;border-radius:999px;cursor:pointer;font-size:14px;font-weight:700;color:#08101f;
   background:linear-gradient(90deg,#60a5fa,#22d3ee);box-shadow:0 8px 20px rgba(34,211,238,.3);transition:transform .15s}
 .nbtn2:hover{transform:translateY(-2px)}
@@ -548,12 +552,13 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
       <label>Advance-payment wait, plan (days)<input id="f_ctu" type="number" value="0"></label>
       <label>Advance-payment date, actual<input id="f_tutt" type="date"></label>
       <label>Shipping time, plan (days)<input id="f_dt" type="number" value="0"></label>
-      <label>Shipping time, actual (days)<input id="f_dttt" type="number" value="0"></label>
+      <label>Shipping time, actual (days)<input id="f_dttt" type="number"></label>
       <label>Clearance &amp; pickup, plan (days)<input id="f_lm" type="number" value="0"></label>
-      <label>Clearance &amp; pickup, actual (days)<input id="f_lmtt" type="number" value="0"></label>
+      <label>Clearance &amp; pickup, actual (days)<input id="f_lmtt" type="number"></label>
       <label>Confirmed/expected ex-works date<input id="f_xxg" type="date"></label>
       <label>CTM days<input id="f_ctm" type="number" value="0"></label>
       <label>Working day (count business days only?)<select id="f_wd"><option value="no">no</option><option value="yes">yes</option></select></label>
+      <div class="calc-box" id="addCalc"></div>
       <label class="full">Delay note<textarea id="f_gt" rows="2"></textarea></label>
     </div>
     <div class="add-actions">
@@ -814,6 +819,7 @@ window.fpickers = {};
     altFormat: 'd/m/Y',
     allowInput: false,        // KHÔNG cho gõ tay, chỉ chọn từ lịch
     disableMobile: true,      // luôn dùng lịch flatpickr (kể cả trên mobile)
+    onChange: ()=>updCalc(),  // chọn ngày xong -> tính lại các ngày liên đới
     locale: (LANG==='vi' && window.flatpickr && flatpickr.l10ns && flatpickr.l10ns.vn) ? 'vn' : 'default'
   };
   ['f_duyet','f_dh','f_tutt','f_xxg'].forEach(id=>{
@@ -843,13 +849,12 @@ function isoToSerial(s){                              // 'YYYY-MM-DD' -> serial 
 }
 const isoToDMY = s => s ? s.split('-').reverse().join('/') : '';
 
-async function submitAdd(){
+/* === Các ngày liên đới, tính từ dữ liệu đang có trong form (dùng chung cho khung xem trước và lúc lưu) ===
+   giống công thức Root data:  KH = đặt hàng + chờ tạm ứng KH + đi tàu KH + lãnh máy KH + CTM (WORKDAY nếu Working day = yes)
+                               NM = xuất xưởng + đi tàu TT + lãnh máy TT  (ô TT để trống -> lấy theo KH) */
+function calcDates(){
   const val = id => (document.getElementById(id).value||'').trim();
-  const ten = val('f_ten');
-  if(!ten){ showNotice({type:'error', title:tr('Machine name missing','Thiếu tên máy'), sub:tr('Please enter the machine name before adding it.','Vui lòng nhập Tên máy trước khi thêm.')}); return; }
-
   const dathang = isoToSerial(val('f_dh'));
-  const tutt    = isoToSerial(val('f_tutt'));
   const xxg     = isoToSerial(val('f_xxg'));
   const ctu = xlNum(val('f_ctu')), ctm = xlNum(val('f_ctm'));
   const dt  = xlNum(val('f_dt')),  lm  = xlNum(val('f_lm'));                 // kế hoạch (KH)
@@ -862,6 +867,50 @@ async function submitAdd(){
   const okDate = s => s>=20000 && s<=80000;                      // chỉ đánh giá khi có đủ 2 ngày hợp lệ
   const dg = (!okDate(veKH) || !okDate(veNM)) ? ''
            : (veKH===veNM ? 'Đúng tiến độ' : (veKH>veNM ? 'Sớm' : 'Trễ'));
+  return {dathang, xxg, ctu, ctm, dt, lm, dtTT, lmTT, wd, veKH, veNM, dg};
+}
+
+/* khung "Tự động tính" trong form: cập nhật mỗi khi sửa một ô */
+function updCalc(){
+  const box = document.getElementById('addCalc'); if(!box) return;
+  const c = calcDates();
+  const D = s => serialToISO(s).split('-').reverse().join('/');
+  const n = v => Number(v).toLocaleString(NUMLOC);
+  const days = tr(' days',' ngày');
+  const nd = k => n(k) + (LANG==='vi' ? ' ngày' : (k===1 ? ' day' : ' days'));
+  ['f_dttt','f_lmtt'].forEach((id,k)=>{ document.getElementById(id).placeholder = tr('empty = plan: ','trống = KH: ') + n(k ? c.lm : c.dt); });
+  const kh = c.veKH
+    ? `<b>${D(c.veKH)}</b><small>${tr('order date','ngày đặt hàng')} + ${n(c.ctu)} + ${n(c.dt)} + ${n(c.lm)}${days} + ${n(c.ctm)}${c.wd==='yes' ? tr(' working days',' ngày làm việc') : days}</small>`
+    : `<span class="muted">${tr('enter the order date','nhập ngày đặt hàng')}</span>`;
+  const nm = c.veNM
+    ? `<b>${D(c.veNM)}</b><small>${tr('ex-works','xuất xưởng')} + ${n(c.dtTT)} + ${n(c.lmTT)}${days}</small>`
+    : `<span class="muted">${tr('enter the ex-works date','nhập ngày xuất xưởng')}</span>`;
+  const diff = c.veNM - c.veKH;
+  const rt = c.dg
+    ? `<b style="color:${c.dg==='Trễ'?'var(--red)':c.dg==='Sớm'?'var(--green)':'var(--blue)'}">${dgT(c.dg)}</b>`
+      + (diff ? `<small>${nd(Math.abs(diff))} ${diff>0 ? tr('after plan','sau kế hoạch') : tr('before plan','trước kế hoạch')}</small>` : '')
+    : `<span class="muted">${tr('needs both dates above','cần đủ 2 ngày ở trên')}</span>`;
+  let st = `<span class="muted">—</span>`;
+  if(c.veNM){
+    const now = new Date(), t0 = Math.round((Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())-XL_EPOCH)/86400000);
+    const d = c.veNM - t0, s = d<0 ? 'arrived' : d<=15 ? 'soon' : 'waiting';
+    st = `<span class="badge b-${s}">${LBL[s]}</span><small>${d<0 ? tr(`arrived ${nd(-d)} ago`,`đã về ${nd(-d)} trước`) : tr(`${nd(d)} to go`,`còn ${nd(d)}`)}</small>`;
+  }
+  const it = (k,v) => `<div class="dt-i"><span class="dt-k">${k}</span><span class="dt-v">${v}</span></div>`;
+  box.innerHTML = `<h5>🧮 ${tr('Calculated automatically','Tự động tính')}</h5><div class="dt-grid">
+    ${it(tr('Planned arrival date','Ngày dự kiến máy về (KH)'), kh)}${it(tr('Expected arrival at plant','Ngày dự kiến máy về NM'), nm)}
+    ${it(tr('Rating','Đánh giá'), rt)}${it(tr('Status','Trạng thái'), st)}</div>`;
+}
+addGrid.addEventListener('input', updCalc);
+addGrid.addEventListener('change', updCalc);
+
+async function submitAdd(){
+  const val = id => (document.getElementById(id).value||'').trim();
+  const ten = val('f_ten');
+  if(!ten){ showNotice({type:'error', title:tr('Machine name missing','Thiếu tên máy'), sub:tr('Please enter the machine name before adding it.','Vui lòng nhập Tên máy trước khi thêm.')}); return; }
+
+  const tutt = isoToSerial(val('f_tutt'));
+  const { xxg, ctu, ctm, dt, lm, dtTT, lmTT, wd, veKH, veNM, dg } = calcDates();
 
   const m = {
     ten, phutrach: val('f_pt'),
@@ -930,9 +979,11 @@ async function submitAdd(){
 function resetAddForm(){
   ['f_ten','f_pt','f_cs','f_nld','f_ncc','f_xx','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_gt'].forEach(id=>document.getElementById(id).value='');
   ['f_duyet','f_dh','f_tutt','f_xxg'].forEach(id=>{ if(window.fpickers && window.fpickers[id]) window.fpickers[id].clear(); });
-  ['f_ctu','f_dt','f_dttt','f_lm','f_lmtt','f_ctm'].forEach(id=>document.getElementById(id).value='0');
+  ['f_ctu','f_dt','f_lm','f_ctm'].forEach(id=>document.getElementById(id).value='0');
+  ['f_dttt','f_lmtt'].forEach(id=>document.getElementById(id).value='');     // trống = lấy theo KH
   document.getElementById('f_sl').value='1'; document.getElementById('f_wd').value='no';
   addResult.innerHTML='';
+  updCalc();
 }
 function copyBox(id){
   const ta=document.getElementById(id); ta.select(); ta.setSelectionRange(0,99999);
@@ -1766,6 +1817,7 @@ window.editMachine = i => {
     const fp = window.fpickers && window.fpickers[id];
     if(fp){ v ? fp.setDate(v, false, 'Y-m-d') : fp.clear(); } else set(id, v||'');
   });
+  updCalc();
   window.__editId = x._id;
   addTitle.textContent = tr('✏️ Edit: ','✏️ Sửa: ') + unescH(x.ten);
   addSubmit.textContent = tr('💾 Save changes','💾 Lưu thay đổi');
