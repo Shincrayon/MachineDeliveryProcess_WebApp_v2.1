@@ -191,20 +191,25 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 .money{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
 .gt{max-width:230px;font-size:12px;color:var(--amber);line-height:1.4}
 
-/* ===== NCC leaderboard ===== */
-.ncc-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px 18px;
-  max-height:calc(50vh - 130px);min-height:200px;overflow:auto;padding-right:6px}
-.ncc-row{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:11px;transition:.2s;border:1px solid transparent}
-.ncc-row:hover{background:rgba(96,165,250,.07);border-color:var(--border);transform:translateX(3px)}
-.ncc-rank{width:30px;text-align:center;font-size:15px;font-weight:800;color:var(--muted);flex:0 0 auto}
-.ncc-info{flex:1;min-width:0}
-.ncc-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ncc-name small{color:var(--muted);font-weight:400;margin-left:6px}
-.ncc-bar{height:7px;border-radius:99px;background:rgba(148,163,184,.15);margin-top:5px;overflow:hidden}
-.ncc-bar i{display:block;height:100%;border-radius:99px;width:0;transition:width .9s cubic-bezier(.2,.8,.2,1)}
-.ncc-pct{font-size:16px;font-weight:800;width:52px;text-align:right;flex:0 0 auto}
-.ncc-tre{font-size:10.5px;font-weight:700;color:var(--red);background:rgba(248,113,113,.13);
-  padding:2px 8px;border-radius:99px;flex:0 0 auto}
+/* ===== Bảng điểm nhà cung cấp ===== */
+.sc-wrap{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:14px;align-items:start}
+.sc-tbl{max-height:calc(52vh - 90px);min-height:180px;overflow:auto}
+.sc-tbl table{width:100%;min-width:640px;border-collapse:collapse;font-size:12.5px}
+.sc-tbl th{position:sticky;top:0;z-index:1;background:var(--panel2);text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--muted);font-weight:700;padding:7px 8px;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
+.sc-tbl th:first-child,.sc-tbl td:first-child{text-align:left}
+.sc-tbl th:hover{color:var(--txt)}
+.sc-tbl th.on{color:var(--blue)}
+.sc-tbl td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sc-tbl td.nm{font-weight:700;color:var(--strong);white-space:normal;min-width:140px}
+.sc-tbl tr.insuf td{color:var(--muted)}
+.sc-tbl tr.insuf td.nm{color:var(--muted);font-weight:600}
+.sc-tbl td.na{font-style:italic;text-align:center}
+.sc-tbl tbody tr:hover{background:rgba(96,165,250,.07)}
+.sc-sep td{padding:10px 8px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border);text-align:left!important}
+#scChart{height:320px}
+@media(max-width:1100px){.sc-wrap{grid-template-columns:1fr}}
+@media(max-width:640px){#scSub{flex-basis:100%;margin:2px 0 0 16px!important}#p4 .card h3{flex-wrap:wrap}}
 
 /* ===== PIC evaluation board ===== */
 .pic-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
@@ -621,7 +626,8 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <select id="evYear"><option value="">Year: All</option></select>
       <span style="font-size:12px;color:var(--muted)" id="evInfo"></span>
     </div>
-    <div class="card" style="--accent:#f0abfc"><h3><span class="dot"></span>Supplier rating — on-time delivery</h3><div class="ncc-board" id="nccBoard" style="max-height:calc(48vh - 120px)"></div></div>
+    <div class="card" style="--accent:#f0abfc"><h3><span class="dot"></span><span id="scTitle"></span><small id="scSub" style="font-weight:500;color:var(--muted);font-size:12px;margin-left:8px"></small></h3>
+      <div class="sc-wrap"><div class="sc-tbl" id="scTable"></div><div><div class="dm-legend" id="scLegend"></div><div id="scChart"></div><div id="scChartEmpty" class="dm-hint" hidden></div></div></div></div>
     <div class="card" style="--accent:#2dd4bf;margin-top:12px"><h3><span class="dot"></span>Person-in-charge rating — on time · volume · value</h3><div class="pic-board" id="picBoard"></div></div>
     <div class="card" style="--accent:#fbbf24;margin-top:12px"><h3><span class="dot"></span>Staff performance scorecard — weights: equipment count 50% · value 30% · on time 20%</h3><div style="position:relative;height:230px"><canvas id="chPICscore"></canvas></div></div>
   </div>
@@ -1706,29 +1712,8 @@ function buildEval(){
     (!yr || x.vedukienn.slice(0,4)===yr) && (!mo || x.vedukienn.slice(5,7)===mo));
   evInfo.textContent = rowsAll.length + tr(' machines in period (by expected arrival at plant)',' thiết bị trong kỳ (theo ngày dự kiến về NM)');
 
-  // ----- NCC leaderboard -----
-  const nccStats = [...new Set(rowsAll.map(x=>x.ncc))].map(n=>{
-    const rows = rowsAll.filter(x=>x.ncc===n);
-    const som = rows.filter(x=>x.danhgia==='Sớm').length;
-    const dung = rows.filter(x=>x.danhgia==='Đúng tiến độ').length;
-    const tre = rows.filter(x=>x.danhgia==='Trễ').length;
-    return {n, total:rows.length, som, dung, tre, ontime:(som+dung)/rows.length};
-  }).sort((a,b)=> b.ontime-a.ontime || b.total-a.total);
-  nccBoard.innerHTML = nccStats.length ? nccStats.map((s,i)=>{
-    const p = Math.round(s.ontime*100);
-    const col = p===100 ? '#2dd4bf' : p>=50 ? '#fbbf24' : '#f87171';
-    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
-    return `<div class="ncc-row">
-      <div class="ncc-rank">${medal}</div>
-      <div class="ncc-info">
-        <div class="ncc-name">${s.n}<small>${s.total} ${tr('machines','thiết bị')}</small></div>
-        <div class="ncc-bar"><i data-w="${p}" style="background:linear-gradient(90deg,${col},${col}cc)"></i></div>
-      </div>
-      <div class="ncc-pct" style="color:${col}">${p}%</div>
-      ${s.tre? `<div class="ncc-tre">${s.tre} ${tr('late','trễ')}</div>` : '<div class="ncc-tre" style="visibility:hidden">0</div>'}
-    </div>`;
-  }).join('') : '<div style="color:var(--muted);font-size:13px;padding:10px">'+tr('No data for this period.','Không có dữ liệu trong kỳ này.')+'</div>';
-  setTimeout(()=>nccBoard.querySelectorAll('.ncc-bar i').forEach(b=>b.style.width=b.dataset.w+'%'),80);
+  // ----- bảng điểm nhà cung cấp (metrics.js: DM.supplierScorecard) -----
+  drawScorecard(rowsAll);
 
   // ----- thẻ điểm nhân sự -----
   const picStats = [...new Set(rowsAll.map(x=>x.phutrach).filter(Boolean))].map(n=>{
@@ -1819,6 +1804,85 @@ function buildEval(){
       scales:{x:{stacked:true,max:100,grid:{color:'rgba(148,163,184,.08)'}},
         y:{stacked:true,grid:{display:false},ticks:{font:{size:12,weight:'700'},autoSkip:false}}}}});
 }
+/* bảng điểm NCC: bảng sắp xếp được + biểu đồ lead time cam kết / thực tế */
+let SC = [], scSort = null;
+const SC_COLS = () => [
+  ['name',        tr('Supplier','Nhà cung cấp')],
+  ['delivered',   tr('Delivered','Đã giao')],
+  ['onTimePct',   tr('On-time %','Đúng hạn %')],
+  ['avgLateDays', tr('Avg days late','TB ngày trễ')],
+  ['committedLT', tr('Committed LT','LT cam kết')],
+  ['actualLT',    tr('Actual LT','LT thực tế')],
+  ['gapDays',     tr('Gap','Chênh lệch')],
+  ['inProgress',  tr('In progress','Đang chờ')]
+];
+function drawScorecard(rows){
+  scTitle.textContent = tr('Supplier scorecard — on-time delivery & lead time', 'Bảng điểm nhà cung cấp — đúng hạn & lead time');
+  SC = DM.supplierScorecard(rows, { minDelivered: 2 });
+  const ok = SC.filter(r => r.sufficient);
+  scSub.textContent = SC.length ? tr(`${ok.length} of ${SC.length} suppliers rated · min. 2 deliveries · LT = contract → arrival at site (days)`,
+                                     `${ok.length} / ${SC.length} NCC được chấm · tối thiểu 2 lần giao · LT = ký HĐ → về NM (ngày)`) : '';
+  renderScTable(); renderScChart();
+}
+function renderScTable(){
+  if(!SC.length){ scTable.innerHTML = `<div class="dm-hint">${tr('No supplier data for this period.', 'Không có dữ liệu NCC trong kỳ này.')}</div>`; return; }
+  const cols = SC_COLS(), d = v => v == null ? '—' : dmN(v, 0);
+  const cmp = (a, b) => { if(!scSort) return 0; const k = scSort.k, x = a[k], y = b[k];
+    if(k === 'name') return scSort.dir * String(x).localeCompare(String(y));
+    return scSort.dir * (((x ?? -Infinity)) - ((y ?? -Infinity))); };
+  const ok = SC.filter(r => r.sufficient).slice().sort(cmp), few = SC.filter(r => !r.sufficient).slice().sort(cmp);
+  const pctCol = v => v == null ? '' : v >= .8 ? 'var(--st-ok)' : v >= .6 ? 'var(--st-warn)' : 'var(--st-bad)';
+  const gapCol = v => v == null ? '' : v <= 0 ? 'var(--st-ok)' : v <= 14 ? 'var(--st-warn)' : 'var(--st-bad)';
+  const nm = r => ovEsc(r.name) || `<i>${tr('(no supplier)', '(chưa có NCC)')}</i>`;
+  const row = r => `<tr><td class="nm">${nm(r)}</td><td>${r.delivered}</td>` +
+    `<td style="color:${pctCol(r.onTimePct)};font-weight:700">${r.onTimePct == null ? '—' : dmN(r.onTimePct * 100) + '%'}<small style="color:var(--muted);font-weight:400"> ${r.onTimeDen ? r.onTimeNum + '/' + r.onTimeDen : ''}</small></td>` +
+    `<td>${r.avgLateDays == null ? '—' : '+' + dmN(r.avgLateDays, 0)}</td><td>${d(r.committedLT)}</td><td>${d(r.actualLT)}</td>` +
+    `<td style="color:${gapCol(r.gapDays)};font-weight:700">${r.gapDays == null ? '—' : (r.gapDays > 0 ? '+' : '') + dmN(r.gapDays, 0)}</td><td>${r.inProgress}</td></tr>`;
+  const rowFew = r => `<tr class="insuf"><td class="nm">${nm(r)}</td><td>${r.delivered}</td><td class="na" colspan="5">${tr('insufficient data', 'chưa đủ dữ liệu')}</td><td>${r.inProgress}</td></tr>`;
+  scTable.innerHTML = `<table><thead><tr>${cols.map(([k, t]) => `<th data-k="${k}" class="${scSort && scSort.k === k ? 'on' : ''}">${t}${scSort && scSort.k === k ? (scSort.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody>` +
+    (ok.length ? ok.map(row).join('') : `<tr><td colspan="8" class="na">${tr('No supplier has 2 or more deliveries in this period.', 'Chưa NCC nào có từ 2 lần giao trong kỳ này.')}</td></tr>`) +
+    (few.length ? `<tr class="sc-sep"><td colspan="8">${tr('Fewer than 2 deliveries — insufficient data', 'Dưới 2 lần giao — chưa đủ dữ liệu')} (${few.length})</td></tr>` + few.map(rowFew).join('') : '') +
+    `</tbody></table>`;
+  scTable.querySelectorAll('th').forEach(th => th.onclick = () => {
+    const k = th.dataset.k;
+    scSort = scSort && scSort.k === k ? (scSort.dir < 0 ? { k, dir: 1 } : null) : { k, dir: k === 'name' ? 1 : -1 };
+    renderScTable();
+  });
+}
+let scEc = null;
+function renderScChart(){
+  if(!window.echarts){ scChartEmpty.hidden = false; scChartEmpty.textContent = tr('Chart library failed to load.', 'Không tải được thư viện biểu đồ.'); return; }
+  const list = SC.filter(r => r.sufficient && r.committedLT != null).slice(0, 15);
+  scChartEmpty.hidden = !!list.length; scChart.style.display = list.length ? '' : 'none';
+  scLegend.style.display = list.length ? '' : 'none';
+  if(!list.length){ scChartEmpty.textContent = tr('No supplier with 2+ deliveries and contract/plan dates to compare lead time.', 'Chưa NCC nào có từ 2 lần giao kèm ngày ký HĐ / kế hoạch để so lead time.'); return; }
+  scChart.style.height = Math.max(200, list.length * 34 + 40) + 'px';
+  // chú thích riêng: thanh thực tế tô theo chênh lệch so với cam kết
+  scLegend.innerHTML = [[ 'rgba(148,163,184,.45)', tr('Committed lead time', 'Lead time cam kết') ],
+    [ cssv('--st-ok'), tr('Actual ≤ committed', 'Thực tế ≤ cam kết') ], [ cssv('--st-warn'), tr('Actual +1–14 days', 'Thực tế chậm 1–14 ngày') ],
+    [ cssv('--st-bad'), tr('Actual > 14 days slower', 'Thực tế chậm > 14 ngày') ]].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
+  if(!scEc) scEc = echarts.init(scChart); else scEc.resize();
+  const txt = cssv('--txt'), mut = cssv('--muted'), bd = cssv('--border');
+  scEc.setOption({
+    textStyle:{ color:mut, fontFamily:'Segoe UI, system-ui, sans-serif' },
+    grid:{ left:8, right:46, top:8, bottom:6, containLabel:true },
+    tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, backgroundColor:cssv('--panel2'), borderColor:bd, textStyle:{ color:txt, fontSize:12 },
+      formatter: ps => { const r = list[ps[0].dataIndex];
+        return `<b>${ovEsc(r.name)}</b><br>${tr('Committed','Cam kết')}: ${dmN(r.committedLT)} ${tr('days','ngày')}<br>${tr('Actual','Thực tế')}: ${dmN(r.actualLT)} ${tr('days','ngày')}<br>` +
+               `${tr('Gap','Chênh lệch')}: <b>${r.gapDays > 0 ? '+' : ''}${dmN(r.gapDays)}</b> · ${tr('based on','dựa trên')} ${r.ltCount} ${tr('deliveries','lần giao')}`; } },
+    xAxis:{ type:'value', name:tr('days','ngày'), nameTextStyle:{ color:mut }, axisLabel:{ color:mut }, splitLine:{ lineStyle:{ color:bd } } },
+    yAxis:{ type:'category', inverse:true, data:list.map(r => r.name), axisLabel:{ color:txt, width:130, overflow:'truncate' }, axisTick:{ show:false }, axisLine:{ lineStyle:{ color:bd } } },
+    series:[
+      { name:tr('Committed lead time','Lead time cam kết'), type:'bar', data:list.map(r => Math.round(r.committedLT)), itemStyle:{ color:mut, opacity:.45, borderRadius:[0,4,4,0] }, barGap:'15%' },
+      { name:tr('Actual lead time','Lead time thực tế'), type:'bar', data:list.map(r => ({ value:Math.round(r.actualLT),
+          itemStyle:{ borderRadius:[0,4,4,0], color: r.gapDays <= 0 ? cssv('--st-ok') : r.gapDays <= 14 ? cssv('--st-warn') : cssv('--st-bad') } })),
+        label:{ show:true, position:'right', color:mut, fontSize:11, formatter: p => { const g = list[p.dataIndex].gapDays; return (g > 0 ? '+' : '') + dmN(g); } } }
+    ]
+  }, true);
+}
+new MutationObserver(() => { if(SC.length) renderScChart(); }).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
+new ResizeObserver(() => { if(scEc) scEc.resize(); }).observe(scChart);
+
 function initP4(){
   const years = [...new Set(DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4)))].sort();
   years.forEach(y=>evYear.add(new Option(y,y)));

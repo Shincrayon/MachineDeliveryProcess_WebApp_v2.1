@@ -196,5 +196,40 @@
              vnd: r.reduce((s, x) => s + (+x.vnd || 0), 0) };
   });
 
+  /* ---------- Bảng điểm nhà cung cấp (thay cho view v_supplier_scorecard: tên NCC đã mã hoá) ----------
+     Mỗi NCC 1 dòng, tính trên mốc arrived_site:
+       delivered      số máy đã về NM (có actual)
+       onTimePct      % máy đã về có planned mà actual ≤ planned (null nếu không máy nào có planned)
+       avgLateDays    trung bình (actual − planned) của riêng các máy về trễ (null nếu không trễ)
+       committedLT /  lead time cam kết (planned − ngày ký HĐ) / thực tế (actual − ngày ký HĐ), trung bình,
+       actualLT       cùng tập máy có đủ 3 ngày để 2 con số so được với nhau; gapDays = actualLT − committedLT
+       inProgress     số máy chưa về
+     opt.minDelivered (mặc định 2): dưới ngưỡng thì sufficient = false ("insufficient data"). */
+  DM.supplierScorecard = (rows, opt) => {
+    const min = (opt && opt.minDelivered) || 2;
+    const avg = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : null;
+    const by = {};
+    rows.forEach(x => { const k = x.ncc || ''; (by[k] = by[k] || []).push(x); });
+    return Object.keys(by).map(name => {
+      const ms3 = by[name].map(x => DM.milestones(x));
+      const done = ms3.filter(m => m[2].actual);
+      const planned = done.filter(m => m[2].planned);
+      const late = planned.map(m => DM.days(m[2].planned, m[2].actual)).filter(d => d > 0);
+      const full = planned.filter(m => m[0].actual);
+      const committedLT = avg(full.map(m => DM.days(m[0].actual, m[2].planned)));
+      const actualLT = avg(full.map(m => DM.days(m[0].actual, m[2].actual)));
+      return {
+        name, delivered: done.length, inProgress: ms3.length - done.length,
+        onTimeNum: planned.filter(m => m[2].actual <= m[2].planned).length, onTimeDen: planned.length,
+        onTimePct: planned.length ? planned.filter(m => m[2].actual <= m[2].planned).length / planned.length : null,
+        lateCount: late.length, avgLateDays: avg(late),
+        ltCount: full.length, committedLT, actualLT,
+        gapDays: committedLT == null ? null : actualLT - committedLT,
+        sufficient: done.length >= min
+      };
+    }).sort((a, b) => (b.sufficient - a.sufficient) || ((b.onTimePct ?? -1) - (a.onTimePct ?? -1)) ||
+                      (b.delivered - a.delivered) || a.name.localeCompare(b.name));
+  };
+
   window.DM = DM;
 })();
