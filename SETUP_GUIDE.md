@@ -13,10 +13,24 @@ Giao diện giữ nguyên dashboard `Dashboard_TienDoMayVe.html`. Dữ liệu l�
 | `supabase/03a_real_data_84_machines.sql` | Nạp 84 máy **thật** từ Excel ngày 26/10/2026. Chỉ dùng khi IT/pháp chế đã đồng ý |
 | `supabase/03b_anonymized_data_84_machines.sql` | Nạp 84 máy **ẩn danh** để chạy thử: người phụ trách → PT01…, nhà cung cấp → NCC01…, giá trị xáo trộn ±30%, giải trình đã ẩn |
 | `supabase/04_model_serial.sql` | Thêm cột **Model** và **Số serial**. Chạy 1 lần nếu project đã tạo trước khi có 2 cột này |
+| `supabase/05_mmtb_schema.sql` | Tạo phân hệ **Danh mục MMTB** (bảng `mmtb_machines`, `suppliers`, `production_lines`…). Không đụng tới bảng `machines` của Tiến độ máy về. Chạy 1 lần |
+| `supabase/import/mmtb_import.sql` | Nạp 300 máy, 38 chuyền, 54 NCC từ `mmtb_export_2026-10-29.json`. Chạy sau `05`. Sinh lại bằng `mmtb_build_sql.py`. **Không dùng khi đã bật mã hoá** (gửi dữ liệu dạng thường) |
+| `supabase/06_encryption.sql` | Bật **mã hoá trên trình duyệt**: dữ liệu nhạy cảm được mã hoá AES-256 bằng mật khẩu dữ liệu trước khi gửi lên, Supabase chỉ lưu chuỗi đã mã hoá. Chạy 1 lần, sau `05` |
+| `supabase/import/mmtb_rows.json` | Cùng dữ liệu với `mmtb_import.sql`, để nạp bằng nút **📥 Nạp file dữ liệu** trong app (mã hoá trước khi gửi). Chứa dữ liệu thật dạng thường: chỉ giữ trên máy |
+
+**Bật mã hoá (làm 1 lần, theo thứ tự)**
+1. Chạy `06_encryption.sql` trong SQL Editor.
+2. Mở app, đăng nhập bằng tài khoản admin → app hỏi **tạo mật khẩu dữ liệu** (≥ 12 ký tự). Mật khẩu này khác mật khẩu đăng nhập. **Quên là mất dữ liệu**, không ai khôi phục được.
+3. Banner *"Còn N bản ghi chưa mã hoá"* → bấm **🔐 Mã hoá ngay**. App tải file sao lưu `Backup_BeforeEncrypt_….json` về máy trước, rồi mã hoá. Cất file sao lưu ở nơi an toàn rồi xoá khỏi thư mục Tải về.
+4. Danh mục MMTB (đang trống) → bấm **📥 Nạp file dữ liệu** → chọn `supabase/import/mmtb_rows.json`.
+5. Chạy lại mục 5 trong `06_encryption.sql`: cả 4 số phải bằng 0. Sau đó có thể chạy mục 6 (tuỳ chọn) để bỏ dữ liệu thường còn trong nhật ký sửa cũ.
+
+Mỗi lần mở app ở tab mới, app hỏi mật khẩu dữ liệu. Đóng tab hoặc đăng xuất là quên khoá.
 
 **Quyền người dùng**
 - `viewer`: chỉ xem.
-- `editor`: xem, nhập máy, sửa, xoá, nạp Excel.
+- `editor`: xem, nhập máy, sửa, xoá, nạp Excel ở cả 2 phân hệ.
+- `catalog_editor`: chỉ thêm, sửa, xoá ở **Danh mục MMTB**; phần Tiến độ máy về chỉ xem. Có sau khi chạy `05_mmtb_schema.sql`.
 - `admin`: như editor, thêm **Thùng rác** (khôi phục hoặc xoá hẳn máy).
 - Người chưa được cấp quyền đăng nhập vào cũng không thấy dữ liệu nào.
 - Chỉ cấp quyền được cho email `@duytanrecycling.com`, trừ email ngoại lệ `tiendungvo98@gmail.com`. Muốn thêm tên miền hoặc email ngoại lệ khác thì sửa dòng `check` trong `01_schema.sql`.
