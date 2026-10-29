@@ -27,7 +27,7 @@ Giao diện giữ nguyên dashboard `Dashboard_TienDoMayVe.html`. Dữ liệu l�
 
 Mỗi lần mở app ở tab mới, app hỏi mật khẩu dữ liệu. Đóng tab hoặc đăng xuất là quên khoá.
 
-**Mã PIN 6 số:** đặt cùng lúc với mật khẩu dữ liệu. Nhập sai mật khẩu dữ liệu 5 lần thì ô nhập bị khoá, phải nhập đúng PIN mới được thử tiếp. Sai PIN 5 lần thì chờ 15 phút. PIN **không** mở được dữ liệu, chỉ chặn việc dò mật khẩu trên giao diện. Quên PIN: chạy dòng `update public.app_crypto set pin_salt = null, …` ở cuối mục 1 trong `06_encryption.sql`, lần mở khoá sau app sẽ hỏi đặt PIN mới.
+**Mã PIN 6 số (đặt bằng SQL, không có trên app):** trong SQL Editor chạy `select public.admin_set_pin('123456');` (thay bằng PIN của bạn). Đổi PIN: chạy lại lệnh với PIN mới. Nhập sai mật khẩu dữ liệu 5 lần thì ô nhập bị khoá, phải nhập đúng PIN mới được thử tiếp; sai PIN 5 lần thì chờ 15 phút. PIN băm bcrypt, kiểm tra và đếm số lần sai đều trên máy chủ. PIN **không** mở được dữ liệu. Bỏ PIN: `update public.app_pin set pin_hash = null;`
 
 **Quyền người dùng**
 - `viewer`: chỉ xem.

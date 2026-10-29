@@ -2784,7 +2784,7 @@ const CRYPTO = (()=>{
   const te = new TextEncoder(), td = new TextDecoder();
   const b64 = u8 => { let s = ''; for(let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
   const unb64 = s => Uint8Array.from(atob(s), c=>c.charCodeAt(0));
-  const CHECK = 'tdmv-key-check-v1', SKEY = 'tdmv_k', ITER = 310000, PIN_ITER = 200000;
+  const CHECK = 'tdmv-key-check-v1', SKEY = 'tdmv_k', ITER = 310000;
   let key = null;
   async function derive(pass, salt, iters){
     const base = await crypto.subtle.importKey('raw', te.encode(pass), 'PBKDF2', false, ['deriveKey']);
@@ -2825,18 +2825,8 @@ const CRYPTO = (()=>{
            if(await decStr(row.check_value) === CHECK) return true; }catch(e){}
       key = null; try{ sessionStorage.removeItem(SKEY); }catch(e){} return false;
     },
-    forget(){ key = null; try{ sessionStorage.removeItem(SKEY); }catch(e){} },
-    /* mã PIN 6 số: chỉ để mở lại ô nhập mật khẩu sau 5 lần sai, không dùng để giải mã */
-    async makePin(pin){
-      const salt = b64(crypto.getRandomValues(new Uint8Array(16)));
-      return { pin_salt:salt, pin_iter:PIN_ITER, pin_hash: await pinHash(pin, salt, PIN_ITER) };
-    },
-    async checkPin(pin, row){ return !!row.pin_hash && await pinHash(pin, row.pin_salt, row.pin_iter || PIN_ITER) === row.pin_hash; }
+    forget(){ key = null; try{ sessionStorage.removeItem(SKEY); }catch(e){} }
   };
-  async function pinHash(pin, salt, iters){
-    const base = await crypto.subtle.importKey('raw', te.encode(pin), 'PBKDF2', false, ['deriveBits']);
-    return b64(new Uint8Array(await crypto.subtle.deriveBits({ name:'PBKDF2', salt:unb64(salt), iterations:iters, hash:'SHA-256' }, base, 256)));
-  }
 })();
 /* trường nhạy cảm của từng bảng + giá trị để trống trong cột gốc */
 const SEC = {
@@ -2872,7 +2862,7 @@ async function cryptoGate(sb, role, card){
   if(error) return true;                        // chưa chạy 06_encryption.sql: app chạy như cũ, không mã hoá
   if(row && await CRYPTO.resume(row)) return true;
   const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;');
-  return new Promise(resolve=>{
+  return new Promise(async resolve=>{
     const done = ok => { const bg = document.getElementById('loginBg'); if(bg) bg.remove(); resolve(ok); };
     if(!row){
       if(role !== 'admin'){ done(true); return; }
@@ -2884,7 +2874,6 @@ async function cryptoGate(sb, role, card){
         <form id="cgForm" novalidate><div style="display:flex;flex-direction:column;gap:12px">
           <label>${tr('Data password (at least 12 characters)','Mật khẩu dữ liệu (tối thiểu 12 ký tự)')}<input id="cgP1" type="password" autocomplete="new-password"></label>
           <label>${tr('Confirm data password','Nhập lại mật khẩu dữ liệu')}<input id="cgP2" type="password" autocomplete="new-password"></label>
-          ${pinFields('cg')}
           <label style="flex-direction:row;align-items:center;gap:8px;font-weight:400"><input id="cgOk" type="checkbox" style="width:auto"> ${tr('I have saved this password somewhere safe','Tôi đã lưu mật khẩu này ở nơi an toàn')}</label>
           <div class="err" id="cgErr"></div>
           <button type="submit" id="cgBtn">${tr('🔐 Create and turn on encryption','🔐 Tạo và bật mã hoá')}</button>
@@ -2896,11 +2885,10 @@ async function cryptoGate(sb, role, card){
         const p1 = cgP1.value, p2 = cgP2.value, err = t => { cgErr.textContent = t; };
         if(p1.length < 12) return err(tr('Use at least 12 characters.','Dùng ít nhất 12 ký tự.'));
         if(p1 !== p2) return err(tr('The two passwords do not match.','Hai mật khẩu không khớp.'));
-        const pinErr = checkPinFields('cg'); if(pinErr) return err(pinErr);
         if(!cgOk.checked) return err(tr('Please confirm you have saved the password.','Hãy xác nhận đã lưu mật khẩu.'));
         cgBtn.disabled = true; cgBtn.textContent = tr('Creating…','Đang tạo…');
         try{
-          const r = Object.assign(await CRYPTO.create(p1), await CRYPTO.makePin(cgPin1.value));
+          const r = await CRYPTO.create(p1);
           const { error: e2 } = await sb.from('app_crypto').insert(Object.assign(r, { created_by: window.__userEmail || null }));
           if(e2) throw e2;
           done(true);
@@ -2918,89 +2906,54 @@ async function cryptoGate(sb, role, card){
       </div></form>
       <p style="font-size:12px"><a href="#" id="cuOut" style="color:var(--blue)">${tr('Sign out','Đăng xuất')}</a></p>`);
     bg.querySelector('#cuOut').onclick = async e=>{ e.preventDefault(); await appSignOut(); location.reload(); };
-    /* Sai mật khẩu dữ liệu 5 lần -> khoá ô nhập, phải nhập PIN 6 số mới được thử tiếp.
-       Sai PIN 5 lần -> chờ 15 phút. Bộ đếm lưu trên trình duyệt này. */
-    const LS = { get:k=>{ try{ return +localStorage.getItem(k) || 0; }catch(e){ return 0; } },
-                 set:(k,v)=>{ try{ v ? localStorage.setItem(k, String(v)) : localStorage.removeItem(k); }catch(e){} } };
-    const MAX = 5, LOCK_MS = 15*60*1000;
-    let timer = null;
-    const pinMode = () => !!row.pin_hash && LS.get('tdmv_df') >= MAX;
+    /* Sai mật khẩu dữ liệu 5 lần -> khoá ô nhập, phải nhập đúng PIN 6 số mới được thử tiếp; sai PIN 5 lần -> chờ 15 phút.
+       PIN đặt bằng SQL (admin_set_pin), kiểm tra và đếm số lần sai đều trên máy chủ (06_encryption.sql mục 1b).
+       Máy chủ chưa có các hàm này (SQL cũ) thì không chặn. */
+    const rpc = async (fn, args) => { const { data, error } = await sb.rpc(fn, args || {}); return error ? null : data; };
+    let st = await rpc('unlock_status') || { need_pin:false, pin_set:false }, timer = null;
     function view(){
-      const pm = pinMode(), until = LS.get('tdmv_pl'), wait = until - Date.now();
+      const pm = !!st.need_pin, lockMs = st.locked_until ? new Date(st.locked_until) - Date.now() : 0;
       cuPwBox.hidden = pm; cuPinBox.hidden = !pm;
       cuBtn.textContent = pm ? tr('🔢 Check PIN','🔢 Kiểm tra PIN') : tr('🔓 Unlock','🔓 Mở khoá');
       clearInterval(timer);
-      if(pm && wait > 0){
+      if(pm && lockMs > 0){
         cuBtn.disabled = true; cuPin.disabled = true;
-        const tick = () => { const s = Math.max(0, Math.ceil((LS.get('tdmv_pl') - Date.now())/1000));
+        const end = Date.now() + lockMs;
+        const tick = async () => { const s = Math.max(0, Math.ceil((end - Date.now())/1000));
           cuPinMsg.textContent = tr(`Too many wrong PINs. Try again in ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}.`,
                                     `Nhập sai PIN quá nhiều. Thử lại sau ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}.`);
-          if(s <= 0){ LS.set('tdmv_pl', 0); LS.set('tdmv_pf', 0); view(); } };
+          if(s <= 0){ clearInterval(timer); st = await rpc('unlock_status') || st; view(); } };
         tick(); timer = setInterval(tick, 1000); return;
       }
       cuBtn.disabled = false; cuPin.disabled = false;
-      if(pm){ cuPinMsg.textContent = tr('The data password was entered wrong 5 times. Enter your 6-digit PIN to try again.',
+      if(pm){ cuPinMsg.textContent = tr('The data password was entered wrong 5 times. Enter the 6-digit PIN to try again.',
                                         'Đã nhập sai mật khẩu dữ liệu 5 lần. Nhập mã PIN 6 số để được thử lại.'); cuPin.value = ''; cuPin.focus(); }
       else cuP.focus();
     }
     view();
     bg.querySelector('#cuForm').onsubmit = async e=>{
       e.preventDefault(); cuErr.textContent = '';
-      if(pinMode()){
-        if(LS.get('tdmv_pl') > Date.now()) return;
+      if(st.need_pin){
         cuBtn.disabled = true;
-        const ok = /^\d{6}$/.test(cuPin.value) && await CRYPTO.checkPin(cuPin.value, row);
-        if(ok){ LS.set('tdmv_df', 0); LS.set('tdmv_pf', 0); view(); cuP.value = ''; return; }
-        const pf = LS.get('tdmv_pf') + 1; LS.set('tdmv_pf', pf);
-        if(pf >= MAX){ LS.set('tdmv_pl', Date.now() + LOCK_MS); }
-        else cuErr.textContent = tr(`Wrong PIN (${MAX - pf} tries left).`, `Sai PIN (còn ${MAX - pf} lần).`);
-        view(); return;
+        const r = await rpc('verify_pin', { p_pin: cuPin.value });
+        if(r) st = r;
+        if(r && r.ok){ cuP.value = ''; view(); return; }
+        view();
+        if(r && !r.locked_until) cuErr.textContent = tr(`Wrong PIN (${r.pin_left} tries left).`, `Sai PIN (còn ${r.pin_left} lần).`);
+        return;
       }
       cuBtn.disabled = true; cuBtn.textContent = tr('Unlocking…','Đang mở khoá…');
       const ok = await CRYPTO.unlock(cuP.value, row);
-      if(ok){
-        LS.set('tdmv_df', 0); LS.set('tdmv_pf', 0); clearInterval(timer);
-        if(!row.pin_hash && role === 'admin') return askPin();       // mật khẩu tạo trước khi có tính năng PIN
-        return done(true);
-      }
-      const df = LS.get('tdmv_df') + 1; LS.set('tdmv_df', df);
+      if(ok){ clearInterval(timer); await rpc('report_pw_ok'); return done(true); }
+      st = await rpc('report_pw_fail') || st;
       view();
-      cuErr.textContent = pinMode() ? '' : tr('Wrong data password.','Sai mật khẩu dữ liệu.') +
-        (row.pin_hash ? tr(` ${MAX - df} tries left before the PIN is required.`, ` Còn ${MAX - df} lần trước khi phải nhập PIN.`) : '');
-      if(!pinMode()) cuP.select();
+      if(!st.need_pin){
+        cuErr.textContent = tr('Wrong data password.','Sai mật khẩu dữ liệu.') +
+          (st.pin_set ? tr(` ${st.pw_left} tries left before the PIN is required.`, ` Còn ${st.pw_left} lần trước khi phải nhập PIN.`) : '');
+        cuP.select();
+      }
     };
-    /* đặt PIN lần đầu (khi mật khẩu dữ liệu đã có từ trước) */
-    function askPin(){
-      const b2 = card(`<h2>${tr('🔢 Set a 6-digit PIN','🔢 Đặt mã PIN 6 số')}</h2>
-        <p>${tr('If the data password is entered wrong 5 times, this PIN is needed before you can try again. The PIN cannot decrypt the data.',
-                'Khi nhập sai mật khẩu dữ liệu 5 lần, phải nhập PIN này mới được thử tiếp. PIN không giải mã được dữ liệu.')}</p>
-        <form id="spForm" novalidate><div style="display:flex;flex-direction:column;gap:12px">
-          ${pinFields('sp')}<div class="err" id="spErr"></div>
-          <button type="submit" id="spBtn">${tr('💾 Save PIN','💾 Lưu PIN')}</button></div></form>
-        <p style="font-size:12px"><a href="#" id="spLater" style="color:var(--blue)">${tr('Later','Để sau')}</a></p>`);
-      b2.querySelector('#spLater').onclick = e=>{ e.preventDefault(); done(true); };
-      b2.querySelector('#spForm').onsubmit = async e=>{
-        e.preventDefault();
-        const m = checkPinFields('sp'); if(m){ spErr.textContent = m; return; }
-        spBtn.disabled = true;
-        const p = await CRYPTO.makePin(spPin1.value);
-        const { error: e3 } = await sb.from('app_crypto').update(p).eq('id', 1);
-        if(e3){ spBtn.disabled = false; spErr.textContent = e3.message; return; }
-        done(true);
-      };
-      b2.querySelector('#spPin1').focus();
-    }
   });
-}
-function pinFields(p){
-  return `<label>${tr('6-digit PIN (asked after 5 wrong passwords)','Mã PIN 6 số (hỏi khi sai mật khẩu 5 lần)')}<input id="${p}Pin1" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••••"></label>
-    <label>${tr('Confirm PIN','Nhập lại PIN')}<input id="${p}Pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••••"></label>`;
-}
-function checkPinFields(p){
-  const a = document.getElementById(p+'Pin1').value, b = document.getElementById(p+'Pin2').value;
-  if(!/^\d{6}$/.test(a)) return tr('The PIN must be exactly 6 digits.','PIN phải gồm đúng 6 chữ số.');
-  if(a !== b) return tr('The two PINs do not match.','Hai mã PIN không khớp.');
-  return '';
 }
 
 /* ===== mã hoá dữ liệu đang lưu dạng thường (admin bấm 1 lần sau khi tạo mật khẩu dữ liệu) ===== */
