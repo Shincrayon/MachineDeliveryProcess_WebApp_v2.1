@@ -27,6 +27,8 @@ Giao diện giữ nguyên dashboard `Dashboard_TienDoMayVe.html`. Dữ liệu l�
 
 Mỗi lần mở app ở tab mới, app hỏi mật khẩu dữ liệu. Đóng tab hoặc đăng xuất là quên khoá.
 
+**Mã PIN 6 số:** đặt cùng lúc với mật khẩu dữ liệu. Nhập sai mật khẩu dữ liệu 5 lần thì ô nhập bị khoá, phải nhập đúng PIN mới được thử tiếp. Sai PIN 5 lần thì chờ 15 phút. PIN **không** mở được dữ liệu, chỉ chặn việc dò mật khẩu trên giao diện. Quên PIN: chạy dòng `update public.app_crypto set pin_salt = null, …` ở cuối mục 1 trong `06_encryption.sql`, lần mở khoá sau app sẽ hỏi đặt PIN mới.
+
 **Quyền người dùng**
 - `viewer`: chỉ xem.
 - `editor`: xem, nhập máy, sửa, xoá, nạp Excel ở cả 2 phân hệ.
