@@ -154,5 +154,44 @@
     .sort((a, b) => b.d.days - a.d.days || String(a.x.ten).localeCompare(String(b.x.ten)))
     .slice(0, n || 5);
 
+  /* ---------- Gantt kế hoạch so với thực tế ----------
+     Mỗi máy 1 thanh mờ (kế hoạch) + 1 thanh đậm (thực tế, hoặc dự kiến nếu chưa về), từ contract_signed tới arrived_site.
+     Kế hoạch: bảng machines không có ngày ký HĐ kế hoạch nên đầu thanh kế hoạch = ngày ký HĐ thực tế.
+     opt.recentDays: ngoài máy chưa về, chỉ lấy máy đã về trong N ngày qua (null = lấy hết). Nhóm theo công ty. */
+  DM.gantt = (rows, opt) => {
+    opt = opt || {};
+    const from = opt.recentDays == null ? null : DM.addDays(DM.todayIso(), -opt.recentDays);
+    const items = rows.map(x => {
+      const m = DM.milestones(x), c = m[0], a = m[2];
+      const end = a.actual || a.forecast;
+      if (!c.actual || (!end && !a.planned)) return null;
+      if (from && a.actual && a.actual < from) return null;
+      return { x, group: DM.companyCode(x.noilapdat) || 'Other', start: c.actual,
+               planEnd: a.planned, end, endKind: a.actual ? 'actual' : 'forecast',
+               sev: DM.severity(x), delay: DM.delay(x), milestones: m };
+    }).filter(Boolean);
+    const order = [...DM.COMPANIES, 'Other'];
+    items.sort((p, q) => order.indexOf(p.group) - order.indexOf(q.group) || String(p.end || p.planEnd).localeCompare(String(q.end || q.planEnd)));
+    const groups = order.map(g => ({ group: g, items: items.filter(i => i.group === g) })).filter(g => g.items.length);
+    return { items, groups };
+  };
+
+  /* ---------- Phễu vòng đời ----------
+     Số máy (hoặc giá trị VNĐ) đang ở từng giai đoạn. Bảng machines không tách được "đã đặt hàng" và "đang chế tạo"
+     (gộp 1 bước) và chưa có dữ liệu lắp đặt / nghiệm thu (available = false). */
+  DM.FUNNEL = [
+    { key: 'planned',       states: ['planned'] },
+    { key: 'manufacturing', states: ['manufacturing'] },
+    { key: 'shipping',      states: ['shipping'] },
+    { key: 'arrived',       states: ['arrived'] },
+    { key: 'installing',    states: [], available: false },
+    { key: 'in_operation',  states: [], available: false }   // nghiệm thu trong 12 tháng gần nhất
+  ];
+  DM.funnel = rows => DM.FUNNEL.map(st => {
+    const r = rows.filter(x => st.states.includes(DM.lifecycle(x)));
+    return { key: st.key, available: st.available !== false, rows: r, count: r.length,
+             vnd: r.reduce((s, x) => s + (+x.vnd || 0), 0) };
+  });
+
   window.DM = DM;
 })();
