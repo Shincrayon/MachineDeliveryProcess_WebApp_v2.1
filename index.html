@@ -106,6 +106,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:
 
 /* ===== toolbar / table ===== */
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.ov-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.ov-top .ticker{flex:1;min-width:0;margin-bottom:0}
+.ov-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto;white-space:nowrap;font-size:12.5px;font-weight:700;color:var(--muted)}
+.ov-bar select{padding:6px 10px;font-size:13px;font-weight:600;border-radius:9px;border:1px solid var(--border);background:var(--field);color:var(--txt);outline:none;cursor:pointer;min-width:120px}
 .search{flex:1;min-width:200px;position:relative}
 .search input{width:100%;padding:9px 13px 9px 36px;border-radius:10px;border:1px solid var(--border);background:var(--field);color:var(--txt);font-size:13.5px;outline:none;transition:border .2s}
 .search input:focus{border-color:var(--blue)}
@@ -502,13 +506,16 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 
   <!-- ============ PAGE 1: TỔNG QUAN ============ -->
   <div class="page active" id="p1">
+    <div class="ov-top">
     <div class="ticker" id="ticker" style="display:none">
       <span class="ticker-ic">🚨</span>
       <div class="ticker-clip"><div class="ticker-track" id="tickerTrack"></div></div>
       <span class="ticker-count" id="tickerCount"></span>
     </div>
+    <div class="ov-bar"><span>📅 Period</span><select id="ovMonth"><option value="">Month: All</option></select><select id="ovYear"><option value="">Year: All</option></select></div>
+    </div>
     <div class="kpis">
-      <div class="kpi" style="--accent:var(--sky)" onclick="showKPI('all')"><span class="ic">⚙️</span><div class="lbl" style="display:flex;align-items:center;gap:8px">Total equipment<select id="kpiYear" style="padding:2px 6px;font-size:11px;border-radius:7px;border:1px solid var(--border);background:var(--field);color:var(--txt);outline:none;cursor:pointer"></select></div><div class="val" id="kpiN">0</div><div class="note" id="kpiNote"></div></div>
+      <div class="kpi" style="--accent:var(--sky)" onclick="showKPI('all')"><span class="ic">⚙️</span><div class="lbl">Total equipment</div><div class="val" id="kpiN">0</div><div class="note" id="kpiNote"></div></div>
       <div class="kpi" style="--accent:var(--violet)" onclick="showKPI('value')"><span class="ic">💰</span><div class="lbl">Total value</div><div class="val"><span id="kpiValPre"></span><span id="kpiVal">0</span><span id="kpiValUnit"></span></div><div class="note" id="kpiValNote"></div></div>
       <div class="kpi" style="--accent:var(--blue)" onclick="showKPI('waiting')"><span class="ic">⏳</span><div class="lbl">Awaiting</div><div class="val" id="kpiWait">0</div><div class="note">expected in more than 15 days</div></div>
       <div class="kpi" style="--accent:var(--amber)" onclick="showKPI('soon')"><span class="ic">🚢</span><div class="lbl">Arriving soon</div><div class="val" id="kpiSoon">0</div><div class="note">within 15 days · get ready to receive</div></div>
@@ -516,8 +523,8 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <div class="kpi" style="--accent:var(--green)" onclick="showKPI('arrived')"><span class="ic">✅</span><div class="lbl">Arrived at plant</div><div class="val" id="kpiArr">0</div><div class="note" id="kpiArrNote"></div></div>
     </div>
     <div class="grid2">
-      <div class="card" style="--accent:#34d399"><h3><span class="dot"></span>Equipment status<span class="sel"><select id="selMonth"><option value="">Month: All</option></select><select id="selYear"><option value="">Year: All</option></select></span></h3><div class="chartbox"><canvas id="chStatus"></canvas></div></div>
-      <div class="card" style="--accent:#60a5fa"><h3><span class="dot"></span>Monthly arrival schedule<span class="sel"><span class="gv-btn on" id="gvBar">▮ Bars</span><span class="gv-btn" id="gvTl">⏱ Timeline</span><select id="selYearM"></select></span></h3><div class="chartbox"><canvas id="chMonth"></canvas><div id="ganttBox"></div></div></div>
+      <div class="card" style="--accent:#34d399"><h3><span class="dot"></span>Equipment status</h3><div class="chartbox"><canvas id="chStatus"></canvas></div></div>
+      <div class="card" style="--accent:#60a5fa"><h3><span class="dot"></span>Monthly arrival schedule<span class="sel"><span class="gv-btn on" id="gvBar">▮ Bars</span><span class="gv-btn" id="gvTl">⏱ Timeline</span></span></h3><div class="chartbox"><canvas id="chMonth"></canvas><div id="ganttBox"></div></div></div>
     </div>
   </div>
 
@@ -1138,12 +1145,25 @@ document.querySelectorAll('[data-count]').forEach(el=>{
   ticker.style.display = 'flex';
 })();
 
-/* ===== KPI tổng thiết bị theo năm ===== */
+/* ===== Mốc thời gian chung của trang Tổng quan: KPI + 3 biểu đồ cùng lọc =====
+   ovMonth ('01'..'12' hoặc '') và ovYear ('YYYY' hoặc '') chọn độc lập, theo ngày về NM */
+const OV_HOOKS = [];
+const ovMatch = d => !!d && (!ovYear.value || d.slice(0,4)===ovYear.value) && (!ovMonth.value || d.slice(5,7)===ovMonth.value);
+const ovRows = () => DATA.filter(x => ovMatch(x.vedukienn));
+const ovLabel = () => {
+  const m = ovMonth.value, y = ovYear.value;
+  if(!m && !y) return tr('All','Tất cả');
+  if(!m) return y;
+  if(!y) return tr(MON[+m-1]+' (all years)', 'Tháng '+(+m)+' (mọi năm)');
+  return tr(MON[+m-1]+' '+y, 'Tháng '+(+m)+'/'+y);
+};
 (function(){
   const years = [...new Set(DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4)))].sort();
-  years.forEach(y=>kpiYear.add(new Option(y, y)));
-  kpiYear.add(new Option(tr('All','Tất cả'),''));
-  kpiYear.value = years.includes('2026') ? '2026' : '';
+  years.forEach(y=>ovYear.add(new Option(y,y)));
+  for(let i=1;i<=12;i++) ovMonth.add(new Option(tr(MON[i-1],'Tháng '+i), String(i).padStart(2,'0')));
+  ovMonth.onchange = ovYear.onchange = () => OV_HOOKS.forEach(f=>f());
+})();
+(function(){
   function animTo(el, target, dec){
     const from = parseFloat((el.textContent||'0').replace(LANG==='vi' ? /\./g : /,/g,'').replace(',','.')) || 0;
     const t0 = performance.now();
@@ -1154,10 +1174,10 @@ document.querySelectorAll('[data-count]').forEach(el=>{
   kpiValPre.textContent = tr('$', '');
   kpiValUnit.textContent = tr('M', ' tỷ ₫');
   function upd(){
-    const y = kpiYear.value;
-    const rows = DATA.filter(x=>x.vedukienn && (!y || x.vedukienn.slice(0,4)===y));
+    const y = ovMonth.value || ovYear.value;
+    const rows = ovRows();
     const units = rows.reduce((s,x)=>s+x.sl,0);
-    const tag = y ? tr('due at plant in ','dự kiến về NM ')+y : tr('entire portfolio','toàn bộ danh mục');
+    const tag = y ? tr('due at plant in ','dự kiến về NM ')+ovLabel() : tr('entire portfolio','toàn bộ danh mục');
     animTo(kpiN, rows.length);
     kpiNote.textContent = units + tr(' units by quantity · ',' máy theo số lượng · ') + tag;
     const vnd = rows.reduce((s,x)=>s+x.vnd,0), usd = rows.reduce((s,x)=>s+x.usd,0);
@@ -1176,8 +1196,7 @@ document.querySelectorAll('[data-count]').forEach(el=>{
     animTo(kpiWait, rows.filter(x=>x.status==='waiting').length);
     animTo(kpiDelay, rows.filter(isLate).length);
   }
-  kpiYear.onclick = e=>e.stopPropagation();
-  kpiYear.onchange = upd; upd();
+  OV_HOOKS.push(upd); upd();
 })();
 
 /* ===== page 1 charts ===== */
@@ -1191,10 +1210,7 @@ const DGL = {'Sớm':'Early','Đúng tiến độ':'On time','Trễ':'Late'};
 const dgT = v => (LANG==='en' && DGL[v]) || v || '—';
 const STS = ['arrived','soon','waiting'];
 function statusRings(){
-  const m = selMonth.value, y = selYear.value;
-  const rows = DATA.filter(x => x.vedukienn &&
-    (!y || x.vedukienn.slice(0,4)===y) &&
-    (!m || x.vedukienn.slice(5,7)===m));
+  const rows = ovRows();
   const outer = STS.map(s=>rows.filter(x=>x.status===s).length);
   const inner=[], innerLbl=[], innerCol=[];
   STS.forEach(s=>DG.forEach(g=>{
@@ -1212,9 +1228,6 @@ function updateStatusChart(){
   stChart.update();
 }
 function initP1(){
-  const years = [...new Set(DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4)))].sort();
-  years.forEach(y=>selYear.add(new Option(y,y)));
-  for(let i=1;i<=12;i++) selMonth.add(new Option(tr(MON[i-1],'Tháng '+i), String(i).padStart(2,'0')));
   const r0 = statusRings();
   stChart = new Chart(chStatus,{type:'doughnut',data:{
     labels:[LBL.arrived,LBL.soon,LBL.waiting],
@@ -1243,14 +1256,11 @@ function initP1(){
       }}},
       title:{display:true,text:r0.total+tr(' machines',' thiết bị'),font:{size:12.5},padding:{bottom:4}}},
       animation:{animateRotate:true,duration:1200}}});
-  selMonth.onchange = updateStatusChart;
-  selYear.onchange = updateStatusChart;
-  const yearsM = [...new Set(DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4)))].sort();
-  yearsM.forEach(y=>selYearM.add(new Option(y,y)));
-  selYearM.add(new Option(tr('All','Tất cả'),''));
-  selYearM.value = yearsM.includes('2026') ? '2026' : '';
+  OV_HOOKS.push(updateStatusChart);
+  /* biểu đồ tháng: chọn năm -> 12 tháng của năm đó (không chọn năm -> mọi tháng có dữ liệu);
+     chọn tháng -> làm nổi (các) cột của tháng đó, cột khác mờ */
   function monthData(){
-    const y = selYearM.value;
+    const y = ovYear.value;
     const keys = y ? Array.from({length:12},(_,i)=>y+'-'+String(i+1).padStart(2,'0')) : AGG.months;
     const labels = keys.map(k=>{const[yy,mo]=k.split('-');return y ? MON[mo-1] : MON[mo-1]+tr(" '",'/')+yy.slice(2)});
     const inM = k => DATA.filter(x=>x.vedukienn && x.vedukienn.slice(0,7)===k);
@@ -1258,35 +1268,42 @@ function initP1(){
       arr: keys.map(k=>inM(k).filter(x=>x.status==='arrived').length),
       soon: keys.map(k=>inM(k).filter(x=>x.status==='soon').length),
       wait: keys.map(k=>inM(k).filter(x=>x.status==='waiting').length),
-      late: keys.map(k=>inM(k).filter(x=>x.danhgia==='Trễ').length)};
+      late: keys.map(k=>inM(k).filter(x=>x.danhgia==='Trễ').length),
+      dim: keys.map(k=>!!ovMonth.value && k.slice(5,7)!==ovMonth.value)};
   }
+  const fade = (col, md) => md.dim.map(d => d ? col+'40' : col);
   const md0 = monthData();
   const mChart = new Chart(chMonth,{type:'bar',data:{labels:md0.labels,datasets:[
     {type:'line',label:tr('Late','Trễ'),data:md0.late,borderColor:'#f87171',backgroundColor:'#f87171',
      pointBackgroundColor:'#f87171',pointRadius:4,pointHoverRadius:6,borderWidth:2.5,tension:.35,order:0},
-    {label:LBL.arrived,data:md0.arr,backgroundColor:C.arrived,borderRadius:5,stack:'s',order:1},
-    {label:LBL.soon,data:md0.soon,backgroundColor:C.soon,borderRadius:5,stack:'s',order:1},
-    {label:LBL.waiting,data:md0.wait,backgroundColor:C.waiting,borderRadius:5,stack:'s',order:1}]},
-    options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true}},
+    {label:LBL.arrived,data:md0.arr,backgroundColor:fade(C.arrived,md0),borderRadius:5,stack:'s',order:1},
+    {label:LBL.soon,data:md0.soon,backgroundColor:fade(C.soon,md0),borderRadius:5,stack:'s',order:1},
+    {label:LBL.waiting,data:md0.wait,backgroundColor:fade(C.waiting,md0),borderRadius:5,stack:'s',order:1}]},
+    options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true,
+        /* màu chú thích luôn đậm, kể cả khi cột tháng đầu đang mờ */
+        generateLabels: ch => Chart.defaults.plugins.legend.labels.generateLabels(ch)
+          .map((l,i)=>({...l, fillStyle:['#f87171',C.arrived,C.soon,C.waiting][i]}))}},
       tooltip:{callbacks:{label: ctx => ctx.dataset.label+': '+ctx.parsed.y+tr(' machines',' thiết bị')}}},
       scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{stepSize:1}}}}});
-  selYearM.onchange = ()=>{
+  OV_HOOKS.push(()=>{
     const md = monthData();
     mChart.data.labels = md.labels;
     mChart.data.datasets[0].data = md.late;
-    mChart.data.datasets[1].data = md.arr;
-    mChart.data.datasets[2].data = md.soon;
-    mChart.data.datasets[3].data = md.wait;
+    [['arr',C.arrived],['soon',C.soon],['wait',C.waiting]].forEach(([k,col],i)=>{
+      mChart.data.datasets[i+1].data = md[k];
+      mChart.data.datasets[i+1].backgroundColor = fade(col, md);
+    });
     mChart.update();
     if(ganttBox.style.display==='block') renderGantt();
-  };
+  });
 
   /* ===== Gantt timeline sinh động ===== */
   const gxTip = document.createElement('div'); gxTip.className='gx-tip'; document.body.appendChild(gxTip);
   const fmtVN = s => s ? s.split('-').reverse().join('/') : '—';
   const GXC = {arrived:'#34d399', soon:'#fbbf24', waiting:'#60a5fa', unknown:'#64748b'};
   function renderGantt(){
-    const rows = DATA.filter(x=>x.vedukienn && x.daysleft>=-30)
+    const p = ovMonth.value || ovYear.value;
+    const rows = (p ? ovRows() : DATA.filter(x=>x.vedukienn && x.daysleft>=-30))
                      .sort((a,b)=> a.vedukienn<b.vedukienn?-1:1);
     if(!rows.length){ ganttBox.innerHTML='<div style="color:var(--muted);padding:20px">'+tr('No data','Không có dữ liệu')+'</div>'; return; }
     const t0=new Date(); t0.setHours(0,0,0,0);
@@ -1305,7 +1322,7 @@ function initP1(){
     const mh = `<div class="gx-yrow">${yrs.map(yy=>`<div class="gx-y" style="width:${yy.w}%">${yy.y}</div>`).join('')}</div>`+
                `<div class="gx-mrow">${cells.map(cl=>`<div class="gx-m" style="width:${cl.w}%">${mLbl(cl)}</div>`).join('')}</div>`;
     const grid = `<div class="gx-grid">${cells.map(cl=>`<i class="${cl.m===1?'y':''}" style="left:${cl.left}%"></i>`).join('')}${cells.filter(cl=>cl.m%2===0).map(cl=>`<s style="left:${cl.left}%;width:${cl.w}%"></s>`).join('')}<div class="gx-today" style="left:${pct(t0)}%"></div></div>`;
-    let out=`<div class="gx-lg"><span><i style="background:#34d399"></i>${LBL.arrived}</span><span><i style="background:#fbbf24"></i>${LBL.soon}</span><span><i style="background:#60a5fa"></i>${LBL.waiting}</span><span><i style="background:var(--red);border:1.5px solid #ffb4b4;transform:rotate(45deg)"></i>${tr(`Planned date`,`Mốc kế hoạch`)}</span><span style="color:var(--red)">▎${tr(`Today`,`Hôm nay`)}</span><span style="margin-left:auto;color:var(--muted)">${tr(`Showing: machines not yet arrived + arrived in the last 30 days`,`Hiển thị: máy chưa về + máy đã về trong 30 ngày qua`)}</span></div><div class="gx-head">${mh}</div>`;
+    let out=`<div class="gx-lg"><span><i style="background:#34d399"></i>${LBL.arrived}</span><span><i style="background:#fbbf24"></i>${LBL.soon}</span><span><i style="background:#60a5fa"></i>${LBL.waiting}</span><span><i style="background:var(--red);border:1.5px solid #ffb4b4;transform:rotate(45deg)"></i>${tr(`Planned date`,`Mốc kế hoạch`)}</span><span style="color:var(--red)">▎${tr(`Today`,`Hôm nay`)}</span><span style="margin-left:auto;color:var(--muted)">${p ? tr(`Showing: machines due at plant in `,`Hiển thị: máy về NM trong `)+ovLabel() : tr(`Showing: machines not yet arrived + arrived in the last 30 days`,`Hiển thị: máy chưa về + máy đã về trong 30 ngày qua`)}</span></div><div class="gx-head">${mh}</div>`;
     out+='<div class="gx-body">'+grid+rows.map((x,i)=>{
       const s=pct(D(x.dathang||x.duyet||x.vedukienn)), e=pct(D(x.vedukienn));
       const kh=x.vekh?`<div class="gx-kh" style="left:${pct(D(x.vekh))}%"></div>`:'';
@@ -1631,8 +1648,7 @@ function render(){
 }
 window.goPage = p => { pageNo = p; render(); };
 window.showKPI = kind => {
-  const y = kpiYear.value;
-  let rows = DATA.filter(x=>x.vedukienn && (!y || x.vedukienn.slice(0,4)===y));
+  let rows = ovRows();
   const T = tr({all:'Total equipment', value:'Total value', waiting:'Awaiting', soon:'Arriving soon (≤15 days)', late:'Late vs plan', arrived:'Arrived at plant'},
     {all:'Tổng thiết bị', value:'Tổng giá trị', waiting:'Đang chờ về', soon:'Sắp về (≤15 ngày)', late:'Về trễ so với kế hoạch', arrived:'Đã về nhà máy'});
   if(kind==='waiting'||kind==='soon'||kind==='arrived') rows = rows.filter(x=>x.status===kind);
@@ -1643,7 +1659,7 @@ window.showKPI = kind => {
     return a.vedukienn>b.vedukienn?1:-1;
   });
   const vnd = rows.reduce((s,x)=>s+x.vnd,0), usd = rows.reduce((s,x)=>s+x.usd,0), units = rows.reduce((s,x)=>s+x.sl,0);
-  mTitle.textContent = T[kind] + (y? ' · '+y : ' · '+tr('All','Tất cả'));
+  mTitle.textContent = T[kind] + ' · ' + ovLabel();
   mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')} · ${(vnd/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')} ≈ ${(usd/1e6).toLocaleString(NUMLOC,{maximumFractionDigits:2})} ${tr('M USD','triệu USD')}`;
   mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(x=>`
     <div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
@@ -2978,6 +2994,7 @@ const STATIC_VI = new Map([
   ['Equipment status','Trạng thái thiết bị'],
   ['Month: All','Tháng: Tất cả'],
   ['Year: All','Năm: Tất cả'],
+  ['📅 Period','📅 Mốc thời gian'],
   ['Monthly arrival schedule','Lịch máy về theo tháng'],
   ['▮ Bars','▮ Cột'],
   ['Value by supplier (B ₫)','Giá trị theo nhà cung cấp (tỷ ₫)'],
