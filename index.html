@@ -545,6 +545,8 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
       <label>Installation site<input id="f_nld" type="text"></label>
       <label>Supplier<input id="f_ncc" type="text"></label>
       <label>Origin<input id="f_xx" type="text"></label>
+      <label>Model<input id="f_model" type="text"></label>
+      <label>Serial number<input id="f_serial" type="text"></label>
       <label>Total value (VND)<input id="f_vnd" type="text" inputmode="numeric" placeholder="e.g. 3,000,000,000"></label>
       <label>Total value (USD)<input id="f_usd" type="text" inputmode="numeric" placeholder="e.g. 120,000"></label>
       <label>Proposal approval date<input id="f_duyet" type="date"></label>
@@ -629,6 +631,8 @@ function rowsToData(rows){
     sl:num(r['Số lượng'])||1, congsuat:String(r['Công suất']||'').trim(),
     noilapdat:String(r['Nơi lắp đặt']||'').trim(), ncc:String(r['Nhà cung cấp']||'').trim(),
     xuatxu:String(r['Xuất xứ']||'').trim(),
+    model: 'Model' in r ? String(r['Model']||'').trim() : undefined,
+    serial: 'Số serial' in r ? String(r['Số serial']||'').trim() : undefined,
     vnd:num(r['Tổng giá trị (VNĐ)']), usd:num(r['Tổng giá trị (USD)']),
     duyet:iso(r['Ngày duyệt ĐXĐT']), dathang:iso(r['Ngày đặt hàng']),
     vekh:iso(r['Ngày dự kiến máy về (KH)']), vedukienn:iso(r['Ngày dự kiến máy về NM']),
@@ -731,6 +735,9 @@ function readAll(wb){
       noilapdat:String(gv(row,'Nơi lắp đặt')||'').trim(),
       ncc:String(gv(row,'Nhà cung cấp')||'').trim(),
       xuatxu:String(gv(row,'Xuất xứ')||'').trim(),
+      // file Excel cũ chưa có cột Model / Số serial -> để undefined, replaceAll giữ giá trị đang có
+      model: H['Model']!=null ? String(gv(row,'Model')||'').trim() : undefined,
+      serial: H['Số serial']!=null ? String(gv(row,'Số serial')||'').trim() : undefined,
       vnd:xlNum(gv(row,'Tổng giá trị (VNĐ)')), usd:xlNum(gv(row,'Tổng giá trị (USD)')),
       duyet:serialToISO(toSerial(gv(row,'Ngày duyệt ĐXĐT'))),
       dathang:serialToISO(dathang),
@@ -916,6 +923,7 @@ async function submitAdd(){
     ten, phutrach: val('f_pt'),
     sl: Math.round(xlNum(val('f_sl')))||1,
     congsuat: val('f_cs'), noilapdat: val('f_nld'), ncc: val('f_ncc'), xuatxu: val('f_xx'),
+    model: val('f_model'), serial: val('f_serial'),
     vnd: parseMoney(val('f_vnd')), usd: parseMoney(val('f_usd')),
     duyet: val('f_duyet')||null, dathang: val('f_dh')||null,
     vekh: serialToISO(veKH), vedukienn: serialToISO(veNM),
@@ -977,7 +985,7 @@ async function submitAdd(){
 }
 
 function resetAddForm(){
-  ['f_ten','f_pt','f_cs','f_nld','f_ncc','f_xx','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_gt'].forEach(id=>document.getElementById(id).value='');
+  ['f_ten','f_pt','f_cs','f_nld','f_ncc','f_xx','f_model','f_serial','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_gt'].forEach(id=>document.getElementById(id).value='');
   ['f_duyet','f_dh','f_tutt','f_xxg'].forEach(id=>{ if(window.fpickers && window.fpickers[id]) window.fpickers[id].clear(); });
   ['f_ctu','f_dt','f_lm','f_ctm'].forEach(id=>document.getElementById(id).value='0');
   ['f_dttt','f_lmtt'].forEach(id=>document.getElementById(id).value='');     // trống = lấy theo KH
@@ -1618,7 +1626,9 @@ window.showDetail = i => {
       it(tr('Capacity','Công suất'), T(x.congsuat)),
       it(tr('Installation site','Nơi lắp đặt'), T(x.noilapdat)),
       it(tr('Supplier','Nhà cung cấp'), T(x.ncc)),
-      it(tr('Origin','Xuất xứ'), T(ctT(x.xuatxu)))])}
+      it(tr('Origin','Xuất xứ'), T(ctT(x.xuatxu))),
+      it('Model', T(x.model)),
+      it(tr('Serial number','Số serial'), T(x.serial))])}
     ${sec(tr('Value','Giá trị'),[
       it(tr('Total value (VND)','Tổng giá trị (VNĐ)'), x.vnd ? x.vnd.toLocaleString(NUMLOC)+' ₫' : '—','hl'),
       it(tr('Total value (USD)','Tổng giá trị (USD)'), x.usd ? x.usd.toLocaleString('en-US')+' $' : '—','hl')])}
@@ -1707,21 +1717,22 @@ function dbErrText(e){
   const c = e && e.code;
   if(c==='conflict') return tr('Someone else just edited or deleted this machine. Press <b>🔄 Refresh</b> to see the latest version, then try again.','Máy này vừa được người khác sửa hoặc xoá. Bấm <b>🔄 Làm mới</b> để xem bản mới nhất rồi làm lại.');
   if(c==='42501' || c==='perm') return tr('Your account does not have permission to do this. Ask an admin for editor access.','Tài khoản của bạn không có quyền làm việc này. Nhờ admin cấp quyền editor.');
+  if(c==='PGRST204' && /model|serial/.test(e.message||'')) return tr('The database does not have the Model / Serial number columns yet. An admin needs to run <b>supabase/04_model_serial.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có cột Model / Số serial. Admin cần chạy file <b>supabase/04_model_serial.sql</b> trong Supabase > SQL Editor.');
   if(c==='PGRST301' || c==='401') return tr('Your session has expired. Reload the page and sign in again.','Phiên đăng nhập đã hết hạn. Tải lại trang và đăng nhập lại.');
   if(!window.__sb) return tr('Not connected to the data server. Check your network and reload the page.','Chưa kết nối được máy chủ dữ liệu. Kiểm tra mạng rồi tải lại trang.');
   return escH((e && e.message) || tr('Connection error. Try again in a few minutes.','Lỗi kết nối. Thử lại sau ít phút.'));
 }
-const REC_KEYS = ['ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','vnd','usd','duyet','dathang','vekh','vedukienn',
+const REC_KEYS = ['ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','vekh','vedukienn',
   'danhgia','sonagyctm','giaitrinh','ctu','tamungtt','ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','workingday'];
 const REC_LABEL = {ten:'Tên máy', phutrach:'Người phụ trách', sl:'Số lượng', congsuat:'Công suất', noilapdat:'Nơi lắp đặt',
-  ncc:'Nhà cung cấp', xuatxu:'Xuất xứ', vnd:'Tổng giá trị (VNĐ)', usd:'Tổng giá trị (USD)', duyet:'Ngày duyệt ĐXĐT',
+  ncc:'Nhà cung cấp', xuatxu:'Xuất xứ', model:'Model', serial:'Số serial', vnd:'Tổng giá trị (VNĐ)', usd:'Tổng giá trị (USD)', duyet:'Ngày duyệt ĐXĐT',
   dathang:'Ngày đặt hàng', vekh:'Ngày dự kiến máy về (KH)', vedukienn:'Ngày dự kiến máy về NM', danhgia:'Đánh giá',
   sonagyctm:'Số ngày CTM', giaitrinh:'Giải trình', ctu:'TG chờ tạm ứng KH (ngày)', tamungtt:'Ngày tạm ứng TT',
   ditaukh:'TG đi tàu KH (ngày)', ditautt:'TG đi tàu TT (ngày)', lanhkh:'TG lãnh máy KH (ngày)', lanhtt:'TG lãnh máy TT (ngày)',
   xuatxuong:'Xác nhận/dự kiến xuất xưởng', workingday:'Working day'};
 /* nhãn hiển thị khi chọn tiếng Anh; REC_LABEL ở trên giữ tiếng Việt vì là tên cột Excel */
 const REC_LABEL_EN = {ten:'Machine name', phutrach:'Person in charge', sl:'Quantity', congsuat:'Capacity', noilapdat:'Installation site',
-  ncc:'Supplier', xuatxu:'Origin', vnd:'Total value (VND)', usd:'Total value (USD)', duyet:'Proposal approval date',
+  ncc:'Supplier', xuatxu:'Origin', model:'Model', serial:'Serial number', vnd:'Total value (VND)', usd:'Total value (USD)', duyet:'Proposal approval date',
   dathang:'Order date', vekh:'Planned arrival date', vedukienn:'Expected arrival at plant', danhgia:'Rating',
   sonagyctm:'Manufacturing days (CTM)', giaitrinh:'Delay note', ctu:'Advance-payment wait, plan (days)', tamungtt:'Advance-payment date, actual',
   ditaukh:'Shipping time, plan (days)', ditautt:'Shipping time, actual (days)', lanhkh:'Clearance & pickup, plan (days)', lanhtt:'Clearance & pickup, actual (days)',
@@ -1760,7 +1771,7 @@ async function saveMachine(m, editId){
 }
 
 /* ---- Xuất Excel: cùng cấu trúc sheet "📝Cập nhật" nên nạp lại được bằng 📂 Nạp Excel ---- */
-const XL_COLS = ['ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','vnd','usd','duyet','dathang','ctu','tamungtt',
+const XL_COLS = ['ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','ctu','tamungtt',
   'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'];
 const pad2 = n=>String(n).padStart(2,'0');
 function stampNow(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes()); }
@@ -1788,6 +1799,15 @@ async function replaceAll(data){
   if(DATA.length){ try{ exportExcel('Backup_BeforeImport'); }catch(e){} }   // tự sao lưu dữ liệu đang có
   window.__selfWriting = true;
   btnPick.textContent = tr('⏳ Importing…','⏳ Đang nạp…');
+  /* file không có cột Model / Số serial: lấy lại giá trị của máy cùng tên đang có, để nạp Excel không xoá mất */
+  const used = new Set();
+  data.forEach(m=>{
+    if(m.model!==undefined && m.serial!==undefined) return;
+    const old = DATA.find(x=>!used.has(x) && unescH(x.ten)===m.ten); if(!old) return;
+    used.add(old);
+    if(m.model===undefined) m.model = unescH(old.model);
+    if(m.serial===undefined) m.serial = unescH(old.serial);
+  });
   const rows = data.map((m,i)=>Object.assign(toRow(m), {sort_order:i+1}));
   const { error } = await sb.rpc('replace_all_machines', { rows });
   if(error) throw error;
@@ -1810,6 +1830,7 @@ window.editMachine = i => {
   const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value = (v==null?'':v); };
   set('f_ten', unescH(x.ten)); set('f_pt', unescH(x.phutrach)); set('f_sl', x.sl||1);
   set('f_cs', unescH(x.congsuat)); set('f_nld', unescH(x.noilapdat)); set('f_ncc', unescH(x.ncc)); set('f_xx', unescH(x.xuatxu));
+  set('f_model', unescH(x.model)); set('f_serial', unescH(x.serial));
   set('f_vnd', fmtMoney(x.vnd)); set('f_usd', fmtMoney(x.usd));
   set('f_ctu', x.ctu||0); set('f_dt', x.ditaukh||0); set('f_dttt', x.ditautt||0);
   set('f_lm', x.lanhkh||0); set('f_lmtt', x.lanhtt||0); set('f_ctm', x.sonagyctm||0);
@@ -2066,6 +2087,7 @@ const STATIC_VI = new Map([
   ['Clearance & pickup, actual (days)','TG lãnh máy TT (ngày)'],
   ['Confirmed/expected ex-works date','Xác nhận/dự kiến xuất xưởng'],
   ['Manufacturing days (CTM)','Số ngày chế tạo máy (CTM)'],
+  ['Serial number','Số serial'],
   ['Working day (count business days only?)','Working day (tính theo ngày làm việc?)'],
   ['Delay note','Giải trình'],
   ['Cancel','Hủy'],
@@ -2127,7 +2149,7 @@ function showBanner(html, kind, withReload){
 }
 (async function(){
   const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const STR = ['ten','phutrach','congsuat','noilapdat','ncc','xuatxu','danhgia','giaitrinh','workingday'];
+  const STR = ['ten','phutrach','congsuat','noilapdat','ncc','xuatxu','model','serial','danhgia','giaitrinh','workingday'];
   const DATES = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong'];
   const NUMS = ['sl','vnd','usd','sonagyctm','ctu','ditaukh','ditautt','lanhkh','lanhtt'];
   const isoRe = /^\d{4}-\d{2}-\d{2}$/;
@@ -2177,7 +2199,7 @@ function showBanner(html, kind, withReload){
   }
   const cfg = window.APP_CONFIG || {};
   if(!window.supabase || !cfg.SUPABASE_URL || /YOUR_|xxxx/i.test(cfg.SUPABASE_URL + cfg.SUPABASE_ANON_KEY)){
-    card(tr('<h2>Server not configured</h2><p>Open <b>config.js</b>, paste your Supabase <b>Project URL</b> and <b>anon public key</b>, save, then reload the page. See section 3 of HUONG_DAN.md.</p>','<h2>Chưa cấu hình máy chủ</h2><p>Mở file <b>config.js</b>, dán <b>Project URL</b> và <b>anon public key</b> của Supabase vào, lưu lại rồi tải lại trang. Xem mục 3 trong HUONG_DAN.md.</p>'));
+    card(tr('<h2>Server not configured</h2><p>Open <b>config.js</b>, paste your Supabase <b>Project URL</b> and <b>anon public key</b>, save, then reload the page. See section 3 of SETUP_GUIDE.md.</p>','<h2>Chưa cấu hình máy chủ</h2><p>Mở file <b>config.js</b>, dán <b>Project URL</b> và <b>anon public key</b> của Supabase vào, lưu lại rồi tải lại trang. Xem mục 3 trong SETUP_GUIDE.md.</p>'));
     return;
   }
   const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);

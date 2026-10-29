@@ -9,9 +9,10 @@ Giao diện giữ nguyên dashboard `Dashboard_TienDoMayVe.html`. Dữ liệu l�
 | `index.html` | Trang web (dashboard + đăng nhập + nhập/sửa/xoá máy + nạp Excel) |
 | `config.js` | Địa chỉ và khoá kết nối Supabase (bước 3) |
 | `supabase/01_schema.sql` | Tạo bảng, phân quyền, nhật ký. Chạy 1 lần |
-| `supabase/02_nguoi_dung.sql` | Cấp quyền người dùng. Chạy lại mỗi khi thêm người |
-| `supabase/03a_du_lieu_that_84_may.sql` | Nạp 84 máy **thật** từ Excel ngày 26/10/2026. Chỉ dùng khi IT/pháp chế đã đồng ý |
-| `supabase/03b_du_lieu_an_danh_84_may.sql` | Nạp 84 máy **ẩn danh** để chạy thử: người phụ trách → PT01…, nhà cung cấp → NCC01…, giá trị xáo trộn ±30%, giải trình đã ẩn |
+| `supabase/02_users.sql` | Cấp quyền người dùng. Chạy lại mỗi khi thêm người |
+| `supabase/03a_real_data_84_machines.sql` | Nạp 84 máy **thật** từ Excel ngày 26/10/2026. Chỉ dùng khi IT/pháp chế đã đồng ý |
+| `supabase/03b_anonymized_data_84_machines.sql` | Nạp 84 máy **ẩn danh** để chạy thử: người phụ trách → PT01…, nhà cung cấp → NCC01…, giá trị xáo trộn ±30%, giải trình đã ẩn |
+| `supabase/04_model_serial.sql` | Thêm cột **Model** và **Số serial**. Chạy 1 lần nếu project đã tạo trước khi có 2 cột này |
 
 **Quyền người dùng**
 - `viewer`: chỉ xem.
@@ -43,9 +44,9 @@ Giao diện giữ nguyên dashboard `Dashboard_TienDoMayVe.html`. Dữ liệu l�
 Vào menu trái **SQL Editor** → **New query**, lần lượt làm 3 lần:
 
 1. Mở `supabase/01_schema.sql` bằng VS Code, copy toàn bộ, dán vào SQL Editor rồi bấm **Run**. Kết quả là *Success. No rows returned*.
-2. Mở `supabase/02_nguoi_dung.sql`, kiểm tra email admin là email của anh, rồi dán và **Run**.
-3. Mở **`supabase/03b_du_lieu_an_danh_84_may.sql`** (dữ liệu ẩn danh), dán và **Run**. Dòng cuối phải ra `so_may = 84`.
-   Khi IT/pháp chế đồng ý dùng dữ liệu thật, chạy `03a_du_lieu_that_84_may.sql` (thay toàn bộ danh sách), hoặc đăng nhập app và bấm 📂 Nạp Excel.
+2. Mở `supabase/02_users.sql`, kiểm tra email admin là email của anh, rồi dán và **Run**.
+3. Mở **`supabase/03b_anonymized_data_84_machines.sql`** (dữ liệu ẩn danh), dán và **Run**. Dòng cuối phải ra `so_may = 84`.
+   Khi IT/pháp chế đồng ý dùng dữ liệu thật, chạy `03a_real_data_84_machines.sql` (thay toàn bộ danh sách), hoặc đăng nhập app và bấm 📂 Nạp Excel.
 
 ## Bước 3. Khoá đăng ký tự do và tạo tài khoản (≈5 phút)
 
@@ -55,7 +56,7 @@ Vào menu trái **SQL Editor** → **New query**, lần lượt làm 3 lần:
 2. **Authentication → Users → Add user → Create new user**:
    - Nhập email và mật khẩu.
    - Tick **Auto Confirm User** → Create user.
-   - Làm cho chính anh trước, dùng đúng email đã ghi trong `02_nguoi_dung.sql`.
+   - Làm cho chính anh trước, dùng đúng email đã ghi trong `02_users.sql`.
 
 ## Bước 4. Dán khoá kết nối vào `config.js` (≈2 phút)
 
@@ -95,12 +96,12 @@ Khi sửa `index.html` sau này, chỉ cần **Upload files** đè lên trong re
 ## Thêm đồng nghiệp
 
 1. Supabase → **Authentication → Users → Add user**: tạo email và mật khẩu, tick **Auto Confirm User**.
-2. Mở `02_nguoi_dung.sql`:
+2. Mở `02_users.sql`:
    - Thêm 1 dòng: `, ('email@duytanrecycling.com', 'Họ tên', 'editor')`
    - Dán vào SQL Editor → **Run**.
 3. Gửi link, email và mật khẩu cho người đó.
 
-**Thu hồi quyền:** chạy lệnh `delete` ở cuối file `02_nguoi_dung.sql`, hoặc xoá user trong Authentication → Users.
+**Thu hồi quyền:** chạy lệnh `delete` ở cuối file `02_users.sql`, hoặc xoá user trong Authentication → Users.
 
 ## Dùng hằng ngày
 
@@ -129,9 +130,9 @@ Khi sửa `index.html` sau này, chỉ cần **Upload files** đè lên trong re
 |---|---|
 | Trang báo *"Chưa cấu hình máy chủ"* | Chưa dán URL/khoá vào `config.js`, hoặc chưa upload `config.js` lên GitHub |
 | *"Sai email hoặc mật khẩu"* | Kiểm tra lại user trong Authentication → Users, đã tick Auto Confirm chưa |
-| *"Chưa được cấp quyền"* | Email chưa có trong `app_users`: chạy lại `02_nguoi_dung.sql` có email đó |
+| *"Chưa được cấp quyền"* | Email chưa có trong `app_users`: chạy lại `02_users.sql` có email đó |
 | Không thấy nút Nhập máy / Nạp Excel / Excel | Tài khoản đang là `viewer` |
 | Không thấy nút 🗑 Thùng rác | Chỉ tài khoản `admin` mới có |
 | Báo *"Máy này vừa được người khác sửa hoặc xoá"* | Có người vừa sửa máy đó. Bấm 🔄 Làm mới rồi sửa lại |
-| Báo lỗi khi cấp quyền trong `02_nguoi_dung.sql` | Email không phải `@duytanrecycling.com` |
+| Báo lỗi khi cấp quyền trong `02_users.sql` | Email không phải `@duytanrecycling.com` |
 | Dashboard trống, báo không tải được dữ liệu | Project Supabase đang tạm dừng: vào supabase.com → Restore |
