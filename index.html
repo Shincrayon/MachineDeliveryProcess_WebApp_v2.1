@@ -472,9 +472,42 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 .dm-legend i.fc{background:transparent!important;border:1.5px dashed var(--muted)}
 .dm-gwrap{max-height:560px;overflow-y:auto;overflow-x:hidden}
 .dm-hint{color:var(--muted);padding:16px 4px;font-size:13px}
-.dm-row2{margin-bottom:16px}
-.dm-row2 .card{min-width:0}
-#fnList .k-list{max-height:300px}
+.ov-top{margin-bottom:12px}
+.ov-top .dm-filters{margin:0;flex:0 1 auto}
+.ov-top .dm-link{margin-left:0}
+.ov-top .ticker{min-width:280px}
+.ov-main > .card{margin-bottom:14px}
+.ov-sub{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.ov-sub .card{min-width:0}
+#fnChart{height:300px}
+.ov-ms .chartbox{height:300px}
+@media(max-width:900px){.ov-sub{grid-template-columns:1fr}}
+/* màn hình máy tính: cả trang Tổng quan gói trong 1 màn hình, phần dài (Gantt, Cần chú ý) cuộn bên trong thẻ */
+@media(min-width:1100px) and (min-height:640px){
+  #p1.active{display:flex;flex-direction:column;padding-top:12px;padding-bottom:12px}
+  #p1 .ov-top{margin-bottom:10px;flex:0 0 auto}
+  #p1 .dm-kpis{margin-bottom:10px;flex:0 0 auto;gap:10px}
+  #p1 .dm-kpis .kpi{padding:9px 14px}
+  #p1 .dm-kpis .kpi .val{font-size:24px;margin-top:1px}
+  #p1 .dm-kpis .kpi .note{margin-top:1px}
+  .ov-main{flex:1 1 auto;min-height:0;display:grid;gap:10px;
+    grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);grid-template-rows:minmax(0,.85fr) minmax(0,1.15fr)}
+  .ov-main > .card,.ov-sub > .card{display:flex;flex-direction:column;min-height:0;margin:0;padding:11px 14px}
+  .ov-main .card h3{margin-bottom:6px;flex:0 0 auto}
+  .ov-gantt{grid-row:1 / 3}
+  .ov-gantt .dm-legend{margin:0 0 6px}
+  .ov-gantt .dm-gwrap{flex:1 1 auto;min-height:0;max-height:none}
+  .ov-att #attBox{flex:1 1 auto;min-height:0;overflow:auto}
+  .ov-att td{padding:6px 8px}
+  .ov-sub{min-height:0;gap:10px}
+  #fnChart{flex:1 1 auto;min-height:0;height:auto}
+  .ov-ms .chartbox{flex:1 1 auto;min-height:0;height:auto}
+  .ov-main > *,.ov-sub > *{min-height:0}
+  .ov-main .card{overflow:hidden}
+  .ov-sub .card h3{font-size:13px;white-space:nowrap;gap:6px}
+  .ov-sub .card h3 .sel{gap:4px}
+  .ov-sub .gv-btn{padding:3px 8px;font-size:11.5px;white-space:nowrap}
+}
 /* điện thoại ~390px: thanh trên cùng gọn, tab cuộn ngang, bảng thành thẻ */
 @media(max-width:640px){
   .topbar{padding:10px 12px;gap:8px 6px}
@@ -544,12 +577,6 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
   <!-- ============ PAGE 1: TỔNG QUAN ============ -->
   <div class="page active" id="p1">
     <div class="ov-top">
-    <div class="ticker" id="ticker" style="display:none">
-      <span class="ticker-ic">🚨</span>
-      <div class="ticker-clip"><div class="ticker-track" id="tickerTrack"></div></div>
-      <span class="ticker-count" id="tickerCount"></span>
-    </div>
-    </div>
     <div class="dm-filters" id="dmFilters">
       <span class="dm-lbl" id="fLbl"></span>
       <select id="fCo"></select><select id="fSup"></select><select id="fSt"></select>
@@ -557,17 +584,22 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <button id="fReset" hidden></button>
       <button class="dm-link" id="fLink"></button>
     </div>
-    <div class="kpis dm-kpis" id="dmKpis"></div>
-    <div class="card dm-att" style="--accent:var(--st-bad)"><h3><span class="dot"></span><span id="attTitle"></span><small id="attSub"></small></h3><div id="attBox"></div></div>
-    <div class="card dm-att" style="--accent:var(--blue)"><h3><span class="dot"></span><span id="gnTitle"></span><small id="gnSub"></small><span class="sel"><span class="gv-btn" id="gnAll"></span></span></h3>
-      <div class="dm-legend" id="gnLegend"></div><div class="dm-gwrap"><div id="gnChart"></div></div><div id="gnEmpty" class="dm-hint" hidden></div></div>
-    <div class="grid2 dm-row2">
-      <div class="card" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="fnTitle"></span><span class="sel"><span class="gv-btn on" id="fnCnt"></span><span class="gv-btn" id="fnVal"></span></span></h3><div id="fnChart" style="height:300px"></div></div>
-      <div class="card" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="fnLTitle"></span><small id="fnLSub" style="font-weight:500;color:var(--muted);font-size:12px;margin-left:8px"></small></h3><div id="fnList"></div></div>
+    <div class="ticker" id="ticker" style="display:none">
+      <span class="ticker-ic">🚨</span>
+      <div class="ticker-clip"><div class="ticker-track" id="tickerTrack"></div></div>
+      <span class="ticker-count" id="tickerCount"></span>
     </div>
-    <div class="grid2">
-      <div class="card" style="--accent:#34d399"><h3><span class="dot"></span>Equipment status</h3><div class="chartbox"><canvas id="chStatus"></canvas></div></div>
-      <div class="card" style="--accent:#60a5fa"><h3><span class="dot"></span>Monthly arrival schedule</h3><div class="chartbox"><canvas id="chMonth"></canvas></div></div>
+    </div>
+    <div class="kpis dm-kpis" id="dmKpis"></div>
+    <div class="ov-main">
+      <div class="card ov-gantt" style="--accent:var(--blue)"><h3><span class="dot"></span><span id="gnTitle"></span><small id="gnSub"></small><span class="sel"><span class="gv-btn" id="gnAll"></span></span></h3>
+        <div class="dm-legend" id="gnLegend"></div><div class="dm-gwrap"><div id="gnChart"></div></div><div id="gnEmpty" class="dm-hint" hidden></div></div>
+      <div class="card dm-att ov-att" style="--accent:var(--st-bad)"><h3><span class="dot"></span><span id="attTitle"></span><small id="attSub"></small></h3><div id="attBox"></div></div>
+      <div class="ov-sub">
+        <div class="card ov-fn" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="fnTitle"></span><span class="sel"><span class="gv-btn on" id="fnCnt"></span><span class="gv-btn" id="fnVal"></span></span></h3><div id="fnChart"></div></div>
+        <div class="card ov-ms" style="--accent:#60a5fa"><h3><span class="dot"></span><span id="msTitle"></span><span class="sel"><span class="gv-btn on" id="msMon"></span><span class="gv-btn" id="msSt"></span></span></h3>
+          <div class="chartbox" id="boxMon"><canvas id="chMonth"></canvas></div><div class="chartbox" id="boxSt" style="display:none"><canvas id="chStatus"></canvas></div></div>
+      </div>
     </div>
   </div>
 
@@ -1226,7 +1258,10 @@ const ovEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&am
   opt(ovMonth, '', tr('Month: All', 'Tháng: Tất cả'));
   for(let i=1;i<=12;i++) opt(ovMonth, String(i).padStart(2,'0'), tr(MON[i-1],'Tháng '+i));
   opt(ovYear, '', tr('Year: All', 'Năm: Tất cả'));
-  [...new Set(DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4)))].sort().forEach(y=>opt(ovYear, y, y));
+  const now = DM.todayIso();
+  [...new Set([now.slice(0,4), ...DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4))])].sort().forEach(y=>opt(ovYear, y, y));
+  // mở trang không có tháng/năm trên URL -> mặc định tháng và năm hiện tại
+  if(!OVF.periodInUrl){ OVF.m = now.slice(5,7); OVF.y = now.slice(0,4); }
   const SELS = { co:fCo, sup:fSup, st:fSt, m:ovMonth, y:ovYear };
   Object.entries(SELS).forEach(([k, el]) => { el.value = OVF[k]; if(el.value !== OVF[k]) OVF[k] = ''; });
   fReset.textContent = tr('✕ Clear filters', '✕ Bỏ lọc');
@@ -1249,6 +1284,7 @@ const ovEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&am
     setTimeout(() => fLink.textContent = tr('🔗 Copy link', '🔗 Sao chép link'), 1800);
   };
   mark();
+  if(!OVF.periodInUrl) try{ history.replaceState(null, '', location.pathname + DM.toQuery(OVF) + location.hash); }catch(e){}
 })();
 
 /* ===== 5 thẻ KPI + bảng Needs attention ===== */
@@ -1324,6 +1360,8 @@ let KP = null;
   const base = () => ({ textStyle:{ color:cssv('--muted'), fontFamily:'Segoe UI, system-ui, sans-serif' }, animationDuration:500 });
   const tipBox = () => ({ backgroundColor:cssv('--panel2'), borderColor:cssv('--border'), textStyle:{ color:cssv('--txt'), fontSize:12 }, extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:10px' });
   const narrow = () => innerWidth < 640;
+  const lblW = () => narrow() ? 100 : Math.round(Math.min(236, Math.max(120, (gnChart.clientWidth || 700) * .3)));
+  const small = () => (fnChart.clientWidth || 400) < 440;
 
   /* ---- 2.1 Gantt ---- */
   const gn = echarts.init(gnChart);
@@ -1379,13 +1417,13 @@ let KP = null;
     };
     const today = TS(DM.todayIso());
     gn.setOption(Object.assign(base(), {
-      grid:{ left: narrow() ? 112 : 250, right: 18, top: 50, bottom: 10, containLabel:false },
+      grid:{ left: lblW() + 12, right: 18, top: 50, bottom: 10, containLabel:false },
       tooltip:Object.assign(tipBox(), { trigger:'item', confine:true, formatter:tip }),
       xAxis:{ type:'time', position:'top', axisLabel:{ color:cssv('--muted'), fontSize:11, hideOverlap:true,
               formatter:{ year:'{yyyy}', month:tr('{MMM}', 'T{M}'), day:'{dd}/{MM}' } }, axisLine:{ lineStyle:{ color:cssv('--border') } },
               splitLine:{ show:true, lineStyle:{ color:cssv('--border') } } },
       yAxis:{ type:'category', inverse:true, data:cats.map(c => c.t), axisTick:{ show:false }, axisLine:{ lineStyle:{ color:cssv('--border') } },
-              axisLabel:{ width: narrow() ? 100 : 236, overflow:'truncate', fontSize:11.5, color:cssv('--txt'),
+              axisLabel:{ width: lblW(), overflow:'truncate', fontSize:11.5, color:cssv('--txt'),
                           formatter:(v, i) => cats[i] && cats[i].h ? '{h|' + v + '}' : v,
                           rich:{ h:{ fontWeight:'bold', color:cssv('--strong'), fontSize:12 } } } },
       series:[
@@ -1404,24 +1442,25 @@ let KP = null;
   /* ---- 2.2 Phễu vòng đời ---- */
   const fn = echarts.init(fnChart);
   let fnMode = 'count', FN = null;
-  const FNL = tr({ planned:'Not yet ordered', manufacturing:'Ordered / manufacturing', shipping:'Shipping', arrived:'Arrived', installing:'Installing', in_operation:'In operation (last 12 mo)' },
-                 { planned:'Chưa đặt hàng', manufacturing:'Đã đặt / đang chế tạo', shipping:'Đang vận chuyển', arrived:'Đã về', installing:'Đang lắp đặt', in_operation:'Vận hành (12 tháng)' });
-  fnTitle.textContent = tr('🔻 Lifecycle funnel', '🔻 Phễu vòng đời');
-  fnCnt.textContent = tr('Machines', 'Số máy'); fnVal.textContent = tr('Value (VND)', 'Giá trị (VNĐ)');
+  const FNL = tr({ planned:'Not yet ordered', manufacturing:'Ordered / manufacturing', shipping:'Shipping', arrived:'Arrived', installing:'Installing', in_operation:'In operation' },
+                 { planned:'Chưa đặt hàng', manufacturing:'Đã đặt / đang chế tạo', shipping:'Đang vận chuyển', arrived:'Đã về', installing:'Đang lắp đặt', in_operation:'Đang vận hành' });
+  fnTitle.textContent = tr('🔻 Lifecycle', '🔻 Vòng đời');
+  fnCnt.textContent = tr('Machines', 'Số máy'); fnVal.textContent = tr('VND', 'VNĐ');
   const setMode = m => { fnMode = m; fnCnt.classList.toggle('on', m === 'count'); fnVal.classList.toggle('on', m === 'vnd'); drawFunnel(); };
   fnCnt.onclick = () => setMode('count'); fnVal.onclick = () => setMode('vnd');
-  const fmtV = v => fnMode === 'vnd' ? dmN(v) + ' ₫' : dmN(v);
+  // thẻ hẹp: giá trị gọn (tỷ ₫), đầy đủ nằm trong tooltip
+  const fmtV = v => fnMode !== 'vnd' ? dmN(v) : small() ? dmN(v / 1e9, 1) + tr(' B ₫', ' tỷ ₫') : dmN(v) + ' ₫';
   function drawFunnel(){
     FN = DM.funnel(DM.filter(DATA, Object.assign(ovFilter(), { st:'' })));   // phễu bỏ qua bộ lọc trạng thái
     const pick = st => fnMode === 'vnd' ? st.vnd : st.count;
     fn.setOption(Object.assign(base(), {
-      grid:{ left: narrow() ? 118 : 160, right: narrow() ? 70 : 150, top:6, bottom:6 },
+      grid:{ left: small() ? 118 : 160, right: small() ? 74 : 150, top:6, bottom:6 },
       tooltip:Object.assign(tipBox(), { trigger:'item', formatter:p => { const st = FN[p.dataIndex];
         return `<b>${FNL[st.key]}</b><br>` + (st.available ? `${dmN(st.count)} ${tr('machines','máy')} · ${dmN(st.vnd)} ₫<br><span style="color:${cssv('--muted')}">${tr('Click to filter the page','Bấm để lọc cả trang')}</span>`
                                                          : tr('No data yet — not tracked in the delivery table', 'Chưa có dữ liệu — bảng tiến độ chưa theo dõi')); } }),
       xAxis:{ type:'value', show:false, max:v => Math.max(v.max, 1) },
       yAxis:{ type:'category', inverse:true, data:FN.map(st => FNL[st.key]), axisTick:{ show:false }, axisLine:{ show:false },
-              axisLabel:{ color:cssv('--txt'), fontSize:12, width: narrow() ? 110 : 150, overflow:'break' } },
+              axisLabel:{ color:cssv('--txt'), fontSize:12, width: small() ? 110 : 150, overflow:'break' } },
       series:[{ type:'bar', barWidth:'62%', data:FN.map((st, i) => ({
           value:st.available ? pick(st) : 0,
           itemStyle:{ borderRadius:6, color: !st.available ? cssv('--st-done') : OVF.st === st.key ? cssv('--blue') : rgba(cssv('--violet'), 1 - i * .1),
@@ -1440,25 +1479,29 @@ let KP = null;
     fSt.value = OVF.st === st.key ? '' : st.key; fSt.onchange();
   });
 
-  /* danh sách máy của giai đoạn đang chọn */
-  fnLTitle.textContent = tr('📋 Machines in stage', '📋 Máy trong giai đoạn');
-  function drawStageList(){
-    if(!OVF.st){ fnLSub.textContent = ''; fnList.innerHTML = `<div class="dm-hint">${tr('Click a stage in the funnel (or pick a status in the filter) to list its machines here.', 'Bấm vào một giai đoạn trong phễu (hoặc chọn trạng thái ở bộ lọc) để xem danh sách máy.')}</div>`; return; }
-    const rows = ovRows();
-    fnLSub.textContent = (OV_LC[OVF.st] || OVF.st) + ' · ' + rows.length + ' ' + tr('machines', 'máy') + ' · ' + dmN(rows.reduce((t, x) => t + (+x.vnd || 0), 0)) + ' ₫';
-    fnList.innerHTML = rows.length ? `<div class="k-list">${rows.slice().sort((a, b) => String(a.vedukienn).localeCompare(String(b.vedukienn))).map(x => {
-      const a = DM.milestones(x)[2], sev = DM.severity(x), d = DM.delay(x);
-      return `<div class="k-row" onclick="showDetail(${DATA.indexOf(x)})"><span class="kn">${ovEsc(x.ten)}<small>${DM.companyCode(x.noilapdat) || ovEsc(x.noilapdat)} · ${ovEsc(x.ncc) || '—'} · ${ovEsc(x.phutrach) || '—'}</small></span>
-        <span class="kv">${a.actual ? tr('Arrived','Đã về') : tr('Forecast','Dự kiến')} ${dmD(a.actual || a.forecast)}<br><span class="sev sev-${sev}" style="font-size:11px;padding:1px 8px">${d ? '+' + d.days + tr(' d late',' ngày trễ') : sev === 'done' ? OV_LC.arrived : tr('on schedule','đúng hạn')}</span></span></div>`;
-    }).join('')}</div>` : `<div class="dm-hint">${tr('No machines in this stage.', 'Không có máy nào trong giai đoạn này.')}</div>`;
-  }
+  /* thẻ bên cạnh: lịch máy về theo tháng / trạng thái thiết bị (Chart.js, vẽ ở initP1) */
+  msMon.textContent = '▮'; msSt.textContent = '◔';
+  msMon.title = tr('Arrivals by month', 'Máy về theo tháng'); msSt.title = tr('Equipment status', 'Trạng thái thiết bị');
+  const msSet = m => {
+    try{ localStorage.setItem('tdmv_msview', m); }catch(e){}
+    const st = m === 'st';
+    msTitle.textContent = st ? tr('📊 Equipment status', '📊 Trạng thái thiết bị') : tr('📊 Arrivals by month', '📊 Máy về theo tháng');
+    msMon.classList.toggle('on', !st); msSt.classList.toggle('on', st);
+    boxMon.style.display = st ? 'none' : ''; boxSt.style.display = st ? '' : 'none';
+    const c = window.Chart && Chart.getChart(st ? chStatus : chMonth); if(c) c.resize();
+  };
+  msMon.onclick = () => msSet('mon'); msSt.onclick = () => msSet('st');
+  setTimeout(() => { let m = 'mon'; try{ m = localStorage.getItem('tdmv_msview') || 'mon'; }catch(e){} msSet(m); });
 
-  const all = () => { drawGantt(); drawFunnel(); drawStageList(); };
+  const all = () => { drawGantt(); drawFunnel(); };
   OV_HOOKS.push(all); all();
   // đổi sáng/tối -> vẽ lại theo màu mới; đổi kích thước -> co giãn
   new MutationObserver(() => { drawGantt(); drawFunnel(); }).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
   let wasNarrow = narrow();
-  new ResizeObserver(() => { if(narrow() !== wasNarrow){ wasNarrow = narrow(); drawGantt(); drawFunnel(); } gn.resize(); fn.resize(); }).observe(fnChart);
+  let ro = 0;
+  new ResizeObserver(() => { cancelAnimationFrame(ro); ro = requestAnimationFrame(() => {
+    if(narrow() !== wasNarrow){ wasNarrow = narrow(); }
+    drawGantt(); drawFunnel(); }); }).observe(document.querySelector('.ov-main'));
 })();
 
 /* ===== page 1 charts ===== */

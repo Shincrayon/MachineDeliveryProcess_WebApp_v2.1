@@ -106,15 +106,18 @@
     for (const ch of String(name)) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
     return h.toString(36);
   };
+  /* Tháng/năm: không có trên URL = mặc định tháng & năm hiện tại (do trang quyết định);
+     "tất cả" ghi rõ là m=all / y=all để link gửi đi giữ đúng góc nhìn. periodInUrl cho biết URL có ghi tháng/năm. */
   DM.parseQuery = search => {
     const q = new URLSearchParams(search || ''), f = {};
-    DM.FILTER_KEYS.forEach(k => { f[k] = q.get(k) || ''; });
+    DM.FILTER_KEYS.forEach(k => { const v = q.get(k) || ''; f[k] = v === 'all' ? '' : v; });
+    Object.defineProperty(f, 'periodInUrl', { value: q.has('m') || q.has('y'), enumerable: false });
     return f;
   };
   DM.toQuery = f => {
     const q = new URLSearchParams();
-    DM.FILTER_KEYS.forEach(k => { if (f[k]) q.set(k, f[k]); });
-    const s = q.toString(); return s ? '?' + s : '';
+    DM.FILTER_KEYS.forEach(k => { if (f[k]) q.set(k, f[k]); else if (k === 'm' || k === 'y') q.set(k, 'all'); });
+    return '?' + q.toString();
   };
 
   /* ---------- KPI ----------
