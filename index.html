@@ -14,6 +14,7 @@
 <script>try{if(localStorage.getItem('tdmv_theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
+<script src="metrics.js"></script>
 <style>
 :root{color-scheme:dark;
   --bg:#0b1220; --panel:#121c31; --panel2:#17233d; --border:rgba(148,163,184,.14);
@@ -464,6 +465,57 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 [data-theme="light"] .login-bg{background:rgba(226,232,240,.85)}
 [data-theme="light"] .gx-tip,[data-theme="light"] .app-banner,
 [data-theme="light"] .leaflet-popup-content-wrapper,[data-theme="light"] .leaflet-popup-tip{box-shadow:0 8px 24px rgba(15,23,42,.15)}
+/* ===== Dashboard Tiến độ máy về: màu trạng thái thống nhất ===== */
+:root{--st-ok:#34d399; --st-warn:#fbbf24; --st-bad:#f87171; --st-done:#94a3b8}
+:root[data-theme="light"]{--st-ok:#059669; --st-warn:#b45309; --st-bad:#dc2626; --st-done:#64748b}
+.dm-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.dm-filters select,.dm-filters button{padding:7px 10px;font-size:13px;font-weight:600;border-radius:9px;border:1px solid var(--border);
+  background:var(--field);color:var(--txt);outline:none;cursor:pointer;max-width:100%}
+.dm-filters select.on{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset}
+.dm-filters .dm-lbl{font-size:12.5px;font-weight:700;color:var(--muted)}
+.dm-filters .dm-link{margin-left:auto}
+.dm-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+.dm-kpis .kpi .lbl{padding-right:24px}
+.kpi.na{cursor:default;opacity:.8}
+.kpi.na .val{color:var(--st-done)}
+.dm-att{margin-bottom:16px}
+.dm-att h3 small{font-weight:500;color:var(--muted);font-size:12px;margin-left:8px}
+.dm-att table{width:100%;min-width:0;border-collapse:collapse;font-size:13px}
+.dm-att th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.dm-att td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.dm-att tbody tr{cursor:pointer;transition:background .15s}
+.dm-att tbody tr:hover{background:rgba(96,165,250,.08)}
+.dm-att td.nm{font-weight:700;color:var(--strong)}
+.dm-att td.note{color:var(--muted);max-width:320px}
+.dm-att td small{display:block;color:var(--muted);font-size:11.5px;font-weight:400}
+.sev{display:inline-block;padding:2px 10px;border-radius:999px;font-weight:800;font-size:12.5px;border:1.5px solid currentColor;white-space:nowrap}
+.sev-ok{color:var(--st-ok)} .sev-warn{color:var(--st-warn)} .sev-bad{color:var(--st-bad)} .sev-done{color:var(--st-done)}
+.dm-empty{padding:18px 6px;color:var(--st-ok);font-weight:600}
+@media(max-width:1180px){.dm-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* điện thoại ~390px: thanh trên cùng gọn, tab cuộn ngang, bảng thành thẻ */
+@media(max-width:640px){
+  .topbar{padding:10px 12px;gap:8px 6px}
+  .topbar .tabs{order:20;width:100%;margin-left:0;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .topbar .tabs::-webkit-scrollbar{display:none}
+  .topbar .updated{display:none}
+  .dm-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .dm-kpis .kpi{padding:12px}
+  .dm-kpis .kpi .lbl{font-size:10.5px;letter-spacing:.4px}
+  .dm-kpis .kpi .note{font-size:11px}
+  .dm-att h3{flex-wrap:wrap}
+  .dm-att h3 small{flex-basis:100%;margin:2px 0 0 16px}
+  .dm-filters select{flex:1 1 44%}
+  .dm-filters .dm-lbl{width:100%}
+  .dm-filters .dm-link{margin-left:0}
+  .dm-att table,.dm-att tbody{display:block;width:100%}
+  .dm-att thead{display:none}
+  .dm-att td.note{max-width:none}
+  .dm-att tr{display:block;padding:10px 4px;border-bottom:1px solid var(--border)}
+  .dm-att td{display:flex;justify-content:space-between;gap:14px;padding:3px 2px;border:0;text-align:right;max-width:none}
+  .dm-att td::before{content:attr(data-l);color:var(--muted);font-size:12px;font-weight:600;text-align:left;flex:0 0 auto}
+  .dm-att td.nm{font-size:14px}
+  .ov-top{flex-wrap:wrap}
+}
 </style>
 </head>
 <body>
@@ -512,16 +564,16 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <div class="ticker-clip"><div class="ticker-track" id="tickerTrack"></div></div>
       <span class="ticker-count" id="tickerCount"></span>
     </div>
-    <div class="ov-bar"><span>📅 Period</span><select id="ovMonth"><option value="">Month: All</option></select><select id="ovYear"><option value="">Year: All</option></select></div>
     </div>
-    <div class="kpis">
-      <div class="kpi" style="--accent:var(--sky)" onclick="showKPI('all')"><span class="ic">⚙️</span><div class="lbl">Total equipment</div><div class="val" id="kpiN">0</div><div class="note" id="kpiNote"></div></div>
-      <div class="kpi" style="--accent:var(--violet)" onclick="showKPI('value')"><span class="ic">💰</span><div class="lbl">Total value</div><div class="val"><span id="kpiValPre"></span><span id="kpiVal">0</span><span id="kpiValUnit"></span></div><div class="note" id="kpiValNote"></div></div>
-      <div class="kpi" style="--accent:var(--blue)" onclick="showKPI('waiting')"><span class="ic">⏳</span><div class="lbl">Awaiting</div><div class="val" id="kpiWait">0</div><div class="note">expected in more than 15 days</div></div>
-      <div class="kpi" style="--accent:var(--amber)" onclick="showKPI('soon')"><span class="ic">🚢</span><div class="lbl">Arriving soon</div><div class="val" id="kpiSoon">0</div><div class="note">within 15 days · get ready to receive</div></div>
-      <div class="kpi" style="--accent:var(--red)" onclick="showKPI('late')"><span class="ic">🔴</span><div class="lbl">Late</div><div class="val" id="kpiDelay">0</div><div class="note">arrival at plant later than plan (incl. arrived)</div></div>
-      <div class="kpi" style="--accent:var(--green)" onclick="showKPI('arrived')"><span class="ic">✅</span><div class="lbl">Arrived at plant</div><div class="val" id="kpiArr">0</div><div class="note" id="kpiArrNote"></div></div>
+    <div class="dm-filters" id="dmFilters">
+      <span class="dm-lbl" id="fLbl"></span>
+      <select id="fCo"></select><select id="fSup"></select><select id="fSt"></select>
+      <select id="ovMonth"></select><select id="ovYear"></select>
+      <button id="fReset" hidden></button>
+      <button class="dm-link" id="fLink"></button>
     </div>
+    <div class="kpis dm-kpis" id="dmKpis"></div>
+    <div class="card dm-att" style="--accent:var(--st-bad)"><h3><span class="dot"></span><span id="attTitle"></span><small id="attSub"></small></h3><div id="attBox"></div></div>
     <div class="grid2">
       <div class="card" style="--accent:#34d399"><h3><span class="dot"></span>Equipment status</h3><div class="chartbox"><canvas id="chStatus"></canvas></div></div>
       <div class="card" style="--accent:#60a5fa"><h3><span class="dot"></span>Monthly arrival schedule<span class="sel"><span class="gv-btn on" id="gvBar">▮ Bars</span><span class="gv-btn" id="gvTl">⏱ Timeline</span></span></h3><div class="chartbox"><canvas id="chMonth"></canvas><div id="ganttBox"></div></div></div>
@@ -1145,11 +1197,17 @@ document.querySelectorAll('[data-count]').forEach(el=>{
   ticker.style.display = 'flex';
 })();
 
-/* ===== Mốc thời gian chung của trang Tổng quan: KPI + 3 biểu đồ cùng lọc =====
-   ovMonth ('01'..'12' hoặc '') và ovYear ('YYYY' hoặc '') chọn độc lập, theo ngày về NM */
+/* ===== Bộ lọc chung của trang Tổng quan: công ty · NCC · trạng thái · tháng · năm =====
+   Mọi phép tính nằm trong metrics.js (window.DM). Lựa chọn lọc lưu vào URL để gửi link đúng góc nhìn;
+   tên NCC là dữ liệu mã hoá nên URL chỉ chứa mã băm của tên (sup=…), không chứa tên. */
 const OV_HOOKS = [];
-const ovMatch = d => !!d && (!ovYear.value || d.slice(0,4)===ovYear.value) && (!ovMonth.value || d.slice(5,7)===ovMonth.value);
-const ovRows = () => DATA.filter(x => ovMatch(x.vedukienn));
+const OVF = DM.parseQuery(location.search);
+const SUP = {};                                   // mã băm -> tên NCC
+DATA.forEach(x=>{ if(x.ncc) SUP[DM.supKey(x.ncc)] = x.ncc; });
+if(OVF.sup && !SUP[OVF.sup]) OVF.sup = '';
+const ovFilter = noPeriod => Object.assign({}, OVF, { sup: SUP[OVF.sup] || '' }, noPeriod ? { m:'', y:'' } : {});
+const ovRows = () => DM.filter(DATA, ovFilter());
+const ovRowsAllTime = () => DM.filter(DATA, ovFilter(true));   // bỏ tháng/năm: cho biểu đồ theo tháng
 const ovLabel = () => {
   const m = ovMonth.value, y = ovYear.value;
   if(!m && !y) return tr('All','Tất cả');
@@ -1157,46 +1215,112 @@ const ovLabel = () => {
   if(!y) return tr(MON[+m-1]+' (all years)', 'Tháng '+(+m)+' (mọi năm)');
   return tr(MON[+m-1]+' '+y, 'Tháng '+(+m)+'/'+y);
 };
+const OV_LC = tr({planned:'Not yet ordered', manufacturing:'Manufacturing', shipping:'Shipping', arrived:'Arrived', delayed:'Delayed'},
+              {planned:'Chưa đặt hàng', manufacturing:'Đang chế tạo', shipping:'Đang vận chuyển', arrived:'Đã về', delayed:'Đang trễ'});
+const OV_MS = tr({contract_signed:'Contract signed', shipped:'Ex-works / shipped', arrived_site:'Arrival at site'},
+               {contract_signed:'Ký hợp đồng', shipped:'Xuất xưởng', arrived_site:'Về nhà máy'});
+const dmD = s => s ? s.split('-').reverse().join('/') : '—';
+const dmN = (v, d) => Number(v).toLocaleString(NUMLOC, { maximumFractionDigits: d || 0 });
+const ovEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
 (function(){
-  const years = [...new Set(DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4)))].sort();
-  years.forEach(y=>ovYear.add(new Option(y,y)));
-  for(let i=1;i<=12;i++) ovMonth.add(new Option(tr(MON[i-1],'Tháng '+i), String(i).padStart(2,'0')));
-  ovMonth.onchange = ovYear.onchange = () => OV_HOOKS.forEach(f=>f());
+  const opt = (sel, v, t) => sel.add(new Option(t, v));
+  const cnt = f => DATA.filter(f).length;
+  fLbl.textContent = tr('🔎 Filter', '🔎 Lọc');
+  opt(fCo, '', tr('All companies', 'Tất cả công ty'));
+  DM.COMPANIES.forEach(c => opt(fCo, c, c + ' (' + cnt(x => DM.companyCode(x.noilapdat) === c) + ')'));
+  opt(fSup, '', tr('All suppliers', 'Tất cả NCC'));
+  Object.keys(SUP).sort((a, b) => SUP[a].localeCompare(SUP[b])).forEach(k => opt(fSup, k, SUP[k]));
+  opt(fSt, '', tr('All statuses', 'Tất cả trạng thái'));
+  [...DM.LIFECYCLE, 'delayed'].forEach(k => opt(fSt, k, OV_LC[k]));
+  opt(ovMonth, '', tr('Month: All', 'Tháng: Tất cả'));
+  for(let i=1;i<=12;i++) opt(ovMonth, String(i).padStart(2,'0'), tr(MON[i-1],'Tháng '+i));
+  opt(ovYear, '', tr('Year: All', 'Năm: Tất cả'));
+  [...new Set(DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4)))].sort().forEach(y=>opt(ovYear, y, y));
+  const SELS = { co:fCo, sup:fSup, st:fSt, m:ovMonth, y:ovYear };
+  Object.entries(SELS).forEach(([k, el]) => { el.value = OVF[k]; if(el.value !== OVF[k]) OVF[k] = ''; });
+  fReset.textContent = tr('✕ Clear filters', '✕ Bỏ lọc');
+  fLink.textContent = tr('🔗 Copy link', '🔗 Sao chép link');
+  const mark = () => {
+    Object.values(SELS).forEach(el => el.classList.toggle('on', !!el.value));
+    fReset.hidden = !DM.FILTER_KEYS.some(k => OVF[k]);
+  };
+  const apply = () => {
+    Object.entries(SELS).forEach(([k, el]) => { OVF[k] = el.value; });
+    try{ history.replaceState(null, '', location.pathname + DM.toQuery(OVF) + location.hash); }catch(e){}
+    mark();
+    OV_HOOKS.forEach(f => f());
+  };
+  Object.values(SELS).forEach(el => el.onchange = apply);
+  fReset.onclick = () => { Object.values(SELS).forEach(el => el.value = ''); apply(); };
+  fLink.onclick = async () => {
+    try{ await navigator.clipboard.writeText(location.href); fLink.textContent = tr('✓ Link copied', '✓ Đã sao chép'); }
+    catch(e){ prompt(tr('Copy this link:', 'Sao chép link này:'), location.href); }
+    setTimeout(() => fLink.textContent = tr('🔗 Copy link', '🔗 Sao chép link'), 1800);
+  };
+  mark();
 })();
+
+/* ===== 5 thẻ KPI + bảng Needs attention ===== */
+let KP = null;
 (function(){
-  function animTo(el, target, dec){
-    const from = parseFloat((el.textContent||'0').replace(LANG==='vi' ? /\./g : /,/g,'').replace(',','.')) || 0;
-    const t0 = performance.now();
-    (function tick(t){ const pr = Math.min((t-t0)/600,1), e = 1-Math.pow(1-pr,3);
-      el.textContent = (from+(target-from)*e).toLocaleString(NUMLOC,{minimumFractionDigits:dec||0,maximumFractionDigits:dec||0});
-      if(pr<1) requestAnimationFrame(tick); })(t0);
-  }
-  kpiValPre.textContent = tr('$', '');
-  kpiValUnit.textContent = tr('M', ' tỷ ₫');
-  function upd(){
-    const y = ovMonth.value || ovYear.value;
-    const rows = ovRows();
-    const units = rows.reduce((s,x)=>s+x.sl,0);
-    const tag = y ? tr('due at plant in ','dự kiến về NM ')+ovLabel() : tr('entire portfolio','toàn bộ danh mục');
-    animTo(kpiN, rows.length);
-    kpiNote.textContent = units + tr(' units by quantity · ',' máy theo số lượng · ') + tag;
-    const vnd = rows.reduce((s,x)=>s+x.vnd,0), usd = rows.reduce((s,x)=>s+x.usd,0);
-    // tiếng Việt: số chính là tỷ ₫, dòng phụ là USD; tiếng Anh thì ngược lại
-    if(LANG==='vi'){
-      animTo(kpiVal, vnd/1e9, 1);
-      kpiValNote.textContent = '≈ ' + (usd/1e6).toLocaleString(NUMLOC,{maximumFractionDigits:2}) + ' triệu USD · ' + tag;
-    } else {
-      animTo(kpiVal, usd/1e6, 2);
-      kpiValNote.textContent = '≈ ' + (vnd/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1}) + ' B ₫ · ' + tag;
+  const CARDS = [
+    ['pipeline', '⚙️', tr('Machines in pipeline', 'Máy đang triển khai')],
+    ['ontime',   '🎯', tr('On-time rate', 'Tỷ lệ đúng hạn')],
+    ['delayed',  '🔴', tr('Delayed', 'Đang trễ')],
+    ['arriving', '🚢', tr('Arriving in 30 days', 'Về trong 30 ngày')],
+    ['commissioning', '🔧', tr('Pending commissioning', 'Chờ nghiệm thu')]
+  ];
+  // chỉ báo tăng/giảm so với 7 ngày trước: ẩn — chưa có dữ liệu lịch sử KPI
+  dmKpis.innerHTML = CARDS.map(([k, ic, lbl]) =>
+    `<div class="kpi${k==='commissioning'?' na':''}" id="dmK_${k}"${k==='commissioning'?'':` onclick="showKPI('${k}')"`}><span class="ic">${ic}</span>` +
+    `<div class="lbl">${lbl}</div><div class="val" id="dmV_${k}">—</div><div class="note" id="dmN_${k}"></div></div>`).join('');
+  const set = (k, acc, val, note) => {
+    document.getElementById('dmK_'+k).style.setProperty('--accent', acc);
+    document.getElementById('dmV_'+k).textContent = val;
+    document.getElementById('dmN_'+k).textContent = note;
+  };
+  attTitle.textContent = tr('⚠️ Needs attention', '⚠️ Cần chú ý');
+  function draw(){
+    const rows = ovRows(), period = !!(OVF.m || OVF.y);
+    KP = DM.kpis(rows, { ontimeWindow: period ? null : 90 });
+    const o = KP.ontime, dl = KP.delayed;
+    set('pipeline', 'var(--sky)', dmN(KP.pipeline.count),
+        dmN(KP.pipeline.vnd) + ' ₫ · ' + tr('not yet arrived at site', 'chưa về nhà máy'));
+    set('ontime', o.rate == null ? 'var(--st-done)' : o.rate >= .8 ? 'var(--st-ok)' : o.rate >= .6 ? 'var(--st-warn)' : 'var(--st-bad)',
+        o.rate == null ? '—' : dmN(o.rate * 100) + '%',
+        (o.den ? o.num + '/' + o.den + tr(' arrivals on or before plan', ' lần về đúng hoặc sớm hạn')
+               : tr('no arrivals with a planned date', 'chưa có lần về nào có ngày kế hoạch')) +
+        ' · ' + (period ? ovLabel() : tr('last 90 days', '90 ngày qua')));
+    set('delayed', !dl.count ? 'var(--st-ok)' : dl.avgDays > 14 ? 'var(--st-bad)' : 'var(--st-warn)', dmN(dl.count),
+        dl.count ? tr('avg ', 'trung bình ') + dmN(dl.avgDays, 1) + tr(' days late', ' ngày trễ') : tr('no machine behind plan', 'không có máy nào trễ'));
+    set('arriving', 'var(--blue)', dmN(KP.arriving.count),
+        tr('expected at site by ', 'dự kiến về nhà máy đến ') + dmD(DM.addDays(DM.todayIso(), 30)));
+    set('commissioning', 'var(--st-done)', '—', tr('no data yet — commissioning date is not tracked', 'chưa có dữ liệu — chưa theo dõi ngày nghiệm thu'));
+
+    const list = DM.attention(rows, 5);
+    attSub.textContent = dl.count ? tr(`top ${list.length} of ${dl.count} delayed · by days late`, `${list.length} / ${dl.count} máy trễ nặng nhất · theo số ngày trễ`) : '';
+    if(!list.length){
+      attBox.innerHTML = `<div class="dm-empty">✅ ${tr('Nothing needs attention — no machine is behind plan.', 'Không có gì cần chú ý — không máy nào trễ kế hoạch.')}</div>`;
+      return;
     }
-    const arr = rows.filter(x=>x.status==='arrived').length;
-    animTo(kpiArr, arr);
-    kpiArrNote.textContent = (rows.length? Math.round(arr/rows.length*100):0) + tr('% of equipment · ','% thiết bị · ') + tag;
-    animTo(kpiSoon, rows.filter(x=>x.status==='soon').length);
-    animTo(kpiWait, rows.filter(x=>x.status==='waiting').length);
-    animTo(kpiDelay, rows.filter(isLate).length);
+    const H = tr(['No.', 'Machine', 'Company', 'Supplier', 'Delayed milestone', 'Days late', 'Note / reason', 'PIC'],
+                 ['STT', 'Tên máy', 'Công ty', 'NCC', 'Mốc đang trễ', 'Số ngày trễ', 'Ghi chú / lý do', 'Phụ trách']);
+    attBox.innerHTML = `<table><thead><tr>${H.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${list.map(({x, d}) => {
+      const sev = d.days > 14 ? 'bad' : 'warn';
+      const when = d.overdue ? tr('overdue · plan ', 'quá hạn · KH ') + dmD(d.planned)
+                             : tr('plan ', 'KH ') + dmD(d.planned) + ' → ' + tr('forecast ', 'dự kiến ') + dmD(d.forecast);
+      return `<tr onclick="showDetail(${DATA.indexOf(x)})">` +
+        `<td data-l="${H[0]}">${x._order || '—'}</td>` +
+        `<td data-l="${H[1]}" class="nm">${ovEsc(x.ten)}</td>` +
+        `<td data-l="${H[2]}">${DM.companyCode(x.noilapdat) || ovEsc(x.noilapdat) || '—'}</td>` +
+        `<td data-l="${H[3]}">${ovEsc(x.ncc) || '—'}</td>` +
+        `<td data-l="${H[4]}"><span>${OV_MS[d.milestone]}<small>${when}</small></span></td>` +
+        `<td data-l="${H[5]}"><span class="sev sev-${sev}">+${d.days} ${tr('d', 'ngày')}</span></td>` +
+        `<td data-l="${H[6]}" class="note">${ovEsc(x.giaitrinh) || '—'}</td>` +
+        `<td data-l="${H[7]}">${ovEsc(x.phutrach) || '—'}</td></tr>`;
+    }).join('')}</tbody></table>`;
   }
-  OV_HOOKS.push(upd); upd();
+  OV_HOOKS.push(draw); draw();
 })();
 
 /* ===== page 1 charts ===== */
@@ -1263,7 +1387,8 @@ function initP1(){
     const y = ovYear.value;
     const keys = y ? Array.from({length:12},(_,i)=>y+'-'+String(i+1).padStart(2,'0')) : AGG.months;
     const labels = keys.map(k=>{const[yy,mo]=k.split('-');return y ? MON[mo-1] : MON[mo-1]+tr(" '",'/')+yy.slice(2)});
-    const inM = k => DATA.filter(x=>x.vedukienn && x.vedukienn.slice(0,7)===k);
+    const base = ovRowsAllTime();
+    const inM = k => base.filter(x=>x.vedukienn && x.vedukienn.slice(0,7)===k);
     return {labels,
       arr: keys.map(k=>inM(k).filter(x=>x.status==='arrived').length),
       soon: keys.map(k=>inM(k).filter(x=>x.status==='soon').length),
@@ -1303,7 +1428,7 @@ function initP1(){
   const GXC = {arrived:'#34d399', soon:'#fbbf24', waiting:'#60a5fa', unknown:'#64748b'};
   function renderGantt(){
     const p = ovMonth.value || ovYear.value;
-    const rows = (p ? ovRows() : DATA.filter(x=>x.vedukienn && x.daysleft>=-30))
+    const rows = (p ? ovRows() : ovRowsAllTime().filter(x=>x.vedukienn && x.daysleft>=-30))
                      .sort((a,b)=> a.vedukienn<b.vedukienn?-1:1);
     if(!rows.length){ ganttBox.innerHTML='<div style="color:var(--muted);padding:20px">'+tr('No data','Không có dữ liệu')+'</div>'; return; }
     const t0=new Date(); t0.setHours(0,0,0,0);
@@ -1648,26 +1773,23 @@ function render(){
 }
 window.goPage = p => { pageNo = p; render(); };
 window.showKPI = kind => {
-  let rows = ovRows();
-  const T = tr({all:'Total equipment', value:'Total value', waiting:'Awaiting', soon:'Arriving soon (≤15 days)', late:'Late vs plan', arrived:'Arrived at plant'},
-    {all:'Tổng thiết bị', value:'Tổng giá trị', waiting:'Đang chờ về', soon:'Sắp về (≤15 ngày)', late:'Về trễ so với kế hoạch', arrived:'Đã về nhà máy'});
-  if(kind==='waiting'||kind==='soon'||kind==='arrived') rows = rows.filter(x=>x.status===kind);
-  if(kind==='late') rows = rows.filter(isLate);
-  rows = [...rows].sort((a,b)=>{
-    const d = (PRIO[a.status]??9)-(PRIO[b.status]??9);
-    if(d) return d;
-    return a.vedukienn>b.vedukienn?1:-1;
-  });
-  const vnd = rows.reduce((s,x)=>s+x.vnd,0), usd = rows.reduce((s,x)=>s+x.usd,0), units = rows.reduce((s,x)=>s+x.sl,0);
+  const K = KP && KP[kind]; if(!K) return;
+  const T = tr({pipeline:'Machines in pipeline', ontime:'On-time rate — arrivals counted', delayed:'Delayed machines', arriving:'Arriving in 30 days'},
+               {pipeline:'Máy đang triển khai', ontime:'Tỷ lệ đúng hạn — các lần về được tính', delayed:'Máy đang trễ', arriving:'Về trong 30 ngày'});
+  const rows = [...K.rows].sort((a,b) => ((DM.delay(b)||{days:0}).days - (DM.delay(a)||{days:0}).days) || String(a.vedukienn).localeCompare(String(b.vedukienn)));
+  const vnd = rows.reduce((s,x)=>s+(+x.vnd||0),0), units = rows.reduce((s,x)=>s+x.sl,0);
   mTitle.textContent = T[kind] + ' · ' + ovLabel();
-  mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')} · ${(vnd/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')} ≈ ${(usd/1e6).toLocaleString(NUMLOC,{maximumFractionDigits:2})} ${tr('M USD','triệu USD')}`;
-  mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(x=>`
-    <div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
-      <span class="kn">${x.ten}${x.sl>=2?` <b style="color:var(--sky)">(x${x.sl})</b>`:''}<small>${x.phutrach||'—'} · ${x.noilapdat} · ${x.ncc}</small></span>
-      <span class="kv">${kind==='value'? '<b style=\'color:var(--violet)\'>'+fmtM(x.vnd)+' ₫</b><br>' : ''}${fmtD(x.vedukienn)}<br>
-        <span class="badge b-${x.status}" style="font-size:10.5px;padding:2px 8px">${LBL[x.status]}</span>
-        <span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}" style="font-size:10.5px;padding:2px 8px">${dgT(x.danhgia)}</span></span>
-    </div>`).join('')}</div>`
+  mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')} · ${dmN(vnd)} ₫`;
+  mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(x=>{
+    const d = DM.delay(x), sev = DM.severity(x);
+    const a = DM.milestones(x)[2];
+    const tag = sev==='done' ? (a.planned && a.actual > a.planned ? tr('arrived ','về trễ ')+'+'+DM.days(a.planned,a.actual)+tr(' d',' ngày') : OV_LC.arrived)
+              : d ? '+'+d.days+tr(' d late',' ngày trễ') : tr('on schedule','đúng tiến độ');
+    return `<div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
+      <span class="kn">${ovEsc(x.ten)}${x.sl>=2?` <b style="color:var(--sky)">(x${x.sl})</b>`:''}<small>${ovEsc(x.phutrach)||'—'} · ${DM.companyCode(x.noilapdat)||ovEsc(x.noilapdat)} · ${ovEsc(x.ncc)||'—'}</small></span>
+      <span class="kv">${tr('Plan','KH')} ${dmD(a.planned)} · ${a.actual?tr('Actual','Thực tế'):tr('Forecast','Dự kiến')} ${dmD(a.actual||a.forecast)}<br>
+        <span class="sev sev-${sev}" style="font-size:11px;padding:1px 8px">${tag}</span> <span style="font-size:11px">${OV_LC[DM.lifecycle(x)]}</span></span>
+    </div>`;}).join('')}</div>`
     : `<div class="m-ok">${tr(`No machines in this group.`,`Không có thiết bị nào trong nhóm này.`)}</div>`;
   openM();
 };
