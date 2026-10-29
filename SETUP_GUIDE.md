@@ -16,6 +16,7 @@ Giao diện giữ nguyên dashboard `Dashboard_TienDoMayVe.html`. Dữ liệu l�
 | `supabase/05_mmtb_schema.sql` | Tạo phân hệ **Danh mục MMTB** (bảng `mmtb_machines`, `suppliers`, `production_lines`…). Không đụng tới bảng `machines` của Tiến độ máy về. Chạy 1 lần |
 | `supabase/import/mmtb_import.sql` | Nạp 300 máy, 38 chuyền, 54 NCC từ `mmtb_export_2026-10-29.json`. Chạy sau `05`. Sinh lại bằng `mmtb_build_sql.py`. **Không dùng khi đã bật mã hoá** (gửi dữ liệu dạng thường) |
 | `supabase/06_encryption.sql` | Bật **mã hoá trên trình duyệt**: dữ liệu nhạy cảm được mã hoá AES-256 bằng mật khẩu dữ liệu trước khi gửi lên, Supabase chỉ lưu chuỗi đã mã hoá. Chạy 1 lần, sau `05` |
+| `supabase/07_library.sql` | Tab **📚 Thư viện** (Mã máy, NCC, Nhà máy, Nhà xưởng, Chuyền, Nhóm). Chỉ admin sửa thư viện. Chạy 1 lần, sau `06` |
 | `supabase/import/mmtb_rows.json` | Cùng dữ liệu với `mmtb_import.sql`, để nạp bằng nút **📥 Nạp file dữ liệu** trong app (mã hoá trước khi gửi). Chứa dữ liệu thật dạng thường: chỉ giữ trên máy |
 
 **Bật mã hoá (làm 1 lần, theo thứ tự)**
@@ -26,6 +27,12 @@ Giao diện giữ nguyên dashboard `Dashboard_TienDoMayVe.html`. Dữ liệu l�
 5. Chạy lại mục 5 trong `06_encryption.sql`: cả 4 số phải bằng 0. Sau đó có thể chạy mục 6 (tuỳ chọn) để bỏ dữ liệu thường còn trong nhật ký sửa cũ.
 
 Mỗi lần mở app ở tab mới, app hỏi mật khẩu dữ liệu. Đóng tab hoặc đăng xuất là quên khoá.
+
+**Thư viện (Danh mục MMTB › 📚 Thư viện, chỉ admin sửa)**
+- **Mã máy** = mã nhà máy + dãy số kế toán, VD `DTR-104600041`. Chưa có số kế toán thì app cấp tạm 9 số ngẫu nhiên (nhãn *tạm*); mã cũ giữ ở cột *Mã cũ*.
+  - Đổi mã cũ (DTR-004…) sang dạng mới: bấm **🎲 Cấp mã tạm dạng mới**.
+  - Khi kế toán gửi số: bấm **📋 Dán mã kế toán**, dán 2 cột từ Excel (*mã hiện tại hoặc mã cũ* | *số kế toán*). Hoặc bấm ✏️ ở từng máy.
+- **Nhà cung cấp, Nhà máy, Nhà xưởng, Chuyền sản xuất, Nhóm thiết bị**: thêm / sửa / xoá. Mục đang có máy dùng thì không xoá được. Đổi tên nhóm thì các máy trong nhóm đổi theo.
 
 **Mã PIN 6 số (đặt bằng SQL, không có trên app):** trong SQL Editor chạy `select public.admin_set_pin('123456');` (thay bằng PIN của bạn). Đổi PIN: chạy lại lệnh với PIN mới. Nhập sai mật khẩu dữ liệu 5 lần thì ô nhập bị khoá, phải nhập đúng PIN mới được thử tiếp; sai PIN 5 lần thì chờ 15 phút. PIN băm bcrypt, kiểm tra và đếm số lần sai đều trên máy chủ. PIN **không** mở được dữ liệu. Bỏ PIN: `update public.app_pin set pin_hash = null;`
 

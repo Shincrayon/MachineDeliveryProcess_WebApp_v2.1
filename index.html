@@ -409,6 +409,19 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
   padding:10px 18px;border-radius:999px;background:var(--panel);border:1px solid rgba(52,211,153,.45);color:var(--txt);
   font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:.3s;pointer-events:none}
 .mm-toast.show{opacity:1;transform:translateX(-50%)}
+/* ===== thư viện ===== */
+.lib-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.lib-tab{padding:7px 13px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.lib-tab:hover{color:var(--txt);border-color:var(--blue)}
+.lib-tab.active{background:var(--blue);border-color:var(--blue);color:#08101f;font-weight:700}
+.lib-tab small{opacity:.75;margin-left:4px}
+.lib-act{white-space:nowrap;text-align:right}
+.lib-act button{padding:4px 9px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:12px;margin-left:4px}
+.lib-act button:hover{color:var(--txt);border-color:var(--blue)}
+.lib-note{font-size:12.5px;color:var(--muted);margin:-4px 0 10px}
+.tag-temp{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:700;background:rgba(251,191,36,.15);color:var(--amber);margin-left:6px;vertical-align:1px}
+.lib-chk{display:flex;flex-wrap:wrap;gap:12px;padding:6px 0;font-size:13px;color:var(--txt)}
+.lib-chk label{flex-direction:row!important;align-items:center;gap:5px!important;color:var(--txt)!important}
 .hx-list{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow:auto}
 .hx-item{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--panel2)}
 .hx-head{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline;font-size:12.5px;color:var(--muted)}
@@ -460,6 +473,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
   <div class="tabs">
     <button class="tab mod-mmtb" data-p="c1">📊 Overview</button>
     <button class="tab mod-mmtb" data-p="c2">📋 Machines</button>
+    <button class="tab mod-mmtb" data-p="c3">📚 Library</button>
     <button class="tab mod-delivery active" data-p="p1">📊 Overview</button>
     <button class="tab mod-delivery" data-p="p2">📈 Analytics</button>
     <button class="tab mod-delivery" data-p="p4">🏅 Evaluation</button>
@@ -484,6 +498,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
   <!-- ============ DANH MỤC MMTB: nội dung do mmtbSrc vẽ ============ -->
   <div class="page" id="c1"></div>
   <div class="page" id="c2"></div>
+  <div class="page" id="c3"></div>
 
   <!-- ============ PAGE 1: TỔNG QUAN ============ -->
   <div class="page active" id="p1">
@@ -2155,8 +2170,13 @@ async function mmImport(J){
       newLine.push(await seal('production_lines', { id, company_id:coId.get(l.company), area_id:areaId(l.company, l.area), code:l.code, name:l.name, materials:l.materials || [] })); }
     await ins('production_lines', newLine);
     // máy: id tạo sẵn để máy con trỏ được về máy cha trong cùng lô
-    const { data: ex, error: eM } = await sb.from('mmtb_machines').select('id,machine_code'); if(eM) throw eM;
+    const { data: ex, error: eM } = await sb.from('mmtb_machines').select(MM.hasGroups ? 'id,machine_code,legacy_code' : 'id,machine_code'); if(eM) throw eM;
     const macId = new Map((ex || []).map(m=>[m.machine_code, m.id]));
+    (ex || []).forEach(m=>{ if(m.legacy_code && !macId.has(m.legacy_code)) macId.set(m.legacy_code, m.id); });   // máy đã đổi sang mã mới
+    if(MM.hasGroups){
+      const gs = [...new Set(J.machines.map(m=>m.group_name).filter(Boolean))];
+      await ins('mmtb_groups', gs.map(name=>({ name })), { onConflict:'name', ignoreDuplicates:true });
+    }
     const newM = [];
     for(const m of J.machines){
       if(macId.has(m.machine_code)) continue;
@@ -2172,6 +2192,7 @@ async function mmImport(J){
         group_name:m.group_name, approved_date:m.approved_date, manufacturing_days:m.manufacturing_days, engineer:m.engineer,
         manager:m.manager, equipment_type:m.equipment_type, source_ref:m.source_ref, sort_order:m.sort_order };
       if(m.parent && !row.parent_machine_id){ row.role = 'main'; }      // cha không có trong file: để máy độc lập
+      if(MM.hasGroups) row.code_temp = true;                            // mã trong file chưa phải số kế toán
       newM.push(await seal('mmtb_machines', row));
     }
     await ins('mmtb_machines', newM);
@@ -2306,7 +2327,7 @@ function filtered(){
     (!F.co || x.company_code===F.co) && (!F.area || x.area_code===F.area) && (!F.line || x.line_id===F.line) &&
     (!F.grp || x.group_name===F.grp) &&
     (!F.st || (F.st==='__prog' ? LC.indexOf(x.lifecycle_status) < LC.indexOf('in_operation') : x.lifecycle_status===F.st)) &&
-    (!F.q || [x.machine_code, x.name, x.model, x.serial_number, x.supplier_name, x.manufacturer, x.line_name, x.notes]
+    (!F.q || [x.machine_code, x.legacy_code, x.name, x.model, x.serial_number, x.supplier_name, x.manufacturer, x.line_name, x.notes]
               .some(v=>v && String(v).toLowerCase().includes(F.q))));
 }
 function renderList(){
@@ -2354,7 +2375,8 @@ window.mmShow = id => {
   mBody.innerHTML = `<div class="dt-wrap">
     ${sec(tr('General','Thông tin chung'), [
       it(tr('Machine name','Tên máy'), T(x.name), 'full'),
-      it(tr('Code','Mã máy'), T(x.machine_code)), it('Model', T(x.model)),
+      it(tr('Code','Mã máy'), T(x.machine_code) + (x.code_temp ? `<span class="tag-temp">${tr('temporary','tạm')}</span>` : '') +
+        (x.legacy_code ? `<div class="mm-sub">${tr('old code','mã cũ')}: ${E(x.legacy_code)}</div>` : '')), it('Model', T(x.model)),
       it(tr('Brand','Thương hiệu'), T(x.manufacturer)), it(tr('Serial number','Số serial'), T(x.serial_number)),
       it(tr('Quantity','Số lượng'), N(x.quantity || 1)), it(tr('Capacity','Công suất'), cap),
       it(tr('Materials','Vật liệu'), (x.materials || []).join(', ') || '—'), it(tr('Group','Nhóm'), T(x.group_name)),
@@ -2399,7 +2421,7 @@ function buildForm(){
     <div class="m-sub">${tr('Saved to the catalog; everyone with the link sees it right away. Fields marked * are required.','Lưu vào Danh mục MMTB, ai mở link cũng thấy ngay. Ô có dấu * là bắt buộc.')}</div>
     <div class="add-grid" id="mmGrid">
       ${L(tr('Plant *','Nhà máy *'), `<select id="m_co" class="req">${MM.companies.map(c=>`<option value="${E(c.id)}">${E(c.code)} — ${E(c.name)}</option>`).join('')}</select>`)}
-      ${L(tr('Code *','Mã máy *'), `<input id="m_code" class="req" type="text" placeholder="DTR-220">`)}
+      ${L(tr('Code *','Mã máy *'), `<input id="m_code" class="req" type="text" placeholder="DTR-104600041"${window.__role==='admin' ? '' : ' readonly'}>`)}
       ${L(tr('Machine name *','Tên máy *'), `<input id="m_name" class="req" type="text">`, 1)}
       ${L('Model', `<input id="m_model" type="text">`)}
       ${L(tr('Brand / manufacturer','Thương hiệu / hãng'), `<input id="m_brand" type="text">`)}
@@ -2411,7 +2433,7 @@ function buildForm(){
       ${L(tr('Role','Vai trò'), `<select id="m_role"><option value="main">${ROLEL.main}</option><option value="auxiliary">${ROLEL.auxiliary}</option></select>`)}
       ${L(tr('Capacity','Công suất'), `<div style="display:flex;gap:6px"><input id="m_capv" type="number" step="any" style="flex:1;min-width:0" placeholder="3000"><input id="m_capu" type="text" style="width:96px" placeholder="kg/h"></div>`)}
       ${L(tr('Materials','Vật liệu'), `<div class="mm-mat">${['PET','HDPE','PP'].map(m=>`<label><input type="checkbox" value="${m}" class="m_mat"> ${m}</label>`).join('')}</div>`)}
-      ${L(tr('Group','Nhóm'), `<input id="m_group" type="text" list="mmGroups"><datalist id="mmGroups"></datalist>`)}
+      ${L(tr('Group','Nhóm'), `<select id="m_group"></select>`)}
       ${L(tr('Equipment type','Loại thiết bị'), `<input id="m_type" type="text">`)}
       ${L(tr('Origin','Xuất xứ'), `<input id="m_origin" type="text">`)}
       ${L(tr('Supplier','Nhà cung cấp'), `<select id="m_sup"></select>`)}
@@ -2463,12 +2485,16 @@ function syncRole(){
   else { const o = m_role.querySelector('[value=sub_unit]'); if(o) o.remove(); if(m_role.value==='sub_unit' || !m_role.value) m_role.value = 'main'; }
   m_role.disabled = sub;
 }
+/* mã máy = mã nhà máy + dãy số kế toán (VD DTR-104600041). Chưa có số kế toán: cấp tạm 9 số ngẫu nhiên. */
+function tempCode(co){
+  const used = new Set(MM.machines.map(x=>x.machine_code));
+  for(;;){ const n = crypto.getRandomValues(new Uint32Array(1))[0] % 900000000 + 100000000;
+           const c = co + '-' + n; if(!used.has(c)) return c; }
+}
+window.__tempCode = tempCode;
 function suggestCode(){
   if(editId || m_code.dataset.touched) return;
-  const co = (MM.companies.find(c=>c.id===m_co.value) || {}).code || 'M';
-  const re = new RegExp('^' + co + '-(\\d+)$', 'i');
-  const max = MM.machines.reduce((a,x)=>{ const m = re.exec(x.machine_code || ''); return m ? Math.max(a, +m[1]) : a; }, 0);
-  m_code.value = co + '-' + String(max + 1).padStart(3, '0');
+  m_code.value = tempCode((MM.companies.find(c=>c.id===m_co.value) || {}).code || 'M');
 }
 const setDate = (id, v) => { if(fps[id]){ v ? fps[id].setDate(String(v).slice(0,10), false, 'Y-m-d') : fps[id].clear(); } else document.getElementById(id).value = v ? String(v).slice(0,10) : ''; };
 function openForm(x){
@@ -2477,7 +2503,10 @@ function openForm(x){
   m_code.dataset.touched = x ? '1' : '';
   mmFTitle.textContent = x ? tr('✏️ Edit: ','✏️ Sửa: ') + x.name : tr('➕ Add machine to the catalog','➕ Thêm máy vào Danh mục MMTB');
   mmSave.textContent = x ? tr('💾 Save changes','💾 Lưu thay đổi') : tr('➕ Add machine','➕ Thêm máy');
-  mmGroups.innerHTML = [...new Set(MM.machines.map(m=>m.group_name).filter(Boolean))].sort().map(g=>`<option value="${E(g)}">`).join('');
+  // nhóm: chọn từ thư viện; nhóm cũ của máy (nếu không còn trong thư viện) vẫn giữ để không mất
+  const gNames = (MM.groups || []).map(g=>g.name);
+  if(x && x.group_name && !gNames.includes(x.group_name)) gNames.push(x.group_name);
+  m_group.innerHTML = `<option value="">—</option>` + gNames.map(g=>`<option value="${E(g)}">${E(g)}</option>`).join('');
   m_sup.innerHTML = `<option value="">—</option>` + MM.suppliers.map(s=>`<option value="${E(s.id)}">${E(s.name)}</option>`).join('');
   const v = x || {};
   const defCo = (MM.companies.find(c=>c.code===(F.co || ovCo)) || MM.companies[0] || {}).id;
@@ -2514,6 +2543,7 @@ async function reload(){
   index(); updHeaderTs();
   if(ovDrawn) updOverview();
   listDrawn = false; if(document.getElementById('c2').classList.contains('active')) drawList();
+  if(document.getElementById('c3').classList.contains('active')) drawLibrary();
 }
 async function save(){
   const val = id => (document.getElementById(id).value || '').trim();
@@ -2531,6 +2561,11 @@ async function save(){
     manufacturing_days: num('m_ctm') == null ? null : Math.round(num('m_ctm')),
     group_name: val('m_group') || null, equipment_type: val('m_type') || null, origin: val('m_origin') || null,
     engineer: val('m_eng') || null, manager: val('m_mgr') || null, notes: val('m_notes') || null };
+  if(MM.hasGroups){   // có cột code_temp (07_library.sql): mã tự cấp = tạm; admin gõ mã khác = mã kế toán
+    const cur = editId ? byId.get(editId) : null;
+    if(!cur) row.code_temp = !m_code.dataset.touched;
+    else if(row.machine_code !== cur.machine_code){ row.code_temp = false; if(!cur.legacy_code) row.legacy_code = cur.machine_code; }
+  }
   if(!row.machine_code || !row.name || !row.company_id){
     showNotice({ type:'error', title:tr('Missing information','Thiếu thông tin'), sub:tr('Plant, code and machine name are required.','Cần nhập Nhà máy, Mã máy và Tên máy.') }); return; }
   const sb = window.__sb;
@@ -2589,6 +2624,288 @@ window.mmDelete = id => {
 };
 if(canW && !MM.err){ btnAddM.hidden = false; btnAddM.onclick = ()=>openForm(null); }
 
+/* ===================== THƯ VIỆN =====================
+   Mã máy · NCC · Nhà máy · Nhà xưởng · Chuyền · Nhóm. Mọi người xem được; chỉ admin thêm / sửa / xoá (07_library.sql).
+   Mục đang được máy dùng thì không xoá được. */
+const isAdmin = window.__role === 'admin';
+const SUP_ROLES = [['manufacturer',tr('Manufacturer','Nhà sản xuất')],['distributor',tr('Distributor','Đại lý / phân phối')],
+                   ['installer',tr('Installer','Nhà thầu lắp đặt')],['service',tr('Service / maintenance','Dịch vụ / bảo trì')]];
+const MATS = [['PET','PET'],['HDPE','HDPE'],['PP','PP']];
+const coOf = id => MM.companies.find(c=>c.id===id) || {};
+const cnt = (arr, f) => arr.filter(f).length;
+const byCoCode = (a,b) => String(coOf(a.company_id).code).localeCompare(coOf(b.company_id).code) || String(a.code).localeCompare(b.code);
+const LIB = {
+  codes:     { icon:'🏷', title:tr('Machine codes','Mã máy'), count:()=>MM.machines.length },
+  suppliers: { icon:'🤝', title:tr('Suppliers','Nhà cung cấp'), table:'suppliers', rows:()=>MM.suppliers,
+    fields:[ {k:'name', l:tr('Name','Tên'), req:1, full:1}, {k:'country', l:tr('Country','Quốc gia')},
+             {k:'roles', l:tr('Roles','Vai trò'), type:'multi', opts:SUP_ROLES, full:1},
+             {k:'contact', l:tr('Contact (person · phone · email)','Liên hệ (người · điện thoại · email)'), full:1},
+             {k:'notes', l:tr('Notes','Ghi chú'), type:'textarea', full:1} ],
+    cols:['name','country','roles','contact'], uniq:['name'], used: r=>cnt(MM.machines, x=>x.supplier_id===r.id),
+    sort:(a,b)=>String(a.name).localeCompare(b.name) },
+  companies: { icon:'🏭', title:tr('Plants','Nhà máy'), table:'companies', rows:()=>MM.companies,
+    fields:[ {k:'code', l:tr('Code (e.g. DTR)','Mã (VD DTR)'), req:1, upper:1, lockEdit:1}, {k:'name', l:tr('Name','Tên'), req:1},
+             {k:'is_active', l:tr('Active','Đang hoạt động'), type:'bool', def:true} ],
+    cols:['code','name','is_active'], uniq:['code'],
+    used: r=>cnt(MM.machines, x=>x.company_id===r.id) + cnt(MM.areas, a=>a.company_id===r.id) + cnt(MM.lines, l=>l.company_id===r.id),
+    sort:(a,b)=>String(a.code).localeCompare(b.code) },
+  areas:     { icon:'🏢', title:tr('Workshops','Nhà xưởng'), table:'areas', rows:()=>MM.areas,
+    fields:[ {k:'company_id', l:tr('Plant','Nhà máy'), type:'company', req:1}, {k:'code', l:tr('Workshop code (e.g. F07)','Mã xưởng (VD F07)'), req:1, upper:1},
+             {k:'name', l:tr('Workshop name','Tên xưởng'), req:1, full:1} ],
+    cols:['company_id','code','name'], uniq:['company_id','code'],
+    used: r=>cnt(MM.machines, x=>x.area_id===r.id) + cnt(MM.lines, l=>l.area_id===r.id), sort:byCoCode },
+  lines:     { icon:'⛓', title:tr('Production lines','Chuyền sản xuất'), table:'production_lines', rows:()=>MM.lines,
+    fields:[ {k:'company_id', l:tr('Plant','Nhà máy'), type:'company', req:1}, {k:'area_id', l:tr('Workshop','Nhà xưởng'), type:'workshop'},
+             {k:'code', l:tr('Line code','Mã chuyền'), req:1, upper:1}, {k:'name', l:tr('Line name','Tên chuyền'), req:1, full:1},
+             {k:'materials', l:tr('Materials','Vật liệu'), type:'multi', opts:MATS}, {k:'is_active', l:tr('Running','Đang hoạt động'), type:'bool', def:true} ],
+    cols:['company_id','code','name','area_id','materials','is_active'], uniq:['company_id','code'],
+    used: r=>cnt(MM.machines, x=>x.line_id===r.id), sort:(a,b)=>String(coOf(a.company_id).code).localeCompare(coOf(b.company_id).code) || String(a.name).localeCompare(b.name) },
+  groups:    { icon:'🗂', title:tr('Equipment groups','Nhóm thiết bị'), table:'mmtb_groups', rows:()=>MM.groups || [],
+    fields:[ {k:'name', l:tr('Group name','Tên nhóm'), req:1, full:1}, {k:'sort_order', l:tr('Display order','Thứ tự hiển thị'), type:'number'} ],
+    cols:['name','sort_order'], uniq:['name'], used: r=>cnt(MM.machines, x=>x.group_name===r.name),
+    sort:(a,b)=>(+a.sort_order || 0) - (+b.sort_order || 0) || String(a.name).localeCompare(b.name), needs07:true }
+};
+const LABEL = (d, k) => { const f = d.fields.find(o=>o.k===k); return f ? f.l.replace(/ \(.*\)$/, '') : k; };
+function cell(k, v){
+  if(k==='company_id') return E(coOf(v).code || '—');
+  if(k==='area_id'){ const a = MM.areas.find(x=>x.id===v); return a ? E(a.code + ' · ' + a.name) : '—'; }
+  if(k==='roles') return (v || []).map(r=>E((SUP_ROLES.find(o=>o[0]===r) || [r, r])[1])).join(', ') || '—';
+  if(k==='materials') return (v || []).join(', ') || '—';
+  if(k==='is_active') return v===false ? '—' : '✓';
+  return T(v);
+}
+let libKey = 'codes', libQ = '';
+function drawLibrary(){
+  if(MM.err){ c3.innerHTML = emptyHTML(); return; }
+  c3.innerHTML = `<div class="lib-tabs">${Object.entries(LIB).map(([k,d])=>
+      `<button class="lib-tab${k===libKey?' active':''}" onclick="libGo('${k}')">${d.icon} ${d.title}<small>${d.count ? d.count() : d.rows().length}</small></button>`).join('')}</div>
+    ${isAdmin ? '' : `<div class="lib-note">🔒 ${tr('Only an admin can change the library. You can view it and pick from it when adding machines.','Chỉ admin được sửa thư viện. Bạn xem được và chọn từ thư viện khi thêm máy.')}</div>`}
+    <div id="libBody"></div>`;
+  libKey==='codes' ? drawCodes() : drawLib(libKey);
+}
+window.libGo = k => { libKey = k; libQ = ''; drawLibrary(); };
+const need07 = () => `<div class="mm-empty">${tr('This library needs <code>supabase/07_library.sql</code> — ask an admin to run it in Supabase › SQL Editor.',
+  'Thư viện này cần chạy <code>supabase/07_library.sql</code> trong Supabase › SQL Editor (admin).')}</div>`;
+function drawLib(k){
+  const d = LIB[k];
+  if(d.needs07 && !MM.hasGroups){ libBody.innerHTML = need07(); return; }
+  libBody.innerHTML = `<div class="toolbar">
+      <div class="search"><input id="libQ" type="text" placeholder="${tr('Search…','Tìm…')}" value="${E(libQ)}"></div>
+      ${isAdmin ? `<button class="nbtn2" onclick="libEdit('${k}')">${tr('➕ Add','➕ Thêm')}</button>` : ''}</div>
+    <div class="tablewrap"><table><thead><tr>${d.cols.map(c=>`<th>${LABEL(d, c)}</th>`).join('')}<th>${tr('Machines using it','Số máy đang dùng')}</th>${isAdmin?'<th></th>':''}</tr></thead>
+      <tbody id="libTb"></tbody></table></div>`;
+  libQ_el().oninput = e=>{ libQ = e.target.value.trim().toLowerCase(); libRows(k); };
+  libRows(k);
+}
+const libQ_el = () => document.getElementById('libQ');
+function libRows(k){
+  const d = LIB[k];
+  const rows = d.rows().filter(r=>!libQ || d.cols.some(c=>String(c==='company_id' ? coOf(r[c]).code : (r[c] ?? '')).toLowerCase().includes(libQ))).sort(d.sort);
+  libTb.innerHTML = rows.map(r=>`<tr>${d.cols.map(c=>`<td${c==='name'?' class="name"':''}>${cell(c, r[c])}</td>`).join('')}
+      <td>${N(d.used(r))}</td>
+      ${isAdmin ? `<td class="lib-act"><button onclick="libEdit('${k}','${r.id}')">✏️</button><button onclick="libDel('${k}','${r.id}')">🗑</button></td>` : ''}</tr>`).join('')
+    || `<tr><td colspan="${d.cols.length + 2}" style="text-align:center;color:var(--muted);padding:20px">${tr('Nothing here yet.','Chưa có mục nào.')}</td></tr>`;
+}
+/* form thêm / sửa 1 mục thư viện (dùng khung modal chung) */
+function libInput(f, val, editing){
+  const id = 'lf_' + f.k;
+  switch(f.type){
+    case 'company':  return `<select id="${id}">${MM.companies.map(c=>`<option value="${E(c.id)}"${c.id===val?' selected':''}>${E(c.code)} — ${E(c.name)}</option>`).join('')}</select>`;
+    case 'workshop': return `<select id="${id}"></select>`;
+    case 'multi':    return `<div class="lib-chk">${f.opts.map(([o,l])=>`<label><input type="checkbox" class="${id}" value="${o}"${(val || []).includes(o)?' checked':''}> ${E(l)}</label>`).join('')}</div>`;
+    case 'bool':     return `<div class="lib-chk"><label><input type="checkbox" id="${id}"${val!==false?' checked':''}> ${tr('Yes','Có')}</label></div>`;
+    case 'textarea': return `<textarea id="${id}" rows="2">${E(val ?? '')}</textarea>`;
+    case 'number':   return `<input id="${id}" type="number" step="1" value="${E(val ?? '')}">`;
+    default:         return `<input id="${id}" type="text" value="${E(val ?? '')}"${f.lockEdit && editing ? ' readonly' : ''}${f.upper ? ' style="text-transform:uppercase"' : ''}>`;
+  }
+}
+function libRead(f){
+  const el = document.getElementById('lf_' + f.k);
+  if(f.type==='multi') return [...document.querySelectorAll('.lf_' + f.k + ':checked')].map(c=>c.value);
+  if(f.type==='bool') return el.checked;
+  if(f.type==='number') return el.value === '' ? 0 : Math.round(+el.value);
+  if(f.type==='company' || f.type==='workshop') return el.value || null;
+  const s = (el.value || '').trim();
+  return f.upper ? s.toUpperCase() : (s || null);
+}
+window.libEdit = (k, id) => {
+  const d = LIB[k], cur = id ? d.rows().find(r=>r.id===id) : null, v = cur || {};
+  mTitle.textContent = (cur ? tr('✏️ Edit · ','✏️ Sửa · ') : tr('➕ Add · ','➕ Thêm · ')) + d.title;
+  mSub.textContent = cur && d.used(cur) ? tr(`Used by ${d.used(cur)} machines.`, `Đang được ${d.used(cur)} máy sử dụng.`) : '';
+  mBody.innerHTML = `<form id="lfForm" novalidate><div class="add-grid">
+      ${d.fields.map(f=>`<label${f.full?' class="full"':''}>${E(f.l)}${f.req?' *':''}${libInput(f, v[f.k] ?? (cur ? null : f.def), !!cur)}</label>`).join('')}</div>
+    <div class="err" id="lfErr" style="color:var(--red);font-size:13px;min-height:1.2em"></div>
+    <div class="add-actions"><button type="button" class="nbtn2 ghost" onclick="mBg.classList.remove('show')">${tr('Cancel','Hủy')}</button>
+      <button type="submit" class="nbtn2" id="lfSave">${cur ? tr('💾 Save','💾 Lưu') : tr('➕ Add','➕ Thêm')}</button></div></form>`;
+  openM();
+  // nhà xưởng lọc theo nhà máy đang chọn
+  const ws = d.fields.find(f=>f.type==='workshop'), co = document.getElementById('lf_company_id');
+  const fillWs = () => { if(!ws) return; const el = document.getElementById('lf_' + ws.k);
+    el.innerHTML = `<option value="">—</option>` + MM.areas.filter(a=>a.company_id===co.value).sort(byCoCode)
+      .map(a=>`<option value="${E(a.id)}">${E(a.code)} · ${E(a.name)}</option>`).join('');
+    el.value = (co.value===v.company_id && v[ws.k]) || ''; };
+  if(co){ co.onchange = fillWs; fillWs(); }
+  document.getElementById('lfForm').onsubmit = async e=>{
+    e.preventDefault();
+    const err = t => { lfErr.textContent = t; }, obj = {};
+    d.fields.forEach(f=>{ if(!(f.lockEdit && cur)) obj[f.k] = libRead(f); });
+    const miss = d.fields.find(f=>f.req && !(f.lockEdit && cur) && (obj[f.k]==null || obj[f.k]===''));
+    if(miss) return err(tr('Please fill in: ','Hãy nhập: ') + miss.l);
+    const mine = d.uniq.map(u=>String((u in obj ? obj[u] : v[u]) ?? '').toLowerCase()).join('|');
+    if(d.rows().some(r=>r.id!==id && d.uniq.map(u=>String(r[u] ?? '').toLowerCase()).join('|')===mine))
+      return err(tr('This already exists in the library.','Mục này đã có trong thư viện.'));
+    lfSave.disabled = true; window.__selfWritingM = true;
+    try{
+      const sb = window.__sb;
+      if(cur){
+        const sealed = await window.__seal(d.table, Object.assign({ id }, obj)); delete sealed.id;
+        const { error } = await sb.from(d.table).update(sealed).eq('id', id); if(error) throw error;
+        if(k==='groups' && obj.name !== cur.name){       // đổi tên nhóm -> đổi theo trên các máy
+          const { error: e2 } = await sb.from('mmtb_machines').update({ group_name: obj.name }).eq('group_name', cur.name); if(e2) throw e2;
+        }
+      } else {
+        const row = (k==='suppliers' || k==='lines') ? Object.assign({ id: crypto.randomUUID() }, obj) : obj;
+        const { error } = await sb.from(d.table).insert(await window.__seal(d.table, row)); if(error) throw error;
+      }
+      mBg.classList.remove('show');
+      await reload();
+      toast('✅ ' + (cur ? tr('Saved','Đã lưu') : tr('Added','Đã thêm')));
+    }catch(ex){ lfSave.disabled = false; err(errText(ex)); }
+    finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+  };
+};
+window.libDel = (k, id) => {
+  const d = LIB[k], r = d.rows().find(x=>x.id===id); if(!r) return;
+  const n = d.used(r);
+  if(n){ showNotice({ type:'error', title:tr('Still in use','Đang được sử dụng'),
+    sub:tr(`${n} machines (or workshops / lines) still use this. Move them to another one first.`,`Còn ${n} máy (hoặc xưởng / chuyền) đang dùng mục này. Hãy chuyển chúng sang mục khác trước.`) }); return; }
+  confirmBox({ title:tr('Delete from the library?','Xoá khỏi thư viện?'), sub:`<b>${E(r.name || r.code || '')}</b>`,
+    ok:tr('🗑 Delete','🗑 Xoá'), onOk: async ()=>{
+      window.__selfWritingM = true;
+      try{ const { error } = await window.__sb.from(d.table).delete().eq('id', id); if(error) throw error;
+           await reload(); toast('🗑 ' + tr('Deleted','Đã xoá')); }
+      catch(ex){ showNotice({ type:'error', title:tr('Could not delete','Chưa xoá được'), sub:errText(ex) }); }
+      finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+    } });
+};
+
+/* ----- Mã máy: mã nhà máy + dãy số kế toán; chưa có số thì mã tạm 9 số ngẫu nhiên ----- */
+let codeCo = '', codeTemp = false;
+const RANDOM_FMT = /^[A-Z]+-\d{9}$/;
+function drawCodes(){
+  if(!MM.hasGroups){ libBody.innerHTML = need07(); return; }
+  const toConvert = MM.machines.filter(x=>x.code_temp && !RANDOM_FMT.test(x.machine_code)).length;
+  libBody.innerHTML = `<div class="lib-note">${tr('Code = plant code + accounting number, e.g. <b>DTR-104600041</b>. Until the accounting number is known, a temporary 9-digit random number is used (marked <span class="tag-temp">temporary</span>).',
+      'Mã máy = mã nhà máy + dãy số kế toán, VD <b>DTR-104600041</b>. Khi chưa có số kế toán, app cấp tạm 9 số ngẫu nhiên (đánh dấu <span class="tag-temp">tạm</span>).')}</div>
+    <div class="toolbar">
+      <div class="search"><input id="libQ" type="text" placeholder="${tr('Search code, old code, machine name…','Tìm mã, mã cũ, tên máy…')}" value="${E(libQ)}"></div>
+      <select id="codeCo"><option value="">${tr('Plant: All','Nhà máy: Tất cả')}</option>${MM.companies.map(c=>`<option value="${E(c.code)}"${c.code===codeCo?' selected':''}>${E(c.code)}</option>`).join('')}</select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)"><input type="checkbox" id="codeTemp"${codeTemp?' checked':''}> ${tr('Temporary only','Chỉ mã tạm')}</label>
+      ${isAdmin ? `${toConvert ? `<button class="nbtn2 ghost" onclick="libConvertCodes()">${tr(`🎲 Give ${toConvert} machines a new-style temporary code`,`🎲 Cấp mã tạm dạng mới cho ${toConvert} máy`)}</button>` : ''}
+        <button class="nbtn2" onclick="libPasteCodes()">${tr('📋 Paste accounting codes','📋 Dán mã kế toán')}</button>` : ''}
+    </div>
+    <div class="tablewrap"><table><thead><tr><th>${tr('Code','Mã máy')}</th><th>${tr('Old code','Mã cũ')}</th><th>${tr('Machine','Tên máy')}</th><th>${tr('Plant','Nhà máy')}</th><th>${tr('Status','Trạng thái')}</th>${isAdmin?'<th></th>':''}</tr></thead>
+      <tbody id="libTb"></tbody></table></div>
+    <div class="pagerow"><div class="count-info" id="codeCnt"></div></div>`;
+  libQ_el().oninput = e=>{ libQ = e.target.value.trim().toLowerCase(); codeRows(); };
+  codeCo_el().onchange = e=>{ codeCo = e.target.value; codeRows(); };
+  document.getElementById('codeTemp').onchange = e=>{ codeTemp = e.target.checked; codeRows(); };
+  codeRows();
+}
+const codeCo_el = () => document.getElementById('codeCo');
+function codeRows(){
+  const rows = MM.machines.filter(x=>(!codeCo || x.company_code===codeCo) && (!codeTemp || x.code_temp) &&
+      (!libQ || [x.machine_code, x.legacy_code, x.name].some(s=>s && String(s).toLowerCase().includes(libQ))))
+    .sort((a,b)=>String(a.machine_code).localeCompare(b.machine_code));
+  libTb.innerHTML = rows.slice(0, 500).map(x=>`<tr>
+      <td style="white-space:nowrap"><b>${E(x.machine_code)}</b>${x.code_temp ? `<span class="tag-temp">${tr('temporary','tạm')}</span>` : ''}</td>
+      <td style="color:var(--muted)">${T(x.legacy_code)}</td><td class="name" style="cursor:pointer" onclick="mmShow('${x.id}')">${E(x.name)}</td>
+      <td>${E(x.company_code)}</td><td>${badge(x.lifecycle_status)}</td>
+      ${isAdmin ? `<td class="lib-act"><button onclick="libCode('${x.id}')">✏️</button></td>` : ''}</tr>`).join('')
+    || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">${tr('No machines match.','Không có máy nào khớp.')}</td></tr>`;
+  codeCnt.textContent = `${N(rows.length)} ${tr('machines','máy')} · ${N(rows.filter(x=>x.code_temp).length)} ${tr('temporary codes','mã tạm')}` +
+    (rows.length > 500 ? tr(' · showing first 500',' · đang hiện 500 dòng đầu') : '');
+}
+async function setCode(x, code){       // đổi mã 1 máy; giữ mã cũ đầu tiên ở legacy_code
+  const upd = { machine_code: code.value, code_temp: !!code.temp };
+  if(!x.legacy_code) upd.legacy_code = x.machine_code;
+  const { error } = await window.__sb.from('mmtb_machines').update(upd).eq('id', x.id);
+  if(error) throw error;
+}
+function codeOk(x, code){
+  const pre = (x.company_code || '') + '-';
+  if(!code.startsWith(pre) || code.length <= pre.length || /\s/.test(code)) return tr(`The code must look like ${pre}104600041.`, `Mã phải có dạng ${pre}104600041.`);
+  if(MM.machines.some(m=>m.id!==x.id && m.machine_code===code)) return tr('This code is already used by another machine.','Mã này đã được dùng cho máy khác.');
+  return '';
+}
+window.libCode = id => {
+  const x = byId.get(id); if(!x) return;
+  mTitle.textContent = tr('🏷 Machine code · ','🏷 Mã máy · ') + x.name;
+  mSub.innerHTML = `${E(x.company_code)} · ${tr('current','hiện tại')}: <b>${E(x.machine_code)}</b>${x.legacy_code ? ' · ' + tr('old','cũ') + ': ' + E(x.legacy_code) : ''}`;
+  mBody.innerHTML = `<form id="lcForm" novalidate><div class="add-grid" style="grid-template-columns:1fr">
+      <label>${tr('Accounting code (you can type only the number)','Mã kế toán (có thể chỉ gõ phần số)')}<input id="lcVal" type="text" value="${E(x.code_temp ? '' : x.machine_code)}" placeholder="${E(x.company_code)}-104600041"></label></div>
+    <div id="lcErr" style="color:var(--red);font-size:13px;min-height:1.2em"></div>
+    <div class="add-actions"><button type="button" class="nbtn2 ghost" id="lcRnd">${tr('🎲 New temporary code','🎲 Cấp mã tạm mới')}</button>
+      <button type="submit" class="nbtn2" id="lcSave">${tr('💾 Save as accounting code','💾 Lưu làm mã kế toán')}</button></div></form>`;
+  openM(); lcVal.focus();
+  const run = async code => {
+    const m = codeOk(x, code.value); if(m){ lcErr.textContent = m; return; }
+    window.__selfWritingM = true;
+    try{ await setCode(x, code); mBg.classList.remove('show'); await reload(); toast('✅ ' + tr('Code saved','Đã lưu mã') + ': <b>' + E(code.value) + '</b>'); }
+    catch(ex){ lcErr.textContent = errText(ex); }
+    finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+  };
+  lcRnd.onclick = () => run({ value: tempCode(x.company_code), temp:true });
+  lcForm.onsubmit = e => { e.preventDefault(); let s = lcVal.value.trim().toUpperCase(); if(/^\d+$/.test(s)) s = x.company_code + '-' + s; run({ value:s, temp:false }); };
+};
+/* mã cũ dạng DTR-004 -> mã tạm dạng mới DTR-xxxxxxxxx (mã cũ giữ ở legacy_code) */
+window.libConvertCodes = () => {
+  const list = MM.machines.filter(x=>x.code_temp && !RANDOM_FMT.test(x.machine_code));
+  confirmBox({ title:tr(`New temporary codes for ${list.length} machines?`,`Cấp mã tạm dạng mới cho ${list.length} máy?`),
+    sub:tr('Each machine gets plant code + 9 random digits. The current code is kept as "old code" and is still searchable.',
+           'Mỗi máy nhận mã nhà máy + 9 số ngẫu nhiên. Mã hiện tại được giữ ở cột "Mã cũ" và vẫn tìm được.'),
+    ok:tr('🎲 Assign','🎲 Cấp mã'), onOk: async ()=>{
+      window.__selfWritingM = true; let n = 0;
+      try{ for(const x of list){ await setCode(x, { value: tempCode(x.company_code), temp:true }); n++; }
+           await reload(); toast('✅ ' + tr('New codes','Đã cấp mã mới') + `: <b>${n}</b>`); }
+      catch(ex){ await reload(); showNotice({ type:'error', title:tr(`Stopped after ${n} machines`,`Dừng sau ${n} máy`), sub:errText(ex) }); }
+      finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+    } });
+};
+/* dán danh sách từ kế toán: mỗi dòng "mã hiện tại (hoặc mã cũ)  ->  mã kế toán (hoặc chỉ phần số)" */
+window.libPasteCodes = () => {
+  mTitle.textContent = tr('📋 Paste accounting codes','📋 Dán mã kế toán');
+  mSub.textContent = tr('One machine per line: current (or old) code, then the accounting code. Separate with Tab (copy 2 columns from Excel), comma or semicolon.',
+                        'Mỗi dòng 1 máy: mã hiện tại (hoặc mã cũ), rồi mã kế toán. Ngăn cách bằng Tab (copy 2 cột từ Excel), dấu phẩy hoặc chấm phẩy.');
+  mBody.innerHTML = `<textarea id="lpTxt" rows="9" style="width:100%;font-family:Consolas,monospace;padding:8px;border-radius:9px;border:1px solid var(--border);background:var(--field);color:var(--txt)" placeholder="DTR-004\t104600041&#10;DTR-005\tDTR-104600042"></textarea>
+    <div id="lpPrev" style="font-size:12.5px;margin:8px 0;max-height:180px;overflow:auto"></div>
+    <div class="add-actions"><button type="button" class="nbtn2 ghost" onclick="mBg.classList.remove('show')">${tr('Cancel','Hủy')}</button>
+      <button type="button" class="nbtn2" id="lpGo" disabled>${tr('💾 Apply','💾 Áp dụng')}</button></div>`;
+  openM(1);
+  let plan = [];
+  lpTxt.oninput = () => {
+    const seen = new Set(); plan = [];
+    const out = lpTxt.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(line=>{
+      const [a, b] = line.split(/\t|;|,/).map(s=>(s || '').trim().toUpperCase());
+      const x = MM.machines.find(m=>m.machine_code.toUpperCase()===a || (m.legacy_code || '').toUpperCase()===a);
+      if(!x || !b) return `<div style="color:var(--red)">✗ ${E(line)} — ${!x ? tr('machine not found','không tìm thấy máy') : tr('missing accounting code','thiếu mã kế toán')}</div>`;
+      const code = /^\d+$/.test(b) ? x.company_code + '-' + b : b;
+      const m = codeOk(x, code) || (seen.has(code) ? tr('duplicated in the list','trùng trong danh sách') : '');
+      if(m) return `<div style="color:var(--red)">✗ ${E(a)} → ${E(code)} — ${m}</div>`;
+      seen.add(code); plan.push([x, code]);
+      return `<div style="color:var(--green)">✓ ${E(a)} → <b>${E(code)}</b> · ${E(x.name)}</div>`;
+    });
+    lpPrev.innerHTML = out.join('');
+    lpGo.disabled = !plan.length; lpGo.textContent = tr(`💾 Apply ${plan.length} codes`, `💾 Áp dụng ${plan.length} mã`);
+  };
+  lpGo.onclick = async () => {
+    lpGo.disabled = true; window.__selfWritingM = true; let n = 0;
+    try{ for(const [x, code] of plan){ await setCode(x, { value:code, temp:false }); n++; }
+         mBg.classList.remove('show'); await reload(); toast('✅ ' + tr('Accounting codes saved','Đã lưu mã kế toán') + `: <b>${n}</b>`); }
+    catch(ex){ await reload(); showNotice({ type:'error', title:tr(`Stopped after ${n} codes`,`Dừng sau ${n} mã`), sub:errText(ex) }); }
+    finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+  };
+};
 /* ===================== CHUYỂN PHÂN HỆ ===================== */
 const delTs = [updDate.textContent, updTime.textContent];
 function updHeaderTs(){
@@ -2605,6 +2922,7 @@ showPage = function(id){
   const m = /^c/.test(id) ? 'mmtb' : 'delivery'; last[m] = id;
   if(id==='c1') drawOverview();
   if(id==='c2') drawList();
+  if(id==='c3') drawLibrary();
 };
 function setMod(m){
   document.body.dataset.mod = m;
@@ -2634,6 +2952,7 @@ const STATIC_VI = new Map([
   ['Machinery catalog','Danh mục máy móc thiết bị'],
   ['Machine delivery tracking','Theo dõi tiến độ máy về'],
   ['Add a machine to the catalog','Thêm máy vào Danh mục MMTB'],
+  ['📚 Library','📚 Thư viện'],
   ['📊 Overview','📊 Tổng quan'],
   ['📈 Analytics','📈 Phân tích'],
   ['🏅 Evaluation','🏅 Đánh giá'],
@@ -3042,7 +3361,10 @@ window.encryptExisting = async () => {
       if(bad) return Object.assign(empty, { err: bad.error.message || String(bad.error.code || 'error') });
       const [m0, co, ar, ln0, sp0, ms, rates] = rs.map(r=>r.data || []);
       const [m, ln, sp] = await Promise.all([openAll(m0), openAll(ln0), openAll(sp0)]);
-      return deriveMmtb({ machines:m, companies:co, areas:ar, lines:ln, suppliers:sp, milestones:ms, rates });
+      // nhóm thiết bị (07_library.sql); chưa có bảng thì lấy theo nhóm đang dùng trong máy
+      const gr = await sb.from('mmtb_groups').select('*').order('sort_order').order('name');
+      const groups = gr.error ? [...new Set(m.map(x=>x.group_name).filter(Boolean))].sort().map(name=>({ name, virtual:true })) : (gr.data || []);
+      return deriveMmtb({ machines:m, companies:co, areas:ar, lines:ln, suppliers:sp, milestones:ms, rates, groups, hasGroups: !gr.error });
     }catch(e){ return Object.assign(empty, { err: String(e.message || e) }); }
   }
   window.__loadMmtb = () => loadMmtb(window.__sb);
