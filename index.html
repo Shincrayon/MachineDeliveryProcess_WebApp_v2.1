@@ -208,6 +208,58 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 .sc-tbl tbody tr:hover{background:rgba(96,165,250,.07)}
 .sc-sep td{padding:10px 8px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border);text-align:left!important}
 #scChart{height:320px}
+/* ===== tab Kế hoạch ===== */
+#p5 .pl-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:12px}
+#p5 .card{position:relative;min-width:0}
+#p5 .card h3 small{font-weight:500;color:var(--muted);font-size:12px;margin-left:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-look{grid-column:2;grid-row:1 / 3}
+#plMta{height:300px} #plCash{height:240px}
+.pl-note{font-size:11.5px;color:var(--muted);margin-top:4px}
+.pl-pick{position:absolute;right:14px;top:46px;z-index:30;width:min(360px,calc(100% - 28px));max-height:360px;overflow:auto;background:var(--panel2);
+  border:1px solid var(--border);border-radius:12px;padding:8px;box-shadow:0 14px 36px rgba(0,0,0,.4)}
+.pl-pick input[type=search]{width:100%;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--field);color:var(--txt);margin-bottom:6px}
+.pl-pick label{display:flex;gap:8px;align-items:flex-start;padding:5px 6px;border-radius:7px;font-size:12.5px;cursor:pointer}
+.pl-pick label:hover{background:rgba(96,165,250,.08)}
+.pl-pick label small{display:block;color:var(--muted);font-size:11px}
+.pl-pick label.off{opacity:.45;cursor:not-allowed}
+.pl-due table{width:100%;min-width:0;border-collapse:collapse;font-size:12px}
+.pl-due td,.pl-due th{padding:5px 6px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.pl-due th{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);position:sticky;top:0;background:var(--panel2)}
+.pl-due td.r,.pl-due th.r{text-align:right;font-variant-numeric:tabular-nums}
+.pl-due td.nm{white-space:normal}
+.pl-due tr.od td{color:var(--st-bad)}
+.pl-grp{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:10px 0 4px}
+.pl-grp:first-child{margin-top:0}
+.pl-m{border:1px solid var(--border);border-radius:11px;padding:8px 10px;margin-bottom:6px}
+.pl-m.red{border-color:var(--st-bad);box-shadow:inset 3px 0 0 var(--st-bad)}
+.pl-m .hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pl-m .nm{font-weight:700;color:var(--strong);cursor:pointer;flex:1;min-width:140px;font-size:13px}
+.pl-m .nm small{display:block;color:var(--muted);font-weight:400;font-size:11.5px}
+.pl-m .dd{font-size:12px;font-weight:800;white-space:nowrap}
+.pl-m .ed{background:transparent;border:1px solid var(--border);border-radius:7px;padding:2px 7px;cursor:pointer;color:var(--txt)}
+.pl-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.pl-chip{font-size:11.5px;padding:3px 8px;border-radius:999px;border:1.5px solid var(--border);background:transparent;color:var(--muted);white-space:nowrap}
+button.pl-chip{cursor:pointer}
+.pl-chip.done{border-color:var(--st-ok);color:var(--st-ok);font-weight:700}
+.pl-chip.in_progress{border-color:var(--st-warn);color:var(--st-warn);font-weight:700}
+.pl-chip.todo{border-style:dashed}
+.pl-chip.na{opacity:.5;text-decoration:line-through}
+.pl-chip.late{border-color:var(--st-bad);color:var(--st-bad)}
+.pl-rd-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1.3fr 1.6fr;gap:6px 8px;align-items:center;font-size:12.5px}
+.pl-rd-grid .h{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.pl-rd-grid input,.pl-rd-grid select{padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--field);color:var(--txt);min-width:0;width:100%}
+@media(max-width:1100px){#p5 .pl-grid{grid-template-columns:1fr}.pl-look{grid-column:auto;grid-row:auto}}
+@media(max-width:640px){.pl-rd-grid{grid-template-columns:1fr 1fr}.pl-rd-grid .h{display:none}.pl-rd-grid .it{grid-column:1/-1;font-weight:700;margin-top:6px}}
+/* máy tính: cả tab trong 1 màn hình, danh sách dài cuộn trong thẻ */
+@media(min-width:1100px) and (min-height:640px){
+  #p5.active{display:flex;flex-direction:column;padding-top:12px;padding-bottom:12px}
+  #p5 .pl-grid{flex:1 1 auto;min-height:0;grid-template-rows:minmax(0,1.05fr) minmax(0,1fr);gap:10px}
+  #p5 .card{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding:11px 14px}
+  #p5 .card h3{margin-bottom:6px;flex:0 0 auto;white-space:nowrap}
+  #plMta,#plCash{flex:1 1 auto;min-height:120px;height:auto}
+  .pl-due{flex:0 1 auto;max-height:34%;overflow:auto}
+  .pl-look .pl-list{flex:1 1 auto;min-height:0;overflow:auto}
+}
 .pay-tbl{overflow:auto;max-height:42vh;margin-top:4px}
 .pay-tbl table{width:100%;min-width:720px;border-collapse:collapse;font-size:12.5px}
 .pay-tbl th{position:sticky;top:0;background:var(--panel2);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
@@ -389,6 +441,10 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
   body[data-mod="delivery"] .brand .logo{display:inline}
   body[data-mod="delivery"] .mod:not(.active) .mod-t{display:none}}
 @media(max-width:1500px){body[data-mod="delivery"] #btnPick .btn-t{display:none}}
+/* thêm tab Kế hoạch: màn hình ≤ 1440px thu nhỏ chữ tab / nút để header phân hệ Tiến độ vẫn 1 dòng */
+@media(max-width:1440px){body[data-mod="delivery"] .tab{font-size:12.5px;padding:8px 6px;gap:5px}
+  body[data-mod="delivery"] .upd-btn{padding-left:7px;padding-right:7px}
+  body[data-mod="delivery"] .topbar{gap:8px 5px}}
 .mm-empty{max-width:640px;margin:40px auto;padding:22px 24px;border:1px dashed var(--border);border-radius:14px;background:var(--panel);color:var(--muted);line-height:1.6}
 .mm-empty h3{color:var(--strong);margin-bottom:6px}
 .mm-empty code{background:var(--panel2);padding:1px 6px;border-radius:6px}
@@ -566,6 +622,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
     <button class="tab mod-delivery active" data-p="p1">📊 Overview</button>
     <button class="tab mod-delivery" data-p="p2">📈 Analytics</button>
     <button class="tab mod-delivery" data-p="p4">🏅 Evaluation</button>
+    <button class="tab mod-delivery" data-p="p5">📅 Planning</button>
     <button class="tab mod-delivery" data-p="p3">📋 Machines</button>
   </div>
   <button class="upd-btn" id="btnUpd" title="Refresh — reload the latest data">🔄</button>
@@ -640,6 +697,19 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <div class="sc-wrap"><div class="sc-tbl" id="scTable"></div><div><div class="dm-legend" id="scLegend"></div><div id="scChart"></div><div id="scChartEmpty" class="dm-hint" hidden></div></div></div></div>
     <div class="card" style="--accent:#2dd4bf;margin-top:12px"><h3><span class="dot"></span>Person-in-charge rating — on time · volume · value</h3><div class="pic-board" id="picBoard"></div></div>
     <div class="card" style="--accent:#fbbf24;margin-top:12px"><h3><span class="dot"></span>Staff performance scorecard — weights: equipment count 50% · value 30% · on time 20%</h3><div style="position:relative;height:230px"><canvas id="chPICscore"></canvas></div></div>
+  </div>
+
+  <!-- ============ PAGE 5: KẾ HOẠCH (MTA · dòng tiền · lookahead 90 ngày) ============ -->
+  <div class="page" id="p5">
+    <div class="pl-grid">
+      <div class="card pl-mta" style="--accent:var(--blue)"><h3><span class="dot"></span><span id="plMtaT"></span><small id="plMtaS"></small><span class="sel"><button class="gv-btn" id="plPickBtn"></button></span></h3>
+        <div class="pl-pick" id="plPick" hidden></div>
+        <div id="plMta"></div><div class="dm-hint" id="plMtaE" hidden></div><div class="pl-note" id="plMtaN"></div></div>
+      <div class="card pl-cash" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="plCashT"></span><small id="plCashS"></small></h3>
+        <div id="plCash"></div><div class="dm-hint" id="plCashE" hidden></div><div class="pl-due" id="plDue"></div></div>
+      <div class="card pl-look" style="--accent:var(--st-warn)"><h3><span class="dot"></span><span id="plLookT"></span><small id="plLookS"></small></h3>
+        <div class="dm-legend" id="plLookL"></div><div class="pl-list" id="plLook"></div></div>
+    </div>
   </div>
 
   <!-- ============ PAGE 3: DANH SÁCH ============ -->
@@ -1179,7 +1249,7 @@ const inited = {};
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id===id));
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.p===id));
-  if(!inited[id]){ inited[id]=true; if(id==='p1') initP1(); if(id==='p2') initP2(); if(id==='p4') initP4(); }
+  if(!inited[id]){ inited[id]=true; if(id==='p1') initP1(); if(id==='p2') initP2(); if(id==='p4') initP4(); if(id==='p5') initP5(); }
   else {
     document.querySelectorAll('#'+id+' canvas').forEach(cv=>{
       const ch = Chart.getChart(cv);
@@ -1892,6 +1962,205 @@ function renderScChart(){
 }
 new MutationObserver(() => { if(SC.length) renderScChart(); }).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
 new ResizeObserver(() => { if(scEc) scEc.resize(); }).observe(scChart);
+
+/* ===== tab 📅 Kế hoạch: MTA · dòng tiền 12 tháng · lookahead 90 ngày (số liệu: metrics.js) ===== */
+const PL = { hist:[], pays:[], ready:[], rates:{}, err:{}, sel:null, ec:{} };
+const READY_L = () => tr({ foundation:'🧱 Foundation', power_supply:'⚡ Power', lifting:'🏗 Lifting', installer:'👷 Installer', utilities:'💧 Air / water' },
+                         { foundation:'🧱 Móng máy', power_supply:'⚡ Nguồn điện', lifting:'🏗 Cẩu / nâng hạ', installer:'👷 Đội lắp đặt', utilities:'💧 Khí / nước' });
+const READY_S = () => tr({ todo:'To do', in_progress:'In progress', done:'Done', na:'Not needed' }, { todo:'Chưa làm', in_progress:'Đang làm', done:'Xong', na:'Không cần' });
+const plMissing = (e, file) => { const c = e && e.code, m = String((e && e.message) || '');
+  return c === '42P01' || c === 'PGRST205' || /not find|does not exist|schema cache/i.test(m)
+    ? tr(`Table not set up yet — run supabase/migrations/${file} in Supabase › SQL Editor.`, `Chưa có bảng — chạy supabase/migrations/${file} trong Supabase › SQL Editor.`) : dbErrText(e); };
+const plName = id => { const x = DATA.find(d => d._id === id); return x ? x.ten : '—'; };
+async function plLoad(){
+  const sb = window.__sb; PL.err = {};
+  const q = async (k, f) => { if(!sb){ PL.err[k] = { code:'nodb' }; return []; }
+    try{ const { data, error } = await f(); if(error) throw error; return data || []; }catch(e){ PL.err[k] = e; return []; } };
+  PL.hist = await q('hist', () => sb.from('milestone_forecast_history').select('machine_id,milestone,new_forecast,changed_at').eq('milestone', 'arrived_site').order('changed_at'));
+  PL.pays = await Promise.all((await q('pays', () => sb.from('payment_schedule').select('*'))).map(window.__open));
+  PL.ready = await Promise.all((await q('ready', () => sb.from('site_readiness').select('*'))).map(window.__open));
+  PL.rates = {}; (await q('rates', () => sb.from('v_latest_rates').select('currency,rate_to_vnd'))).forEach(r => { PL.rates[r.currency] = +r.rate_to_vnd; });
+}
+const plTip = () => ({ backgroundColor:cssv('--panel2'), borderColor:cssv('--border'), textStyle:{ color:cssv('--txt'), fontSize:12 }, confine:true,
+  extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:10px' });
+const plEc = (k, el) => PL.ec[k] || (PL.ec[k] = echarts.init(el));
+const plB = v => dmN(v / 1e9, 1) + tr(' B', ' tỷ');
+
+/* 5.1 MTA */
+function plDefaultSel(){
+  const t = DM.todayIso(), ids = new Set(PL.hist.map(h => h.machine_id));
+  const live = DATA.filter(x => ids.has(x._id) && x.vedukienn && x.vedukienn >= t).sort((a, b) => a.vedukienn.localeCompare(b.vedukienn));
+  const soon = live.filter(x => DM.days(t, x.vedukienn) <= 90);
+  return (soon.length ? soon : live).slice(0, 8).map(x => x._id);
+}
+function plDrawMta(){
+  plMtaT.textContent = tr('📈 Milestone trend — arrival at site', '📈 Xu hướng mốc — ngày về nhà máy');
+  plMtaN.textContent = tr('Flat line = stable commitment. Rising line = repeated slippage. Where a line meets the diagonal, the milestone has been reached.',
+                          'Đường phẳng = cam kết ổn định. Đường đi lên = bị dời nhiều lần. Đường chạm đường chéo = mốc đã đến.');
+  if(PL.err.hist){ plMta.style.display = 'none'; plMtaE.hidden = false; plMtaE.textContent = plMissing(PL.err.hist, '20261030_01_forecast_history.sql'); return; }
+  if(PL.sel == null) PL.sel = plDefaultSel();
+  plPickBtn.textContent = tr('Machines ', 'Chọn máy ') + PL.sel.length + '/8 ▾';
+  const M = DM.mta(PL.hist, PL.sel, { maxWeeks: 52 });
+  plMtaS.textContent = M.weeks.length ? tr(`weekly · ${M.weeks.length} weeks`, `theo tuần · ${M.weeks.length} tuần`) : '';
+  plMtaE.hidden = !!M.series.length; plMta.style.display = M.series.length ? '' : 'none';
+  if(!M.series.length){ if(PL.ec.mta) PL.ec.mta.clear();
+    plMtaE.textContent = tr('Pick 1–8 machines with forecast history (button at top right).', 'Chọn 1–8 máy có lịch sử ngày dự kiến (nút góc trên bên phải).'); return; }
+  const ec = plEc('mta', plMta), TS = d => new Date(d + 'T00:00:00').getTime();
+  // trục X = đúng khoảng tuần đang xem; trục Y gồm cả ngày dự kiến cũ (máy đã về từ lâu nằm phẳng dưới đường chéo)
+  const x0 = TS(M.weeks[0]), x1 = TS(M.weeks[M.weeks.length - 1]);
+  const all = M.series.flatMap(s => s.values.filter(Boolean)).map(TS).concat(x0, x1);
+  const lo = Math.min(...all), hi = Math.max(...all);
+  const fmt = v => dmD(new Date(v).toISOString().slice(0, 10));
+  ec.setOption({
+    textStyle:{ color:cssv('--muted'), fontFamily:'Segoe UI, system-ui, sans-serif' },
+    legend:{ type:'scroll', top:0, textStyle:{ color:cssv('--muted'), fontSize:11 }, itemWidth:14, itemHeight:8,
+      formatter: n => n.length > 26 ? n.slice(0, 25) + '…' : n },
+    grid:{ left:8, right:16, top:30, bottom:4, containLabel:true },
+    tooltip:Object.assign(plTip(), { trigger:'axis', formatter: ps => `<b>${tr('Week ending','Tuần kết thúc')} ${fmt(ps[0].value[0])}</b><br>` +
+      ps.filter(p => p.seriesIndex < M.series.length && p.value[1] != null).map(p => `${p.marker}${ovEsc(p.seriesName)}: <b>${fmt(p.value[1])}</b>`).join('<br>') }),
+    xAxis:{ type:'time', min:x0, max:x1, axisLabel:{ color:cssv('--muted'), fontSize:11, hideOverlap:true, formatter:{ year:'{yyyy}', month:tr('{MMM}', 'T{M}'), day:'{dd}/{MM}' } },
+      splitLine:{ show:false }, axisLine:{ lineStyle:{ color:cssv('--border') } } },
+    yAxis:{ type:'time', min:lo, max:hi, axisLabel:{ color:cssv('--muted'), fontSize:11, formatter: v => fmt(v).slice(3) }, splitLine:{ lineStyle:{ color:cssv('--border') } } },
+    series: M.series.map(se => ({ name: plName(se.id), type:'line', step:'end', symbol:'circle', symbolSize:4, connectNulls:false,
+        lineStyle:{ width:2 }, data: M.weeks.map((w, i) => [TS(w), se.values[i] ? TS(se.values[i]) : null]) }))
+      .concat([{ name:'diag', type:'line', silent:true, symbol:'none', legendHoverLink:false, tooltip:{ show:false },
+        lineStyle:{ color:cssv('--muted'), type:'dashed', width:1 }, data:[[x0, x0], [x1, x1]] }]),
+  }, true);
+  ec.setOption({ legend:{ data: M.series.map(se => plName(se.id)) } });
+}
+function plPicker(){
+  const t = DM.todayIso(), ids = new Set(PL.hist.map(h => h.machine_id));
+  const list = DATA.filter(x => ids.has(x._id)).sort((a, b) => ((b.vedukienn >= t) - (a.vedukienn >= t)) || String(a.vedukienn).localeCompare(String(b.vedukienn)));
+  const row = x => { const on = PL.sel.includes(x._id), off = !on && PL.sel.length >= 8;
+    return `<label class="${off ? 'off' : ''}" data-q="${ovEsc((x.ten + ' ' + (x.ncc || '')).toLowerCase())}"><input type="checkbox" value="${x._id}"${on ? ' checked' : ''}${off ? ' disabled' : ''}>
+      <span>${ovEsc(x.ten)}<small>${DM.companyCode(x.noilapdat) || ovEsc(x.noilapdat)} · ${x.vedukienn >= t ? tr('forecast ', 'dự kiến ') : tr('arrived ', 'đã về ')}${dmD(x.vedukienn)}</small></span></label>`; };
+  plPick.innerHTML = `<input type="search" placeholder="${tr('Search machine…', 'Tìm máy…')}">` + (list.map(row).join('') ||
+    `<div class="dm-hint">${tr('No forecast history yet.', 'Chưa có lịch sử ngày dự kiến.')}</div>`);
+  const sq = plPick.querySelector('input[type=search]');
+  sq.oninput = () => { const v = sq.value.trim().toLowerCase(); plPick.querySelectorAll('label').forEach(l => { l.style.display = !v || l.dataset.q.includes(v) ? '' : 'none'; }); };
+  plPick.querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = () => {
+    PL.sel = cb.checked ? [...PL.sel, cb.value].slice(0, 8) : PL.sel.filter(i => i !== cb.value);
+    const v = sq.value; plPicker(); const s2 = plPick.querySelector('input[type=search]'); s2.value = v; s2.oninput(); plDrawMta();
+  });
+}
+
+/* 5.2 dòng tiền */
+function plDrawCash(){
+  plCashT.textContent = tr('💰 Cash-flow forecast — next 12 months', '💰 Dự báo dòng tiền — 12 tháng tới');
+  if(PL.err.pays){ plCash.style.display = 'none'; plDue.innerHTML = ''; plCashE.hidden = false; plCashE.textContent = plMissing(PL.err.pays, '20261030_02_payment_schedule.sql'); return; }
+  const byId = Object.fromEntries(DATA.map(x => [x._id, x]));
+  const C = DM.cashflow(PL.pays, byId, PL.rates, { months: 12 });
+  const K = PAY_KIND(), total = C.months.reduce((t, m) => t + m.total, 0);
+  plCashS.title = '';
+  plCashS.innerHTML = PL.pays.length ? `${tr('VND', 'VNĐ')} · ${tr('12-month total', 'tổng 12 tháng')} <b>${dmN(total)} ₫</b>` +
+    (C.overdue.count ? ` · <b style="color:var(--st-bad)">${C.overdue.count} ${tr('overdue', 'quá hạn')} (${dmN(C.overdue.vnd)} ₫)</b>` : '') +
+    (C.unscheduled.length ? ` · ${C.unscheduled.length} ${tr('without date / rate', 'thiếu ngày / tỷ giá')}` : '') : '';
+  plCashS.title = plCashS.textContent;
+  const has = PL.pays.length && (total || C.overdue.count || C.due30.length);
+  plCashE.hidden = !!has; plCash.style.display = has ? '' : 'none';
+  if(!has){ if(PL.ec.cash) PL.ec.cash.clear(); plDue.innerHTML = '';
+    plCashE.textContent = PL.pays.length ? tr('No unpaid installments with a due date in the next 12 months.', 'Không có đợt chưa trả nào đến hạn trong 12 tháng tới.')
+      : tr('No payment schedules yet — add them from 💳 Payments in a machine\'s details.', 'Chưa có lịch thanh toán — nhập ở nút 💳 Thanh toán trong chi tiết máy.'); return; }
+  const KC = { deposit:cssv('--violet'), before_shipment:cssv('--blue'), on_arrival:cssv('--cyan'), after_commissioning:cssv('--green'), other:cssv('--muted') };
+  const ml = m => { const [y, mo] = m.split('-'); return tr(MON[+mo - 1] + " '" + y.slice(2), 'T' + (+mo) + '/' + y.slice(2)); };
+  const ec = plEc('cash', plCash);
+  ec.setOption({
+    textStyle:{ color:cssv('--muted'), fontFamily:'Segoe UI, system-ui, sans-serif' },
+    legend:{ top:0, textStyle:{ color:cssv('--muted'), fontSize:11 }, itemWidth:12, itemHeight:8 },
+    grid:{ left:6, right:6, top:28, bottom:2, containLabel:true },
+    tooltip:Object.assign(plTip(), { trigger:'axis', axisPointer:{ type:'shadow' }, formatter: ps => `<b>${ps[0].name}</b><br>` +
+      ps.filter(p => p.value).map(p => `${p.marker}${p.seriesName}: <b>${dmN(p.value)} ₫</b>`).join('<br>') }),
+    xAxis:{ type:'category', data:C.months.map(m => ml(m.month)), axisLabel:{ color:cssv('--muted'), fontSize:11 }, axisLine:{ lineStyle:{ color:cssv('--border') } } },
+    yAxis:[{ type:'value', axisLabel:{ color:cssv('--muted'), fontSize:10.5, formatter:plB }, splitLine:{ lineStyle:{ color:cssv('--border') } } },
+           { type:'value', axisLabel:{ color:cssv('--muted'), fontSize:10.5, formatter:plB }, splitLine:{ show:false } }],
+    series: DM.PAY_KINDS.map(k => ({ name:K[k], type:'bar', stack:'pay', barMaxWidth:28, itemStyle:{ color:KC[k], borderRadius:2 }, data:C.months.map(m => m[k]) }))
+      .concat([{ name:tr('Cumulative', 'Luỹ kế'), type:'line', yAxisIndex:1, symbol:'circle', symbolSize:5, smooth:.25,
+                 lineStyle:{ width:2, color:cssv('--txt') }, itemStyle:{ color:cssv('--txt') }, data:C.months.map(m => m.cumulative) }])
+  }, true);
+  const rows = C.due30;
+  plDue.innerHTML = `<table><thead><tr><th>${tr('Due in 30 days', 'Đến hạn 30 ngày')}</th><th>${tr('Machine', 'Máy')}</th><th>${tr('Installment', 'Đợt')}</th><th class="r">VNĐ</th></tr></thead><tbody>` +
+    (rows.length ? rows.map(i => `<tr class="${i.due < DM.todayIso() ? 'od' : ''}"><td>${dmD(i.due)}${i.due < DM.todayIso() ? ' ⚠' : ''}</td><td class="nm">${ovEsc(i.x ? i.x.ten : '—')}</td>` +
+      `<td>#${i.p.installment_no} · ${K[i.kind] || i.kind}</td><td class="r">${dmN(i.vnd)}</td></tr>`).join('')
+      : `<tr><td colspan="4" style="color:var(--muted)">${tr('Nothing due in the next 30 days.', 'Không có đợt nào đến hạn trong 30 ngày tới.')}</td></tr>`) + '</tbody></table>';
+}
+
+/* 5.3 lookahead */
+function plDrawLook(){
+  plLookT.textContent = tr('🏗 Lookahead 90 days — site readiness', '🏗 90 ngày tới — sẵn sàng mặt bằng');
+  const L = DM.lookahead(DATA, PL.ready, { days: 90, redDays: 14 }), RL = READY_L(), RS = READY_S();
+  const canW = !!window.__canWrite && !PL.err.ready;
+  plLookS.innerHTML = `${L.length} ${tr('machines', 'máy')}` + (L.filter(o => o.red).length ? ` · <b style="color:var(--st-bad)">${L.filter(o => o.red).length} ${tr('not ready, ≤ 14 days', 'chưa sẵn sàng, còn ≤ 14 ngày')}</b>` : '');
+  plLookL.innerHTML = ['done', 'in_progress', 'todo', 'na'].map(k => `<span><span class="pl-chip ${k}" style="padding:0 6px">${RS[k]}</span></span>`).join('') +
+    (canW ? `<span>${tr('click a chip to change its status', 'bấm vào mục để đổi trạng thái')}</span>` : '');
+  if(PL.err.ready){ plLook.innerHTML = `<div class="m-gt">${plMissing(PL.err.ready, '20261030_03_site_readiness.sql')}</div>`; }
+  if(!L.length){ plLook.innerHTML += `<div class="dm-hint">${tr('No machines due at site in the next 90 days.', 'Không có máy nào về nhà máy trong 90 ngày tới.')}</div>`; return; }
+  const G = tr(['0–30 days', '31–60 days', '61–90 days'], ['0–30 ngày', '31–60 ngày', '61–90 ngày']);
+  const body = [0, 1, 2].map(b => { const g = L.filter(o => o.bucket === b); if(!g.length) return '';
+    return `<div class="pl-grp">${G[b]} · ${g.length}</div>` + g.map(o => {
+      const chips = o.items.map(it => { const late = it.status !== 'done' && it.status !== 'na' && it.due_date && it.due_date < DM.todayIso();
+        const tip = `${RS[it.status]}${it.due_date ? ' · ' + tr('due ', 'hạn ') + dmD(it.due_date) : ''}${it.owner ? ' · ' + it.owner : ''}${it.note ? ' · ' + it.note : ''}`;
+        return canW ? `<button class="pl-chip ${it.status}${late ? ' late' : ''}" title="${ovEsc(tip)}" data-m="${o.x._id}" data-it="${it.item}" data-st="${it.status}">${RL[it.item]}</button>`
+                    : `<span class="pl-chip ${it.status}${late ? ' late' : ''}" title="${ovEsc(tip)}">${RL[it.item]}</span>`; }).join('');
+      return `<div class="pl-m${o.red ? ' red' : ''}"><div class="hd"><span class="nm" onclick="showDetail(${DATA.indexOf(o.x)})">${ovEsc(o.x.ten)}<small>${DM.companyCode(o.x.noilapdat) || ovEsc(o.x.noilapdat)} · ${ovEsc(o.x.phutrach) || '—'} · ${tr('at site ', 'về NM ')}${dmD(o.forecast)}</small></span>` +
+        `<span class="dd" style="color:${o.red ? 'var(--st-bad)' : o.days <= 30 ? 'var(--st-warn)' : 'var(--muted)'}">${o.days === 0 ? tr('today', 'hôm nay') : tr('in ' + o.days + ' d', 'còn ' + o.days + ' ngày')}${o.red ? ' ⚠' : ''}</span>` +
+        `<span style="font-size:11.5px;color:var(--muted)">${5 - o.open}/5</span>${canW ? `<button class="ed" title="${tr('Edit checklist', 'Sửa checklist')}" data-ed="${o.x._id}">✏️</button>` : ''}</div>` +
+        `<div class="pl-chips">${chips}</div></div>`; }).join(''); }).join('');
+  plLook.innerHTML = (PL.err.ready ? plLook.innerHTML : '') + body;
+  const NEXT = { todo:'in_progress', in_progress:'done', done:'na', na:'todo' };
+  plLook.querySelectorAll('button.pl-chip').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    const row = { machine_id: b.dataset.m, item: b.dataset.it, status: NEXT[b.dataset.st] };
+    const { data, error } = await window.__sb.from('site_readiness').upsert(row, { onConflict:'machine_id,item' }).select('*');
+    if(error){ b.disabled = false; b.title = plMissing(error, '20261030_03_site_readiness.sql'); b.classList.add('late'); return; }
+    const r = await window.__open(data[0]); PL.ready = PL.ready.filter(x => !(x.machine_id === r.machine_id && x.item === r.item)).concat(r);
+    plDrawLook();
+  });
+  plLook.querySelectorAll('button[data-ed]').forEach(b => b.onclick = () => plEditReady(b.dataset.ed));
+}
+/* sửa chi tiết checklist 1 máy: trạng thái, hạn, người phụ trách, ghi chú (người phụ trách + ghi chú mã hoá) */
+function plEditReady(mid){
+  const x = DATA.find(d => d._id === mid); if(!x) return;
+  const RL = READY_L(), RS = READY_S(), cur = Object.fromEntries(PL.ready.filter(r => r.machine_id === mid).map(r => [r.item, r]));
+  mTitle.textContent = tr('🏗 Site readiness: ', '🏗 Sẵn sàng mặt bằng: ') + unescH(x.ten);
+  mSub.textContent = tr('Expected at site ', 'Dự kiến về NM ') + dmD(x.vedukienn);
+  const o = (v, sel) => Object.entries(RS).map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${l}</option>`).join('');
+  mBody.innerHTML = `<form id="rdForm"><div class="pl-rd-grid"><span class="h">${tr('Item', 'Mục')}</span><span class="h">${tr('Status', 'Trạng thái')}</span><span class="h">${tr('Due', 'Hạn')}</span><span class="h">${tr('Owner', 'Phụ trách')}</span><span class="h">${tr('Note', 'Ghi chú')}</span>` +
+    DM.READY_ITEMS.map(k => { const r = cur[k] || {};
+      return `<span class="it">${RL[k]}</span><select id="rs_${k}">${o(0, r.status || 'todo')}</select><input id="rdd_${k}" value="${ovEsc(r.due_date || '')}" placeholder="dd/mm/yyyy">` +
+             `<input id="ro_${k}" maxlength="80" value="${ovEsc(r.owner || '')}" placeholder="${tr('Owner', 'Phụ trách')}"><input id="rn_${k}" maxlength="200" value="${ovEsc(r.note || '')}" placeholder="${tr('Note', 'Ghi chú')}">`; }).join('') +
+    `</div><div id="rdMsg" style="min-height:1.2em;font-size:13px;margin:10px 0"></div><div class="add-actions"><button type="button" class="nbtn2 ghost" onclick="mBg.classList.remove('show')">${tr('Cancel', 'Huỷ')}</button>` +
+    `<button type="submit" class="nbtn2" id="rdSave">${tr('💾 Save', '💾 Lưu')}</button></div></form>`;
+  openM(1);
+  if(window.flatpickr) DM.READY_ITEMS.forEach(k => flatpickr(document.getElementById('rdd_' + k), { dateFormat:'Y-m-d', altInput:true, altFormat:'d/m/Y', allowInput:false, disableMobile:true,
+    locale:(LANG === 'vi' && flatpickr.l10ns && flatpickr.l10ns.vn) ? 'vn' : 'default' }));
+  document.getElementById('rdForm').onsubmit = async ev => {
+    ev.preventDefault();
+    const msg = document.getElementById('rdMsg'), save = document.getElementById('rdSave');
+    const g = id => document.getElementById(id).value.trim() || null;
+    save.disabled = true; msg.style.color = 'var(--muted)'; msg.textContent = tr('Saving…', 'Đang lưu…');
+    try{
+      const rows = await Promise.all(DM.READY_ITEMS.map(k => window.__seal('site_readiness',
+        { machine_id: mid, item: k, status: g('rs_' + k) || 'todo', due_date: g('rdd_' + k), owner: g('ro_' + k), note: g('rn_' + k) })));
+      const { data, error } = await window.__sb.from('site_readiness').upsert(rows, { onConflict:'machine_id,item' }).select('*');
+      if(error) throw error;
+      const back = await Promise.all((data || []).map(window.__open));
+      PL.ready = PL.ready.filter(r => r.machine_id !== mid).concat(back);
+      mBg.classList.remove('show'); plDrawLook();
+    }catch(err){ save.disabled = false; msg.style.color = 'var(--red)'; msg.textContent = plMissing(err, '20261030_03_site_readiness.sql'); }
+  };
+}
+async function initP5(){
+  if(!window.echarts){ plMtaE.hidden = false; plMtaE.textContent = tr('Chart library failed to load.', 'Không tải được thư viện biểu đồ.'); }
+  [plMtaT, plCashT, plLookT].forEach(e => e.textContent = tr('Loading…', 'Đang tải…'));
+  await plLoad();
+  plPickBtn.onclick = e => { e.stopPropagation(); plPick.hidden = !plPick.hidden; if(!plPick.hidden) plPicker(); };
+  document.addEventListener('click', e => { if(!plPick.hidden && !plPick.contains(e.target)) plPick.hidden = true; });
+  const all = () => { if(window.echarts){ plDrawMta(); plDrawCash(); } plDrawLook(); };
+  all();
+  new MutationObserver(() => { if(window.echarts){ plDrawMta(); plDrawCash(); } }).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
+  let ro = 0;
+  new ResizeObserver(() => { cancelAnimationFrame(ro); ro = requestAnimationFrame(() => Object.values(PL.ec).forEach(c => c.resize())); }).observe(document.querySelector('#p5 .pl-grid'));
+}
 
 function initP4(){
   const years = [...new Set(DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4)))].sort();
@@ -3399,6 +3668,7 @@ const STATIC_VI = new Map([
   ['📊 Overview','📊 Tổng quan'],
   ['📈 Analytics','📈 Phân tích'],
   ['🏅 Evaluation','🏅 Đánh giá'],
+  ['📅 Planning','📅 Kế hoạch'],
   ['📋 Machines','📋 Danh sách'],
   ['📂 Import','📂 Nạp Excel'],
   ['➕ Add','➕ Thêm'],

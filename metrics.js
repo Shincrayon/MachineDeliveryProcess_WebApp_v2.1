@@ -251,5 +251,100 @@
     };
   };
 
+  /* ---------- 5.1 Milestone Trend Analysis (mốc arrived_site) ----------
+     history: dòng milestone_forecast_history {machine_id, milestone, new_forecast, changed_at}.
+     Trục X = cuối mỗi tuần (Chủ nhật), tối đa opt.maxWeeks tuần gần nhất (mặc định 52) tới tuần hiện tại.
+     Giá trị tuần = new_forecast mới nhất có changed_at ≤ cuối tuần đó (chưa có lịch sử thì bỏ trống). */
+  const isoOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  DM.weekEnd = s => { const d = toDate(s); d.setDate(d.getDate() + (7 - d.getDay()) % 7); return isoOf(d); };
+  DM.mta = (history, machineIds, opt) => {
+    opt = opt || {};
+    const t = DM.todayIso(), maxW = opt.maxWeeks || 52;
+    const ev = history.filter(h => h.milestone === 'arrived_site' && machineIds.includes(h.machine_id))
+      .map(h => ({ id: h.machine_id, at: String(h.changed_at), d: iso(h.new_forecast) }))
+      .sort((a, b) => a.at.localeCompare(b.at));
+    if (!ev.length) return { weeks: [], series: [] };
+    const lastWeek = DM.weekEnd(t);
+    let first = DM.weekEnd(ev[0].at.slice(0, 10));
+    const minStart = DM.addDays(lastWeek, -7 * (maxW - 1));
+    if (first < minStart) first = minStart;
+    const weeks = [];
+    for (let w = first; w <= lastWeek; w = DM.addDays(w, 7)) weeks.push(w);
+    const series = machineIds.map(id => {
+      const mine = ev.filter(e => e.id === id);
+      const values = weeks.map(w => { let v; for (const e of mine) { if (e.at.slice(0, 10) <= w) v = e.d; else break; } return v === undefined ? null : v; });
+      const shown = values.filter(v => v);
+      return { id, values, changes: Math.max(mine.length - 1, 0),
+               firstForecast: shown[0] || null, lastForecast: shown[shown.length - 1] || null,
+               slipDays: shown.length ? DM.days(shown[0], shown[shown.length - 1]) : null };
+    }).filter(s => s.values.some(v => v));
+    return { weeks, series };
+  };
+
+  /* ---------- 5.2 Dự báo dòng tiền 12 tháng (đợt chưa trả) ----------
+     Ngày đến hạn: planned_date, không có thì lấy ngày của mốc gắn kèm (ký HĐ / xuất xưởng / về NM).
+     Quy VNĐ: VND giữ nguyên; USD dùng tỷ giá riêng của máy (vnd/usd của chính máy đó, coi như tỷ giá chốt),
+     không có thì tỷ giá mới nhất (exchange_rates); EUR dùng tỷ giá mới nhất. Thiếu tỷ giá / ngày -> 'unscheduled'. */
+  DM.msDate = (x, ms) => !x ? null : ms === 'contract_signed' ? iso(x.dathang) : ms === 'shipped' ? iso(x.xuatxuong)
+    : ms === 'arrived_site' ? iso(x.vedukienn) : null;
+  DM.payVnd = (p, x, rates) => {
+    const cur = p.currency || 'VND';
+    const amt = p.amount != null && p.amount !== '' ? +p.amount
+      : p.percent != null && p.percent !== '' ? (cur === 'VND' ? (x && +x.vnd) : cur === 'USD' ? (x && +x.usd) : 0) * p.percent / 100 : null;
+    if (amt == null || isNaN(amt)) return null;
+    if (cur === 'VND') return Math.round(amt);
+    const own = cur === 'USD' && x && +x.usd > 0 && +x.vnd > 0 ? x.vnd / x.usd : null;
+    const r = own || (rates && rates[cur]);
+    return r ? Math.round(amt * r) : null;
+  };
+  DM.cashflow = (pays, machinesById, rates, opt) => {
+    opt = opt || {};
+    const t = DM.todayIso(), n = opt.months || 12;
+    const m0 = toDate(t.slice(0, 8) + '01');
+    const months = Array.from({ length: n }, (_, i) => { const d = new Date(m0); d.setMonth(d.getMonth() + i); return isoOf(d).slice(0, 7); });
+    const items = pays.filter(p => !p.paid_date).map(p => {
+      const x = machinesById[p.machine_id];
+      const due = iso(p.planned_date) || DM.msDate(x, p.linked_milestone);
+      return { p, x, kind: p.kind || 'other', due, vnd: DM.payVnd(p, x, rates) };
+    });
+    const ok = items.filter(i => i.due && i.vnd != null);
+    const overdue = ok.filter(i => i.due < t);
+    const byMonth = months.map(m => {
+      const o = { month: m, total: 0 };
+      DM.PAY_KINDS.forEach(k => { o[k] = 0; });
+      ok.filter(i => i.due >= t && i.due.slice(0, 7) === m).forEach(i => { o[i.kind] += i.vnd; o.total += i.vnd; });
+      return o;
+    });
+    let run = overdue.reduce((s, i) => s + i.vnd, 0);
+    byMonth.forEach(o => { run += o.total; o.cumulative = run; });
+    const to30 = DM.addDays(t, 30);
+    return {
+      months: byMonth,
+      overdue: { count: overdue.length, vnd: overdue.reduce((s, i) => s + i.vnd, 0), items: overdue },
+      due30: ok.filter(i => i.due <= to30).sort((a, b) => a.due.localeCompare(b.due)),
+      unscheduled: items.filter(i => !i.due || i.vnd == null),
+      later: ok.filter(i => i.due.slice(0, 7) > months[months.length - 1])
+    };
+  };
+
+  /* ---------- 5.3 Lookahead 90 ngày: sẵn sàng mặt bằng ----------
+     Máy chưa về, ngày về dự kiến trong [hôm nay, hôm nay + 90]; nhóm 0–30 / 31–60 / 61–90 ngày.
+     Checklist 5 mục; mục chưa có dòng = 'todo'. Cờ đỏ: còn mục chưa xong (không phải done/na) và còn ≤ 14 ngày. */
+  DM.READY_ITEMS = ['foundation', 'power_supply', 'lifting', 'installer', 'utilities'];
+  DM.lookahead = (rows, readiness, opt) => {
+    const t = DM.todayIso(), days = (opt && opt.days) || 90, red = (opt && opt.redDays) || 14;
+    const by = {};
+    (readiness || []).forEach(r => { (by[r.machine_id] = by[r.machine_id] || {})[r.item] = r; });
+    return rows.map(x => ({ x, m: ms(x, 'arrived_site') }))
+      .filter(o => o.m.forecast && DM.days(t, o.m.forecast) <= days)
+      .map(({ x, m }) => {
+        const d = DM.days(t, m.forecast), rd = by[x._id] || {};
+        const items = DM.READY_ITEMS.map(k => Object.assign({ item: k, status: 'todo' }, rd[k] || {}));
+        const open = items.filter(i => i.status !== 'done' && i.status !== 'na').length;
+        return { x, forecast: m.forecast, days: d, bucket: d <= 30 ? 0 : d <= 60 ? 1 : 2, items, open, red: open > 0 && d <= red };
+      })
+      .sort((a, b) => a.days - b.days);
+  };
+
   window.DM = DM;
 })();
