@@ -16,6 +16,7 @@
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
 <script src="metrics.js"></script>
+<script src="export.js"></script>
 <style>
 :root{color-scheme:dark;
   --bg:#0b1220; --panel:#121c31; --panel2:#17233d; --border:rgba(148,163,184,.14);
@@ -269,6 +270,39 @@ button.pl-chip{cursor:pointer}
 .pay-tbl td.act button{background:transparent;border:1px solid var(--border);border-radius:7px;padding:2px 7px;margin-left:4px;cursor:pointer;color:var(--txt);font-size:12px}
 .pay-tbl td.act button.ask{border-color:var(--st-bad);color:var(--st-bad);font-weight:700}
 .add-grid.pay-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+/* 📤 Xuất dữ liệu (export.js) */
+.exp-open{padding:8px 14px;border-radius:999px;border:1px solid var(--blue);background:transparent;color:var(--sky);font-size:12.5px;font-weight:700;cursor:pointer;transition:.2s;margin-left:auto}
+.exp-open:hover{background:rgba(96,165,250,.12)}
+.modal.exp-modal{position:relative;max-width:980px;max-height:92vh;overflow:auto;display:flex;flex-direction:column}
+.exp-tpl,.exp-tools,.exp-foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.exp-tpl select,.exp-tpl input,.exp-tools input{padding:7px 10px;border-radius:9px;border:1px solid var(--border);background:var(--panel);color:var(--txt);font:inherit;font-size:12.5px;min-width:0}
+.exp-tpl select{flex:1 1 180px} .exp-tpl input{flex:1 1 180px} .exp-tools input{flex:1 1 200px}
+.exp-tpl .nbtn2,.exp-tools .nbtn2{padding:6px 12px;font-size:12px}
+#expCnt{font-size:12px;color:var(--muted);margin-left:auto}
+.exp-list{list-style:none;margin:0 0 12px;padding:4px;border:1px solid var(--border);border-radius:12px;max-height:34vh;overflow:auto;
+  display:grid;grid-template-columns:1fr;gap:3px}
+.exp-list li{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:8px;font-size:12.5px;border:1px solid transparent;background:rgba(148,163,184,.04)}
+.exp-list li.on{background:rgba(96,165,250,.1)}
+.exp-list li.drag{opacity:.4}
+.exp-list li.over-t{border-top-color:var(--blue)} .exp-list li.over-b{border-bottom-color:var(--blue)}
+.exp-list li.exp-none{grid-column:1/-1;color:var(--muted);justify-content:center}
+.exp-list label{flex:1;display:flex;align-items:center;gap:6px;cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exp-list input{width:15px;height:15px;accent-color:var(--blue);flex:none}
+.exp-grip{cursor:grab;color:var(--muted);letter-spacing:-2px;user-select:none}
+.exp-type{font-size:10.5px;color:var(--muted)}
+.exp-list button{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--txt);cursor:pointer;font-size:10px;padding:2px 6px;line-height:1.2}
+.exp-list button:disabled{opacity:.3;cursor:default}
+.exp-h{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--sky);margin:0 0 6px}
+.exp-prev{overflow:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:12px;max-height:26vh}
+.exp-prev table{width:max-content;min-width:100%;border-collapse:collapse;font-size:12px}
+.exp-prev th{position:sticky;top:0;background:var(--panel2);text-align:left;font-size:11px;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:default;text-transform:none;letter-spacing:0}
+.exp-prev td{padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.exp-prev td.n{text-align:right;font-variant-numeric:tabular-nums}
+.exp-empty{padding:14px;color:var(--muted);font-size:12.5px;text-align:center}
+.exp-foot{justify-content:flex-end;margin:0}
+#expHint{margin-right:auto;font-size:12.5px;color:var(--amber)}
+.exp-foot .nbtn2:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:640px){.exp-list{max-height:30vh}.exp-open{margin-left:0}.exp-foot .nbtn2{flex:1 1 100%}}
 /* ⚡ Cập nhật nhanh */
 th.qu-h,td.qu-c{width:64px;white-space:nowrap;cursor:default;padding-right:4px}
 #tb td.name{min-width:170px}
@@ -756,6 +790,9 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <select id="fLoc"><option value="">Site: All</option></select>
       <select id="fOrigin"><option value="">Origin: All</option></select>
       <select id="fPIC"><option value="">Person in charge: All</option></select>
+      <select id="fMon" title="Month of arrival at plant"><option value="">Month: All</option></select>
+      <select id="fYr" title="Year of arrival at plant"><option value="">Year: All</option></select>
+      <button type="button" class="exp-open" id="btnExp" onclick="expOpen()">📤 Export data</button>
     </div>
     <div class="qu-bar" id="quBar" hidden></div>
     <div class="tablewrap">
@@ -2224,12 +2261,18 @@ const fmtM = v => v>=1e9 ? (v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:
 [...new Set(DATA.map(x=>x.noilapdat))].sort().forEach(v=>fLoc.add(new Option(v,v)));
 [...new Set(DATA.map(x=>x.xuatxu))].sort().forEach(v=>fOrigin.add(new Option(ctT(v),v)));
 [...new Set(DATA.map(x=>x.phutrach).filter(Boolean))].sort().forEach(v=>fPIC.add(new Option(v,v)));
+/* Tháng / Năm theo ngày dự kiến về NM (vedukienn); độc lập với mốc thời gian ở trang Tổng quan */
+let lMon='', lYr='';
+for(let i=1;i<=12;i++) fMon.add(new Option(tr(MON[i-1],'Tháng '+i), String(i).padStart(2,'0')));
+[...new Set(DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4)))].sort().forEach(v=>fYr.add(new Option(v,v)));
+fMon.title = tr('Month of arrival at plant','Tháng dự kiến về NM'); fYr.title = tr('Year of arrival at plant','Năm dự kiến về NM');
 
 function filtered(){
   let rows = DATA.filter(x=>
     (filter==='all' || (filter==='delay'? x.giaitrinh : x.status===filter)) &&
     (!loc || x.noilapdat===loc) && (!origin || x.xuatxu===origin) && (!pic || x.phutrach===pic) &&
-    (!q || (x.ten+' '+x.ncc).toLowerCase().includes(q)));
+    (!q || (x.ten+' '+x.ncc).toLowerCase().includes(q)) &&
+    (!lMon || (x.vedukienn && x.vedukienn.slice(5,7)===lMon)) && (!lYr || (x.vedukienn && x.vedukienn.slice(0,4)===lYr)));
   rows.sort((a,b)=>{
     if(sortKey==='__prio'){
       // Máy ĐÃ VỀ: bỏ gom theo Đánh giá, xếp thuần theo ngày về — gần nhất -> lâu nhất
@@ -2378,14 +2421,27 @@ document.querySelectorAll('.fbtn').forEach(b=>b.onclick=()=>{
   b.classList.add('active'); filter=b.dataset.f; pageNo=1;
   if(filter==='all'){
     sortKey='__prio'; sortDir=1;
-    loc=''; origin=''; pic=''; q='';
-    fLoc.value=''; fOrigin.value=''; fPIC.value='';
+    loc=''; origin=''; pic=''; q=''; lMon=''; lYr='';
+    fLoc.value=''; fOrigin.value=''; fPIC.value=''; fMon.value=''; fYr.value='';
     document.getElementById('q').value='';
   }
   render();});
 fLoc.onchange = e=>{loc=e.target.value;pageNo=1;render()};
 fOrigin.onchange = e=>{origin=e.target.value;pageNo=1;render()};
 fPIC.onchange = e=>{pic=e.target.value;pageNo=1;render()};
+fMon.onchange = e=>{lMon=e.target.value;pageNo=1;render()};
+fYr.onchange = e=>{lYr=e.target.value;pageNo=1;render()};
+/* 📤 Xuất dữ liệu (export.js): đúng các dòng bảng đang hiện + mô tả bộ lọc + nhãn đang dùng */
+window.__listView = () => {
+  const d = [`${tr('Month','Tháng')}: ${lMon ? +lMon : tr('all','tất cả')}`, `${tr('Year','Năm')}: ${lYr || tr('all','tất cả')}`];
+  if(filter!=='all'){ const b = document.querySelector(`#p3 .fbtn[data-f="${filter}"]`); if(b) d.push(b.textContent.trim()); }
+  if(loc) d.push(`${tr('Site','Nơi lắp đặt')}: ${unescH(loc)}`);
+  if(origin) d.push(`${tr('Origin','Xuất xứ')}: ${ctT(unescH(origin))}`);
+  if(pic) d.push(`${tr('Person in charge','Phụ trách')}: ${unescH(pic)}`);
+  if(q) d.push(`${tr('Search','Tìm')}: "${q}"`);
+  return { rows: filtered(), desc: d.join(', ') };
+};
+window.__expCtx = () => ({ labels: LANG==='vi' ? REC_LABEL : REC_LABEL_EN, LBL, dgT, ctT });
 document.getElementById('q').oninput = e=>{q=e.target.value.toLowerCase();pageNo=1;render()};
 document.querySelectorAll('thead th[data-s]').forEach(th=>th.onclick=()=>{
   const k=th.dataset.s; if(sortKey===k) sortDir*=-1; else {sortKey=k;sortDir=1;} render();});
@@ -3982,6 +4038,7 @@ const STATIC_VI = new Map([
   ['Equipment status','Trạng thái thiết bị'],
   ['Month: All','Tháng: Tất cả'],
   ['Year: All','Năm: Tất cả'],
+  ['📤 Export data','📤 Xuất dữ liệu'],
   ['📅 Period','📅 Mốc thời gian'],
   ['Monthly arrival schedule','Lịch máy về theo tháng'],
   ['▮ Bars','▮ Cột'],
