@@ -269,6 +269,38 @@ button.pl-chip{cursor:pointer}
 .pay-tbl td.act button{background:transparent;border:1px solid var(--border);border-radius:7px;padding:2px 7px;margin-left:4px;cursor:pointer;color:var(--txt);font-size:12px}
 .pay-tbl td.act button.ask{border-color:var(--st-bad);color:var(--st-bad);font-weight:700}
 .add-grid.pay-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+/* ⚡ Cập nhật nhanh */
+th.qu-h,td.qu-c{width:64px;white-space:nowrap;cursor:default;padding-right:4px}
+#tb td.name{min-width:170px}
+td.qu-c input,th.qu-h input{width:16px;height:16px;vertical-align:middle;accent-color:var(--blue);cursor:pointer}
+.qu-btn{margin-left:6px;background:transparent;border:1px solid var(--border);border-radius:7px;padding:1px 6px;cursor:pointer;color:var(--txt);font-size:12px;vertical-align:middle}
+.qu-btn:hover{border-color:var(--blue)}
+.qu-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;padding:8px 12px;border:1px solid var(--blue);border-radius:12px;background:rgba(96,165,250,.08);font-size:13px}
+.qu-bar[hidden]{display:none}
+.qu-bar b{margin-right:auto}
+.add-grid.qu-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.qu-f{position:relative}
+.qu-f input{width:100%;padding-right:28px}
+.qu-clr{position:absolute;right:6px;bottom:7px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:2px}
+.qu-clr:hover{color:var(--red)}
+.qu-ro{padding:8px 10px;border-radius:9px;border:1px dashed var(--border);color:var(--txt);font-weight:700;min-height:35px}
+.qu-ro small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.qu-warn{border:1px solid var(--amber);background:rgba(251,191,36,.1);border-radius:10px;padding:8px 12px;margin:0 0 10px;font-size:12.5px}
+.qu-warn div::before{content:'⚠ ';color:var(--amber)}
+.qu-names{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.qu-names span{border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:11px;color:var(--muted)}
+.qu-tbl{overflow:auto;max-height:52vh;margin-bottom:12px}
+.qu-tbl table{width:100%;min-width:0;font-size:12.5px;border-collapse:collapse}
+.qu-tbl th{position:sticky;top:0;background:var(--panel2);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:default}
+.qu-tbl td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.qu-tbl td.m{font-weight:600}
+.qu-tbl td.m small{display:block;font-weight:400;color:var(--amber);font-size:11px}
+.qu-tbl s{color:var(--muted)} .qu-tbl ins{text-decoration:none;font-weight:700;color:var(--st-ok)}
+.qu-tbl tr.calc td{color:var(--muted);font-style:italic}
+.qu-tbl tr.calc ins{color:var(--blue)}
+.qu-tbl td.ok{color:var(--st-ok);font-weight:700} .qu-tbl td.bad{color:var(--st-bad);font-weight:700}
+@media(max-width:760px){.add-grid.qu-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.add-grid.qu-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.add-grid.pay-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:1100px){.sc-wrap{grid-template-columns:1fr}}
 @media(max-width:640px){#scSub{flex-basis:100%;margin:2px 0 0 16px!important}#p4 .card h3{flex-wrap:wrap}}
@@ -725,9 +757,11 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <select id="fOrigin"><option value="">Origin: All</option></select>
       <select id="fPIC"><option value="">Person in charge: All</option></select>
     </div>
+    <div class="qu-bar" id="quBar" hidden></div>
     <div class="tablewrap">
       <table>
         <thead><tr>
+          <th class="qu-h" id="quTh" hidden><input type="checkbox" id="quAll"></th>
           <th data-s="ten">Machine</th><th data-s="sl">Qty</th><th data-s="noilapdat">Site</th>
           <th data-s="ncc">Supplier</th><th data-s="xuatxu">Origin</th><th data-s="phutrach">Person in charge</th>
           <th data-s="vnd">Unit price (VND)</th><th data-s="usd">Unit price (USD)</th>
@@ -864,7 +898,11 @@ function rowsToData(rows){
     ctu:num(r['TG chờ tạm ứng KH (ngày)']), tamungtt:iso(r['Ngày tạm ứng TT']),
     ditaukh:num(r['TG đi tàu KH (ngày)']), ditautt:num(r['TG đi tàu TT (ngày)']),
     lanhkh:num(r['TG lãnh máy KH (ngày)']), lanhtt:num(r['TG lãnh máy TT (ngày)']),
-    xuatxuong:iso(r['Xác nhận/dự kiến xuất xưởng']), workingday:String(r['Working day']||'').trim()
+    xuatxuong:iso(r['Xác nhận/dự kiến xuất xưởng']), workingday:String(r['Working day']||'').trim(),
+    // ngày thực tế (Cập nhật nhanh): file không có cột -> undefined, replaceAll giữ giá trị đang có
+    tauchay_tt: 'Ngày tàu chạy TT' in r ? iso(r['Ngày tàu chạy TT']) : undefined,
+    capcang_tt: 'Ngày cập cảng TT' in r ? iso(r['Ngày cập cảng TT']) : undefined,
+    venm_tt: 'Ngày máy về NM TT' in r ? iso(r['Ngày máy về NM TT']) : undefined
   }));
 }
 
@@ -970,7 +1008,10 @@ function readAll(wb){
       ctu:Math.round(ctu), tamungtt:serialToISO(toSerial(gv(row,'Ngày tạm ứng TT'))),
       ditaukh:Math.round(ditauKH), ditautt:Math.round(ditauTT),
       lanhkh:Math.round(lanhKH), lanhtt:Math.round(lanhTT),
-      xuatxuong:serialToISO(xxg), workingday:(wd||'')
+      xuatxuong:serialToISO(xxg), workingday:(wd||''),
+      tauchay_tt: H['Ngày tàu chạy TT']!=null ? serialToISO(toSerial(gv(row,'Ngày tàu chạy TT'))) : undefined,
+      capcang_tt: H['Ngày cập cảng TT']!=null ? serialToISO(toSerial(gv(row,'Ngày cập cảng TT'))) : undefined,
+      venm_tt: H['Ngày máy về NM TT']!=null ? serialToISO(toSerial(gv(row,'Ngày máy về NM TT'))) : undefined
     });
   }
   return out;
@@ -2172,6 +2213,7 @@ function initP4(){
 
 /* ===== table + filters + pagination ===== */
 let filter='all', loc='', origin='', pic='', q='', sortKey='__prio', sortDir=1, pageNo=1;
+const QU_SEL = new Set();          // _id các máy đang được chọn để ⚡ Cập nhật nhanh hàng loạt
 const PRIO = {soon:0, waiting:1, arrived:2};
 const GPRIO = x => (({soon:0, waiting:10, arrived:20})[x.status]??30) + (x.danhgia==='Trễ' ? 0 : x.danhgia==='Đúng tiến độ' ? 1 : x.danhgia==='Sớm' ? 2 : 3);
 const PAGE_SIZE = 10;
@@ -2209,7 +2251,9 @@ function render(){
   const nPages = Math.max(1, Math.ceil(rows.length/PAGE_SIZE));
   if(pageNo>nPages) pageNo = nPages;
   const view = rows.slice((pageNo-1)*PAGE_SIZE, pageNo*PAGE_SIZE);
+  const qw = !!window.__canWrite;
   tb.innerHTML = view.map((x,i)=>`<tr class="${x.status!=='arrived'&&x.danhgia==='Trễ'?'late-flag':''} slide-in" style="--i:${i};cursor:pointer" onclick="showDetail(${DATA.indexOf(x)})" title="${tr('Click to view full machine details','Bấm để xem đầy đủ thông tin thiết bị')}">
+    ${qw ? `<td class="qu-c" onclick="event.stopPropagation()"><input type="checkbox" class="qu-ck" data-id="${x._id}"${QU_SEL.has(x._id)?' checked':''} aria-label="${tr('Select for quick update','Chọn để cập nhật nhanh')}"><button type="button" class="qu-btn" title="${tr('⚡ Quick update','⚡ Cập nhật nhanh')}" onclick="quickEdit(${DATA.indexOf(x)})">⚡</button></td>` : ''}
     <td class="name">${x.ten}${x.congsuat?`<small>${x.congsuat}</small>`:''}</td>
     <td>${x.sl}</td><td>${x.noilapdat}</td><td>${x.ncc}</td><td>${ctT(x.xuatxu)}</td>
     <td>${x.phutrach||'—'}</td>
@@ -2228,6 +2272,7 @@ function render(){
   }
   html += `<button class="pbtn" ${pageNo===nPages?'disabled':''} onclick="goPage(${pageNo+1})">›</button>`;
   pager.innerHTML = html;
+  if(window.quSync) quSync(rows);
 }
 window.goPage = p => { pageNo = p; render(); };
 window.showKPI = kind => {
@@ -2294,6 +2339,9 @@ window.showDetail = i => {
     ${sec(tr('Actual schedule','Tiến độ thực tế (TT)'),[
       it(tr('Advance-payment date (actual)','Ngày tạm ứng TT'), fmtD(x.tamungtt)),
       it(tr('Confirmed/expected ex-works','Xác nhận/dự kiến xuất xưởng'), fmtD(x.xuatxuong)),
+      it(tr('Vessel departure (actual)','Ngày tàu chạy TT'), fmtD(x.tauchay_tt)),
+      it(tr('Port arrival (actual)','Ngày cập cảng TT'), fmtD(x.capcang_tt)),
+      it(tr('Arrival at plant (actual)','Ngày máy về NM TT'), fmtD(x.venm_tt)),
       it(tr('Shipping time (actual)','TG đi tàu TT'), Dy(x.ditautt)),
       it(tr('Clearance & pickup (actual)','TG lãnh máy TT'), Dy(x.lanhtt)),
       it(tr('Expected arrival at plant','Ngày dự kiến máy về NM'), `<b>${fmtD(x.vedukienn)}</b>`,'hl'),
@@ -2307,6 +2355,7 @@ window.showDetail = i => {
       <button class="nbtn2 ghost" onclick="showHistory(${i})">${tr(`🕘 History`,`🕘 Lịch sử`)}</button>
       <button class="nbtn2 ghost" onclick="showPayments(${i})">${tr(`💳 Payments`,`💳 Thanh toán`)}</button>
       ${window.__canWrite ? `<button class="nbtn2 ghost" onclick="askDelete(${i})">${tr(`🗑 Delete machine`,`🗑 Xoá máy`)}</button>
+      <button class="nbtn2 ghost" onclick="quickEdit(${i})">${tr(`⚡ Quick update`,`⚡ Cập nhật nhanh`)}</button>
       <button class="nbtn2" onclick="editMachine(${i})">${tr(`✏️ Edit`,`✏️ Sửa thông tin`)}</button>` : ''}</div>
     <div class="dt-note">${tr(`Planned arrival date = Order date + advance-payment wait (plan) + shipping time (plan) + clearance &amp; pickup (plan) + manufacturing days (CTM).<br>
     Expected arrival at plant = Confirmed/expected ex-works + shipping time (actual) + clearance &amp; pickup (actual).`,`Ngày dự kiến máy về (KH) = Ngày đặt hàng + TG chờ tạm ứng KH + TG đi tàu KH + TG lãnh máy KH + Số ngày chế tạo máy (CTM).<br>
@@ -2368,6 +2417,8 @@ function dbErrText(e){
   const c = e && e.code;
   if(c==='conflict') return tr('Someone else just edited or deleted this machine. Press <b>🔄 Refresh</b> to see the latest version, then try again.','Máy này vừa được người khác sửa hoặc xoá. Bấm <b>🔄 Làm mới</b> để xem bản mới nhất rồi làm lại.');
   if(c==='42501' || c==='perm') return tr('Your account does not have permission to do this. Ask an admin for editor access.','Tài khoản của bạn không có quyền làm việc này. Nhờ admin cấp quyền editor.');
+  if((c==='PGRST204' || c==='42703') && /tauchay_tt|capcang_tt|venm_tt/.test(e.message||'')) return tr('The database does not have the actual-date columns yet. An admin needs to run <b>supabase/migrations/20261030_04_quick_update.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có cột ngày thực tế. Admin cần chạy file <b>supabase/migrations/20261030_04_quick_update.sql</b> trong Supabase > SQL Editor.');
+  if(c==='locked') return tr('This machine could not be decrypted in this tab, so it cannot be updated. Reload and unlock the data first.','Máy này chưa giải mã được trong tab này nên chưa sửa được. Tải lại trang và mở khoá dữ liệu trước.');
   if(c==='PGRST204' && /model|serial/.test(e.message||'')) return tr('The database does not have the Model / Serial number columns yet. An admin needs to run <b>supabase/04_model_serial.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có cột Model / Số serial. Admin cần chạy file <b>supabase/04_model_serial.sql</b> trong Supabase > SQL Editor.');
   if(c==='PGRST301' || c==='401') return tr('Your session has expired. Reload the page and sign in again.','Phiên đăng nhập đã hết hạn. Tải lại trang và đăng nhập lại.');
   if(!window.__sb) return tr('Not connected to the data server. Check your network and reload the page.','Chưa kết nối được máy chủ dữ liệu. Kiểm tra mạng rồi tải lại trang.');
@@ -2380,15 +2431,20 @@ const REC_LABEL = {ten:'Tên máy', phutrach:'Người phụ trách', sl:'Số l
   dathang:'Ngày đặt hàng', vekh:'Ngày dự kiến máy về (KH)', vedukienn:'Ngày dự kiến máy về NM', danhgia:'Đánh giá',
   sonagyctm:'Số ngày CTM', giaitrinh:'Giải trình', ctu:'TG chờ tạm ứng KH (ngày)', tamungtt:'Ngày tạm ứng TT',
   ditaukh:'TG đi tàu KH (ngày)', ditautt:'TG đi tàu TT (ngày)', lanhkh:'TG lãnh máy KH (ngày)', lanhtt:'TG lãnh máy TT (ngày)',
-  xuatxuong:'Xác nhận/dự kiến xuất xưởng', workingday:'Working day'};
+  xuatxuong:'Xác nhận/dự kiến xuất xưởng', workingday:'Working day',
+  tauchay_tt:'Ngày tàu chạy TT', capcang_tt:'Ngày cập cảng TT', venm_tt:'Ngày máy về NM TT'};
 /* nhãn hiển thị khi chọn tiếng Anh; REC_LABEL ở trên giữ tiếng Việt vì là tên cột Excel */
 const REC_LABEL_EN = {ten:'Machine name', phutrach:'Person in charge', sl:'Quantity', congsuat:'Capacity', noilapdat:'Installation site',
   ncc:'Supplier', xuatxu:'Origin', model:'Model', serial:'Serial number', vnd:'Total value (VND)', usd:'Total value (USD)', duyet:'Proposal approval date',
   dathang:'Order date', vekh:'Planned arrival date', vedukienn:'Expected arrival at plant', danhgia:'Rating',
   sonagyctm:'Manufacturing days (CTM)', giaitrinh:'Delay note', ctu:'Advance-payment wait, plan (days)', tamungtt:'Advance-payment date, actual',
   ditaukh:'Shipping time, plan (days)', ditautt:'Shipping time, actual (days)', lanhkh:'Clearance & pickup, plan (days)', lanhtt:'Clearance & pickup, actual (days)',
-  xuatxuong:'Confirmed/expected ex-works', workingday:'Working day'};
-const DATE_KEYS = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong'];
+  xuatxuong:'Confirmed/expected ex-works', workingday:'Working day',
+  tauchay_tt:'Vessel departure, actual', capcang_tt:'Port arrival, actual', venm_tt:'Arrival at plant, actual'};
+/* ngày thực tế nhập qua ⚡ Cập nhật nhanh (migrations/20261030_04): KHÔNG nằm trong REC_KEYS
+   để form Sửa đầy đủ (toRow) không ghi đè chúng; trigger machines_actual_trg tính ditautt / lanhtt / vedukienn từ đây */
+const ACT_KEYS = ['tauchay_tt','capcang_tt','venm_tt'];
+const DATE_KEYS = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong'].concat(ACT_KEYS);
 const INT_KEYS = ['sl','sonagyctm','ctu','ditaukh','ditautt','lanhkh','lanhtt'];
 function toRow(m){
   const o = {};
@@ -2421,9 +2477,235 @@ async function saveMachine(m, editId){
   }
 }
 
+/* ---- ⚡ Cập nhật nhanh: ngày thực tế của 1 máy hoặc nhiều máy cùng lô / container ----
+   Form Sửa đầy đủ giữ nguyên. Chỉ gửi các trường đổi, kiểm tra version giống saveMachine, quyền theo RLS "sua may".
+   TG đi tàu TT / lãnh máy TT / ngày về NM / đánh giá do trigger machines_actual_trg tính trên máy chủ
+   (migrations/20261030_04_quick_update.sql); quDerive() bên dưới tính giống hệt để xem trước. */
+const quEl = id => document.getElementById(id);
+const QU_KEYS = ['tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt','giaitrinh'];
+const QU_DATES = QU_KEYS.filter(k=>k!=='giaitrinh');
+const QU_FUT = ['tamungtt','tauchay_tt','capcang_tt','venm_tt'];      // ngày thực tế: không nên nằm ở tương lai
+const quLbl = k => (LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k];
+const quCur = (x,k) => k==='giaitrinh' ? unescH(x.giaitrinh||'') : (x[k]||null);
+function quStatus(x){
+  const t0 = new Date(); t0.setHours(0,0,0,0);
+  if(x.vedukienn){ x.daysleft = Math.round((new Date(x.vedukienn)-t0)/86400000); x.status = x.daysleft<0 ? 'arrived' : x.daysleft<=15 ? 'soon' : 'waiting'; }
+  else { x.daysleft = null; x.status = 'unknown'; }
+}
+/* giống trigger machines_actual_sync: m = giá trị sau khi sửa */
+function quDerive(m){
+  const o = { ditautt:m.ditautt, lanhtt:m.lanhtt, vedukienn:m.vedukienn };
+  if(m.capcang_tt && m.xuatxuong) o.ditautt = DM.days(m.xuatxuong, m.capcang_tt);
+  if(m.venm_tt && m.capcang_tt) o.lanhtt = DM.days(m.capcang_tt, m.venm_tt);
+  if(m.venm_tt) o.vedukienn = m.venm_tt;
+  else if(m.capcang_tt) o.vedukienn = DM.addDays(m.capcang_tt, Number(o.lanhtt)||0);
+  return o;
+}
+const quMerge = (x,ch) => Object.assign({ xuatxuong:x.xuatxuong, capcang_tt:x.capcang_tt, venm_tt:x.venm_tt,
+  ditautt:x.ditautt, lanhtt:x.lanhtt, vedukienn:x.vedukienn }, ch);
+/* cảnh báo (không chặn): thứ tự ngày sai, ngày thực tế ở tương lai — chỉ xét trường vừa đổi */
+function quWarn(x,ch){
+  const m = quMerge(x,ch), w = [], t = DM.todayIso(), on = (...k) => k.some(j=>j in ch);
+  if(on('capcang_tt','xuatxuong') && m.capcang_tt && m.xuatxuong && m.capcang_tt < m.xuatxuong)
+    w.push(tr(`Port arrival (${fmtD(m.capcang_tt)}) is before ex-works (${fmtD(m.xuatxuong)}).`,`Ngày cập cảng (${fmtD(m.capcang_tt)}) trước ngày xuất xưởng (${fmtD(m.xuatxuong)}).`));
+  if(on('venm_tt','capcang_tt') && m.venm_tt && m.capcang_tt && m.venm_tt < m.capcang_tt)
+    w.push(tr(`Arrival at plant (${fmtD(m.venm_tt)}) is before port arrival (${fmtD(m.capcang_tt)}).`,`Ngày về nhà máy (${fmtD(m.venm_tt)}) trước ngày cập cảng (${fmtD(m.capcang_tt)}).`));
+  QU_FUT.forEach(k=>{ if(ch[k] && ch[k] > t) w.push(tr(`${quLbl(k)} (${fmtD(ch[k])}) is in the future.`,`${quLbl(k)} (${fmtD(ch[k])}) nằm ở tương lai.`)); });
+  return w;
+}
+/* ô trống: 1 máy = xoá giá trị; nhiều máy = giữ nguyên */
+function quDiff(x,f,batch){
+  const ch = {};
+  QU_KEYS.forEach(k=>{
+    const v = f[k], cur = quCur(x,k);
+    if(batch){ if(v!=='' && v!==(cur||'')) ch[k] = v; }
+    else if(v!==(cur||'')) ch[k] = k==='giaitrinh' ? v : (v||null);
+  });
+  return ch;
+}
+async function quSaveOne(x,ch){
+  const sb = window.__sb; if(!sb) throw {code:'nodb'};
+  const upd = {};
+  Object.keys(ch).forEach(k=>{ if(k!=='giaitrinh') upd[k] = ch[k]; });
+  if('giaitrinh' in ch){
+    // giải trình nằm trong sec cùng các trường nhạy cảm khác: mã hoá lại cả gói, chỉ giải trình đổi
+    if(CRYPTO.on && x.ten==='🔒') throw {code:'locked'};
+    const s = {}; SEC.machines.f.forEach(k=>{ s[k] = (k==='vnd'||k==='usd') ? (Number(x[k])||0) : unescH(x[k]||''); });
+    s.giaitrinh = ch.giaitrinh;
+    const sealed = await window.__seal('machines', s);
+    if(sealed.sec){ upd.sec = sealed.sec; upd.giaitrinh = null; } else upd.giaitrinh = ch.giaitrinh;
+  }
+  const { data, error } = await sb.from('machines').update(upd)
+    .eq('id', x._id).eq('version', x._ver).is('deleted_at', null).select('*');
+  if(error) throw error;
+  if(!data || !data.length){
+    // 0 dòng: hoặc người khác vừa sửa (version đổi / máy bị xoá), hoặc RLS không cho sửa
+    const { data: cur } = await sb.from('machines').select('version').eq('id', x._id).is('deleted_at', null).maybeSingle();
+    throw { code: (cur && Number(cur.version)===x._ver) ? 'perm' : 'conflict' };
+  }
+  const o = window.__cleanMachine(await window.__open(data[0]));
+  if(o.ten==='' && x.ten) o.ten = x.ten;
+  Object.assign(x, o); quStatus(x);
+}
+function quAfterSave(){
+  render();
+  try{ OV_HOOKS.forEach(f=>f()); }catch(e){}
+  setTimeout(()=>{ window.__selfWriting = false; }, 1500);
+}
+function quToast(msg){
+  let t = document.querySelector('.mm-toast'); if(!t){ t = document.createElement('div'); t.className = 'mm-toast'; document.body.appendChild(t); }
+  t.innerHTML = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+/* form dùng chung cho 1 máy (điền sẵn) và nhiều máy (để trống) */
+function quForm(list, keep){
+  const batch = list.length > 1, x0 = list[0];
+  const val = k => keep ? keep[k] : batch ? '' : (quCur(x0,k)||'');
+  mTitle.textContent = batch ? tr(`⚡ Quick update (${list.length} machines)`,`⚡ Cập nhật nhanh (${list.length} máy)`)
+                             : tr('⚡ Quick update: ','⚡ Cập nhật nhanh: ') + unescH(x0.ten);
+  mSub.innerHTML = batch
+    ? tr('Leave a box empty to keep each machine\'s current value. You will see every change before it is saved.','Ô để trống = giữ nguyên giá trị cũ của từng máy. Bạn sẽ xem lại mọi thay đổi trước khi lưu.')
+      + `<div class="qu-names">${list.slice(0,12).map(x=>`<span>${x.ten}</span>`).join('')}${list.length>12?`<span>+${list.length-12}</span>`:''}</div>`
+    : tr('Only the boxes you change are saved. Empty a date box (×) to clear it.','Chỉ lưu các ô bạn đổi. Bấm × để xoá một ngày.');
+  const dIn = k => `<label>${quLbl(k)}<span class="qu-f"><input id="qu_${k}" value="${escH(val(k))}" placeholder="${batch ? tr('keep','giữ nguyên') : '—'}"><button type="button" class="qu-clr" data-clr="${k}" title="${tr('Clear','Xoá')}">×</button></span></label>`;
+  mBody.innerHTML = `<form id="quForm" novalidate><div class="add-grid qu-grid">
+      ${QU_DATES.map(dIn).join('')}
+      <label>${tr('Shipping time, actual (calculated)','TG đi tàu TT (tự tính)')}<div class="qu-ro" id="quCalcBox"></div></label>
+      <label class="full">${quLbl('giaitrinh')}<textarea id="qu_giaitrinh" rows="2" maxlength="1000" placeholder="${batch ? tr('keep','giữ nguyên') : ''}">${escH(val('giaitrinh'))}</textarea></label>
+    </div>
+    <div id="quWarnBox"></div>
+    <div id="quMsg" style="min-height:1.2em;font-size:13px;margin-bottom:8px"></div>
+    <div class="add-actions"><button type="button" class="nbtn2 ghost" id="quCancel">${tr('Cancel','Huỷ')}</button>
+      <button type="submit" class="nbtn2" id="quSave">${batch ? tr('Review changes →','Xem lại thay đổi →') : tr('💾 Save','💾 Lưu')}</button></div></form>`;
+  openM(batch);
+  const fp = {};
+  const read = () => Object.fromEntries(QU_KEYS.map(k=>[k, (document.getElementById('qu_'+k).value||'').trim()]));
+  let armed = false;                       // 1 máy có cảnh báo: bấm Lưu lần 2 = vẫn lưu
+  const upd = () => {
+    armed = false; quEl('quSave').textContent = batch ? tr('Review changes →','Xem lại thay đổi →') : tr('💾 Save','💾 Lưu');
+    const f = read();
+    if(batch){
+      const out = list.map(x=>quDerive(quMerge(x, quDiff(x,f,true))).ditautt);
+      const u = [...new Set(out.map(v=>v==null?'—':v))];
+      quEl('quCalcBox').innerHTML = u.length===1 ? `${u[0]}${u[0]==='—'?'':tr(' days',' ngày')}<small>${tr('same for all selected','giống nhau cho các máy đã chọn')}</small>`
+                                      : `${tr('varies','khác nhau')}<small>${tr('per machine — see the review table','tính riêng từng máy — xem ở bảng xác nhận')}</small>`;
+      const nw = list.filter(x=>quWarn(x, quDiff(x,f,true)).length).length;
+      quEl('quWarnBox').innerHTML = nw ? `<div class="qu-warn"><div>${tr(`${nw} machine(s) have date warnings — details in the review table.`,`${nw} máy có cảnh báo ngày — chi tiết ở bảng xác nhận.`)}</div></div>` : '';
+      return;
+    }
+    const ch = quDiff(x0,f,false), m = quMerge(x0,ch), d = quDerive(m);
+    quEl('quCalcBox').innerHTML = (m.capcang_tt && m.xuatxuong)
+      ? `${d.ditautt}${tr(' days',' ngày')}<small>${tr('arrival at plant','về NM')} → ${fmtD(d.vedukienn)}</small>`
+      : `—<small>${tr('needs ex-works and port arrival','cần ngày xuất xưởng và ngày cập cảng')}</small>`;
+    const w = quWarn(x0,ch);
+    quEl('quWarnBox').innerHTML = w.length ? `<div class="qu-warn">${w.map(t=>`<div>${t}</div>`).join('')}</div>` : '';
+  };
+  if(window.flatpickr) QU_DATES.forEach(k=>{ fp[k] = flatpickr(document.getElementById('qu_'+k),
+    { dateFormat:'Y-m-d', altInput:true, altFormat:'d/m/Y', allowInput:false, disableMobile:true, onChange:upd,
+      locale:(LANG==='vi' && flatpickr.l10ns && flatpickr.l10ns.vn) ? 'vn' : 'default' }); });
+  mBody.querySelectorAll('[data-clr]').forEach(b=>b.onclick=()=>{ const k = b.dataset.clr;
+    if(fp[k]) fp[k].clear(); else document.getElementById('qu_'+k).value = ''; upd(); });
+  quEl('qu_giaitrinh').oninput = upd;
+  quEl('quCancel').onclick = () => mBg.classList.remove('show');
+  upd();
+  document.getElementById('quForm').onsubmit = async ev => {
+    ev.preventDefault();
+    const f = read();
+    if(batch){
+      const plan = list.map(x=>({ x, ch:quDiff(x,f,true) })).filter(p=>Object.keys(p.ch).length);
+      if(!plan.length){ quEl('quMsg').style.color = 'var(--muted)'; quEl('quMsg').textContent = tr('Nothing to change — every box is empty or already equal.','Không có gì thay đổi — các ô đều trống hoặc giống giá trị cũ.'); return; }
+      quReview(list, f, plan); return;
+    }
+    const ch = quDiff(x0,f,false);
+    if(!Object.keys(ch).length){ quEl('quMsg').style.color = 'var(--muted)'; quEl('quMsg').textContent = tr('No changes.','Không có thay đổi nào.'); return; }
+    if(quWarn(x0,ch).length && !armed){ armed = true; quEl('quSave').textContent = tr('⚠ Save anyway','⚠ Vẫn lưu');
+      quEl('quMsg').style.color = 'var(--amber)'; quEl('quMsg').textContent = tr('Check the warning above. Press the button again to save anyway.','Kiểm tra cảnh báo ở trên. Bấm nút lần nữa để vẫn lưu.'); return; }
+    quEl('quSave').disabled = true; quEl('quMsg').style.color = 'var(--muted)'; quEl('quMsg').textContent = tr('Saving…','Đang lưu…');
+    window.__selfWriting = true;
+    try{
+      await quSaveOne(x0, ch);
+      mBg.classList.remove('show');
+      quToast(tr('✅ Updated: ','✅ Đã cập nhật: ') + x0.ten);
+    }catch(err){ quEl('quSave').disabled = false; quEl('quMsg').style.color = 'var(--red)'; quEl('quMsg').innerHTML = dbErrText(err); }
+    finally{ quAfterSave(); }
+  };
+}
+/* bảng xác nhận: Máy – Trường – Cũ → Mới (kèm các giá trị trigger sẽ tự tính) */
+function quReview(list, f, plan){
+  const sv = (k,v) => k==='giaitrinh' ? (v ? escH(v) : '—') : fmtD(v);
+  const rows = plan.map(p=>{
+    const m = quMerge(p.x, p.ch), d = quDerive(m), w = quWarn(p.x, p.ch);
+    const lines = Object.keys(p.ch).map(k=>[k, quCur(p.x,k), p.ch[k], false]);
+    if(d.ditautt !== p.x.ditautt) lines.push(['ditautt', p.x.ditautt, d.ditautt, true]);
+    if(d.lanhtt !== p.x.lanhtt) lines.push(['lanhtt', p.x.lanhtt, d.lanhtt, true]);
+    if(d.vedukienn !== p.x.vedukienn) lines.push(['vedukienn', p.x.vedukienn, d.vedukienn, true]);
+    const fmtV = (k,v) => (k==='ditautt'||k==='lanhtt') ? (v==null?'—':v+tr(' days',' ngày')) : sv(k,v);
+    return lines.map(([k,o,n,calc],j)=>`<tr class="${calc?'calc':''}">${j===0 ? `<td class="m" rowspan="${lines.length}">${p.x.ten}${w.map(t=>`<small>⚠ ${t}</small>`).join('')}</td>` : ''}
+      <td>${quLbl(k)}${calc ? tr(' (auto)',' (tự tính)') : ''}</td><td><s>${fmtV(k,o)}</s> → <ins>${fmtV(k,n)}</ins></td></tr>`).join('');
+  }).join('');
+  const skip = list.length - plan.length;
+  mTitle.textContent = tr(`⚡ Review: ${plan.length} machine(s)`,`⚡ Xác nhận: ${plan.length} máy`);
+  mSub.innerHTML = tr('Check old → new values. Rows in italics are calculated by the server from the actual dates.','Kiểm tra giá trị cũ → mới. Dòng in nghiêng do máy chủ tự tính từ ngày thực tế.')
+    + (skip ? ' ' + tr(`${skip} selected machine(s) have no changes and are skipped.`,`${skip} máy đã chọn không có thay đổi, sẽ bỏ qua.`) : '');
+  mBody.innerHTML = `<div class="qu-tbl"><table><thead><tr><th>${tr('Machine','Máy')}</th><th>${tr('Field','Trường')}</th><th>${tr('Old → New','Cũ → Mới')}</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div id="quMsg" style="min-height:1.2em;font-size:13px;margin-bottom:8px"></div>
+    <div class="add-actions"><button type="button" class="nbtn2 ghost" id="quBack">${tr('← Back to edit','← Quay lại sửa')}</button>
+      <button type="button" class="nbtn2" id="quGoSave">${tr(`💾 Save ${plan.length} machine(s)`,`💾 Lưu ${plan.length} máy`)}</button></div>`;
+  quEl('quBack').onclick = () => quForm(list, f);
+  quEl('quGoSave').onclick = async () => {
+    quEl('quGoSave').disabled = quEl('quBack').disabled = true;
+    window.__selfWriting = true;
+    const res = [];
+    for(const [n,p] of plan.entries()){
+      quEl('quMsg').style.color = 'var(--muted)'; quEl('quMsg').textContent = tr(`Saving ${n+1}/${plan.length}…`,`Đang lưu ${n+1}/${plan.length}…`);
+      try{ await quSaveOne(p.x, p.ch); res.push({ x:p.x, ok:true }); QU_SEL.delete(p.x._id); }
+      catch(err){ res.push({ x:p.x, ok:false, err }); }
+    }
+    quAfterSave();
+    const ok = res.filter(r=>r.ok).length, bad = res.length - ok;
+    mTitle.textContent = bad ? tr(`⚡ Saved ${ok}/${res.length} — ${bad} failed`,`⚡ Đã lưu ${ok}/${res.length} — ${bad} máy lỗi`)
+                             : tr(`⚡ Saved ${ok} machine(s)`,`⚡ Đã lưu ${ok} máy`);
+    mSub.innerHTML = bad ? tr('Machines that failed are still selected so you can try again after 🔄 Refresh.','Các máy lỗi vẫn được giữ chọn để làm lại sau khi bấm 🔄 Làm mới.') : '';
+    mBody.innerHTML = `<div class="qu-tbl"><table><thead><tr><th>${tr('Machine','Máy')}</th><th>${tr('Result','Kết quả')}</th></tr></thead><tbody>
+      ${res.map(r=>`<tr><td class="m">${r.x.ten}</td>${r.ok ? `<td class="ok">✅ ${tr('Saved','Đã lưu')}</td>` : `<td class="bad">❌ ${dbErrText(r.err)}</td>`}</tr>`).join('')}</tbody></table></div>
+      <div class="add-actions"><button type="button" class="nbtn2" onclick="mBg.classList.remove('show')">${tr('Close','Đóng')}</button></div>`;
+    if(!bad) quToast(tr(`✅ Updated ${ok} machine(s)`,`✅ Đã cập nhật ${ok} máy`));
+  };
+}
+window.quickEdit = i => { const x = DATA[i]; if(x && window.__canWrite) quForm([x]); };
+/* chọn nhiều: ô chọn ở đầu dòng, ô ở tiêu đề = chọn / bỏ chọn mọi máy đang lọc (mọi trang) */
+window.quSync = rows => {
+  const on = !!window.__canWrite; quEl('quTh').hidden = !on;
+  if(!on){ quEl('quBar').hidden = true; return; }
+  const ids = rows.map(x=>x._id), n = ids.filter(id=>QU_SEL.has(id)).length;
+  quEl('quAll').checked = ids.length>0 && n===ids.length; quEl('quAll').indeterminate = n>0 && n<ids.length;
+  quEl('quAll').title = tr('Select all filtered machines','Chọn mọi máy đang lọc');
+  quEl('quBar').hidden = !QU_SEL.size;
+  quEl('quBar').innerHTML = `<b>${tr(`${QU_SEL.size} machine(s) selected`,`Đã chọn ${QU_SEL.size} máy`)}</b>
+    <button type="button" class="nbtn2 ghost" onclick="quClear()">${tr('Clear selection','Bỏ chọn')}</button>
+    <button type="button" class="nbtn2" onclick="quBatch()">${tr(`⚡ Quick update (${QU_SEL.size})`,`⚡ Cập nhật nhanh (${QU_SEL.size} máy)`)}</button>`;
+};
+window.quClear = () => { QU_SEL.clear(); render(); };
+window.quBatch = () => {
+  const list = DATA.filter(x=>QU_SEL.has(x._id)); if(!list.length || !window.__canWrite) return;
+  quForm(list);
+};
+tb.addEventListener('change', e=>{
+  const c = e.target.closest('.qu-ck'); if(!c) return;
+  c.checked ? QU_SEL.add(c.dataset.id) : QU_SEL.delete(c.dataset.id);
+  quSync(filtered());
+});
+quEl('quAll').addEventListener('click', e=>e.stopPropagation());
+quEl('quAll').addEventListener('change', ()=>{
+  const rows = filtered();
+  rows.forEach(x=> quEl('quAll').checked ? QU_SEL.add(x._id) : QU_SEL.delete(x._id));
+  render();
+});
+quSync(filtered());
+
 /* ---- Xuất Excel: cùng cấu trúc sheet "📝Cập nhật" nên nạp lại được bằng 📂 Nạp Excel ---- */
 const XL_COLS = ['ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','ctu','tamungtt',
-  'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'];
+  'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'].concat(ACT_KEYS);
 const pad2 = n=>String(n).padStart(2,'0');
 function stampNow(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes()); }
 function exportExcel(prefix){
@@ -2459,7 +2741,16 @@ async function replaceAll(data){
     if(m.model===undefined) m.model = unescH(old.model);
     if(m.serial===undefined) m.serial = unescH(old.serial);
   });
-  const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), {sort_order:i+1}))));
+  /* file chưa có cột ngày thực tế (Cập nhật nhanh): lấy lại giá trị của máy cùng tên đang có */
+  const usedA = new Set();
+  data.forEach(m=>{
+    if(ACT_KEYS.every(k=>m[k]!==undefined)) return;
+    const old = DATA.find(x=>!usedA.has(x) && unescH(x.ten)===m.ten); if(!old) return;
+    usedA.add(old);
+    ACT_KEYS.forEach(k=>{ if(m[k]===undefined) m[k] = old[k]; });
+  });
+  const actRow = m => Object.fromEntries(ACT_KEYS.map(k=>[k, (typeof m[k]==='string' && /^\d{4}-\d{2}-\d{2}$/.test(m[k])) ? m[k] : null]));
+  const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1}))));
   const { error } = await sb.rpc('replace_all_machines', { rows });
   if(error) throw error;
 }
@@ -2540,7 +2831,7 @@ window.showHistory = async i => {
       else if(n.deleted_at && !o.deleted_at){ act=tr('Moved to trash','Chuyển vào thùng rác'); col='var(--red)'; }
       else if(o.deleted_at && !n.deleted_at){ act=tr('Restored','Khôi phục'); col='var(--green)'; }
       else {
-        const ch = REC_KEYS.filter(k=> JSON.stringify(o[k]??null) !== JSON.stringify(n[k]??null));
+        const ch = REC_KEYS.concat(ACT_KEYS).filter(k=> JSON.stringify(o[k]??null) !== JSON.stringify(n[k]??null));
         body = ch.length ? ch.map(k=>`<div>${(LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k]}: <s>${escH(showVal(k,o[k]))}</s> → <ins>${escH(showVal(k,n[k]))}</ins></div>`).join('')
                          : '<div style="color:var(--muted)">'+tr('No content changes','Không đổi nội dung')+'</div>';
       }
@@ -4038,7 +4329,7 @@ window.encryptExisting = async () => {
 (async function(){
   const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const STR = ['ten','phutrach','congsuat','noilapdat','ncc','xuatxu','model','serial','danhgia','giaitrinh','workingday'];
-  const DATES = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong'];
+  const DATES = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt'];
   const NUMS = ['sl','vnd','usd','sonagyctm','ctu','ditaukh','ditautt','lanhkh','lanhtt'];
   const isoRe = /^\d{4}-\d{2}-\d{2}$/;
   function clean(d){
@@ -4049,6 +4340,7 @@ window.encryptExisting = async () => {
     if(!o.sl) o.sl = 1;
     return o;
   }
+  window.__cleanMachine = clean;     // ⚡ Cập nhật nhanh: chuẩn hoá dòng vừa lưu giống lúc tải trang
 
   let started = false;
   function start(list, ts, note){
