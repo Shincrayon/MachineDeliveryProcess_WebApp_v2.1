@@ -317,8 +317,12 @@ td.qu-c input,th.qu-h input{width:16px;height:16px;vertical-align:middle;accent-
 .qu-f input{width:100%;padding-right:28px}
 .qu-clr{position:absolute;right:6px;bottom:7px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:2px}
 .qu-clr:hover{color:var(--red)}
-.qu-ro{padding:8px 10px;border-radius:9px;border:1px dashed var(--border);color:var(--txt);font-weight:700;min-height:35px}
-.qu-ro small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.qu-grp{grid-column:1/-1;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--sky);
+  margin:4px 0 -4px;padding-bottom:3px;border-bottom:1px solid rgba(148,163,184,.16)}
+.qu-f.seq input{border-color:var(--amber)!important;box-shadow:0 0 0 1px var(--amber)}
+.qu-cap{display:flex;align-items:flex-end;min-height:2.7em;line-height:1.3}   /* nhãn dài 2 dòng không làm lệch ô cùng hàng */
+.qu-note{display:block;min-height:0;font-size:10.5px;font-weight:600;color:var(--amber);line-height:1.3}
+.qu-note:empty{display:none}
 .qu-warn{border:1px solid var(--amber);background:rgba(251,191,36,.1);border-radius:10px;padding:8px 12px;margin:0 0 10px;font-size:12.5px}
 .qu-warn div::before{content:'⚠ ';color:var(--amber)}
 .qu-names{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
@@ -333,8 +337,7 @@ td.qu-c input,th.qu-h input{width:16px;height:16px;vertical-align:middle;accent-
 .qu-tbl tr.calc td{color:var(--muted);font-style:italic}
 .qu-tbl tr.calc ins{color:var(--blue)}
 .qu-tbl td.ok{color:var(--st-ok);font-weight:700} .qu-tbl td.bad{color:var(--st-bad);font-weight:700}
-@media(max-width:760px){.add-grid.qu-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:480px){.add-grid.qu-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.add-grid.qu-grid{grid-template-columns:1fr}.qu-cap{min-height:0}}
 @media(max-width:760px){.add-grid.pay-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:1100px){.sc-wrap{grid-template-columns:1fr}}
 @media(max-width:640px){#scSub{flex-basis:100%;margin:2px 0 0 16px!important}#p4 .card h3{flex-wrap:wrap}}
@@ -2538,10 +2541,11 @@ async function saveMachine(m, editId){
    TG đi tàu TT / lãnh máy TT / ngày về NM / đánh giá do trigger machines_actual_trg tính trên máy chủ
    (migrations/20261030_04_quick_update.sql); quDerive() bên dưới tính giống hệt để xem trước. */
 const quEl = id => document.getElementById(id);
-const QU_KEYS = ['tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt','giaitrinh'];
+/* thứ tự = trình tự thời gian = thứ tự ô trong popup và thứ tự phím Tab */
+const QU_KEYS = ['dathang','tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt','giaitrinh'];
 const QU_DATES = QU_KEYS.filter(k=>k!=='giaitrinh');
 const QU_FUT = ['tamungtt','tauchay_tt','capcang_tt','venm_tt'];      // ngày thực tế: không nên nằm ở tương lai
-const quLbl = k => (LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k];
+const quLbl = k => k==='dathang' ? tr('Contract signed / order date','Ngày ký HĐ/đặt hàng') : (LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k];
 const quCur = (x,k) => k==='giaitrinh' ? unescH(x.giaitrinh||'') : (x[k]||null);
 function quStatus(x){
   const t0 = new Date(); t0.setHours(0,0,0,0);
@@ -2557,18 +2561,41 @@ function quDerive(m){
   else if(m.capcang_tt) o.vedukienn = DM.addDays(m.capcang_tt, Number(o.lanhtt)||0);
   return o;
 }
-const quMerge = (x,ch) => Object.assign({ xuatxuong:x.xuatxuong, capcang_tt:x.capcang_tt, venm_tt:x.venm_tt,
-  ditautt:x.ditautt, lanhtt:x.lanhtt, vedukienn:x.vedukienn }, ch);
-/* cảnh báo (không chặn): thứ tự ngày sai, ngày thực tế ở tương lai — chỉ xét trường vừa đổi */
+const quMerge = (x,ch) => Object.assign(Object.fromEntries(QU_DATES.map(k=>[k, x[k]||null])),
+  { ditautt:x.ditautt, lanhtt:x.lanhtt, vedukienn:x.vedukienn }, ch);
+/* Ngày đặt hàng đổi -> tính lại Ngày dự kiến máy về (KH) + Đánh giá, đúng công thức form Sửa (calcDates):
+   KH = đặt hàng + chờ tạm ứng KH + đi tàu KH + lãnh máy KH + CTM (Working day = yes: CTM tính ngày làm việc) */
+function quPlan(x, ch){
+  if(!('dathang' in ch)) return {};
+  const dh = isoToSerial(ch.dathang||'');
+  const ctu = Number(x.ctu)||0, dt = Number(x.ditaukh)||0, lm = Number(x.lanhkh)||0, ctm = Number(x.sonagyctm)||0;
+  const base = dh + ctu + dt + lm;
+  const veKH = dh===0 ? 0 : (String(x.workingday||'').toLowerCase()==='yes' ? workday(base, ctm) : base + ctm);
+  const vekh = serialToISO(veKH);
+  const nm = quDerive(quMerge(x, ch)).vedukienn, a = isoToSerial(vekh||''), b = isoToSerial(nm||'');
+  const ok = s => s>=20000 && s<=80000;
+  const danhgia = (!ok(a) || !ok(b)) ? '' : (a===b ? 'Đúng tiến độ' : (a>b ? 'Sớm' : 'Trễ'));
+  return { vekh, danhgia };
+}
+/* trình tự: mỗi ngày không sớm hơn ngày gần nhất có giá trị đứng trước nó (đặt hàng → … → về NM) */
+function quSeq(m){
+  const bad = {};
+  QU_DATES.forEach((k,i)=>{
+    if(!m[k]) return;
+    for(let j=i-1; j>=0; j--){ const p = QU_DATES[j]; if(m[p]){ if(m[k] < m[p]) bad[k] = p; break; } }
+  });
+  return bad;
+}
+/* cảnh báo (không chặn): sai trình tự, ngày thực tế ở tương lai — chỉ xét cặp có trường vừa đổi */
 function quWarn(x,ch){
-  const m = quMerge(x,ch), w = [], t = DM.todayIso(), on = (...k) => k.some(j=>j in ch);
-  if(on('capcang_tt','xuatxuong') && m.capcang_tt && m.xuatxuong && m.capcang_tt < m.xuatxuong)
-    w.push(tr(`Port arrival (${fmtD(m.capcang_tt)}) is before ex-works (${fmtD(m.xuatxuong)}).`,`Ngày cập cảng (${fmtD(m.capcang_tt)}) trước ngày xuất xưởng (${fmtD(m.xuatxuong)}).`));
-  if(on('venm_tt','capcang_tt') && m.venm_tt && m.capcang_tt && m.venm_tt < m.capcang_tt)
-    w.push(tr(`Arrival at plant (${fmtD(m.venm_tt)}) is before port arrival (${fmtD(m.capcang_tt)}).`,`Ngày về nhà máy (${fmtD(m.venm_tt)}) trước ngày cập cảng (${fmtD(m.capcang_tt)}).`));
+  const m = quMerge(x,ch), w = [], t = DM.todayIso(), bad = quSeq(m);
+  Object.entries(bad).forEach(([k,p])=>{ if(!(k in ch) && !(p in ch)) return;
+    w.push(tr(`${quLbl(k)} (${fmtD(m[k])}) is earlier than ${quLbl(p)} (${fmtD(m[p])}).`,`${quLbl(k)} (${fmtD(m[k])}) sớm hơn ${quLbl(p)} (${fmtD(m[p])}).`)); });
   QU_FUT.forEach(k=>{ if(ch[k] && ch[k] > t) w.push(tr(`${quLbl(k)} (${fmtD(ch[k])}) is in the future.`,`${quLbl(k)} (${fmtD(ch[k])}) nằm ở tương lai.`)); });
   return w;
 }
+const QU_DH_MSG = () => tr('The order date is the starting point for the planned arrival date (KH). Changing it will also change KH and the rating. Continue?',
+                           'Ngày đặt hàng là mốc tính Ngày dự kiến máy về (KH). Thay đổi sẽ làm KH và Đánh giá thay đổi theo. Tiếp tục?');
 /* ô trống: 1 máy = xoá giá trị; nhiều máy = giữ nguyên */
 function quDiff(x,f,batch){
   const ch = {};
@@ -2583,6 +2610,7 @@ async function quSaveOne(x,ch){
   const sb = window.__sb; if(!sb) throw {code:'nodb'};
   const upd = {};
   Object.keys(ch).forEach(k=>{ if(k!=='giaitrinh') upd[k] = ch[k]; });
+  Object.assign(upd, quPlan(x, ch));          // đổi ngày đặt hàng -> vekh + danhgia (trigger vẫn tính phần ngày thực tế)
   if('giaitrinh' in ch){
     // giải trình nằm trong sec cùng các trường nhạy cảm khác: mã hoá lại cả gói, chỉ giải trình đổi
     if(CRYPTO.on && x.ten==='🔒') throw {code:'locked'};
@@ -2623,10 +2651,12 @@ function quForm(list, keep){
     ? tr('Leave a box empty to keep each machine\'s current value. You will see every change before it is saved.','Ô để trống = giữ nguyên giá trị cũ của từng máy. Bạn sẽ xem lại mọi thay đổi trước khi lưu.')
       + `<div class="qu-names">${list.slice(0,12).map(x=>`<span>${x.ten}</span>`).join('')}${list.length>12?`<span>+${list.length-12}</span>`:''}</div>`
     : tr('Only the boxes you change are saved. Empty a date box (×) to clear it.','Chỉ lưu các ô bạn đổi. Bấm × để xoá một ngày.');
-  const dIn = k => `<label>${quLbl(k)}<span class="qu-f"><input id="qu_${k}" value="${escH(val(k))}" placeholder="${batch ? tr('keep','giữ nguyên') : '—'}"><button type="button" class="qu-clr" data-clr="${k}" title="${tr('Clear','Xoá')}">×</button></span></label>`;
+  // nút × không nằm trong thứ tự Tab (Tab đi lần lượt từng ngày); xoá bằng bàn phím: Delete / Backspace
+  const dIn = k => `<label><span class="qu-cap">${quLbl(k)}</span><span class="qu-f" id="quf_${k}"><input id="qu_${k}" value="${escH(val(k))}" placeholder="${batch ? tr('keep','giữ nguyên') : '—'}"><button type="button" class="qu-clr" data-clr="${k}" tabindex="-1" title="${tr('Clear','Xoá')}">×</button></span><small class="qu-note" id="qun_${k}"></small></label>`;
+  const grp = t => `<div class="qu-grp">${t}</div>`;
   mBody.innerHTML = `<form id="quForm" novalidate><div class="add-grid qu-grid">
-      ${QU_DATES.map(dIn).join('')}
-      <label>${tr('Shipping time, actual (calculated)','TG đi tàu TT (tự tính)')}<div class="qu-ro" id="quCalcBox"></div></label>
+      ${grp(tr('Purchasing','Mua hàng'))}${QU_DATES.slice(0,3).map(dIn).join('')}
+      ${grp(tr('Shipping','Vận chuyển'))}${QU_DATES.slice(3).map(dIn).join('')}
       <label class="full">${quLbl('giaitrinh')}<textarea id="qu_giaitrinh" rows="2" maxlength="1000" placeholder="${batch ? tr('keep','giữ nguyên') : ''}">${escH(val('giaitrinh'))}</textarea></label>
     </div>
     <div id="quWarnBox"></div>
@@ -2641,18 +2671,15 @@ function quForm(list, keep){
     armed = false; quEl('quSave').textContent = batch ? tr('Review changes →','Xem lại thay đổi →') : tr('💾 Save','💾 Lưu');
     const f = read();
     if(batch){
-      const out = list.map(x=>quDerive(quMerge(x, quDiff(x,f,true))).ditautt);
-      const u = [...new Set(out.map(v=>v==null?'—':v))];
-      quEl('quCalcBox').innerHTML = u.length===1 ? `${u[0]}${u[0]==='—'?'':tr(' days',' ngày')}<small>${tr('same for all selected','giống nhau cho các máy đã chọn')}</small>`
-                                      : `${tr('varies','khác nhau')}<small>${tr('per machine — see the review table','tính riêng từng máy — xem ở bảng xác nhận')}</small>`;
       const nw = list.filter(x=>quWarn(x, quDiff(x,f,true)).length).length;
       quEl('quWarnBox').innerHTML = nw ? `<div class="qu-warn"><div>${tr(`${nw} machine(s) have date warnings — details in the review table.`,`${nw} máy có cảnh báo ngày — chi tiết ở bảng xác nhận.`)}</div></div>` : '';
       return;
     }
-    const ch = quDiff(x0,f,false), m = quMerge(x0,ch), d = quDerive(m);
-    quEl('quCalcBox').innerHTML = (m.capcang_tt && m.xuatxuong)
-      ? `${d.ditautt}${tr(' days',' ngày')}<small>${tr('arrival at plant','về NM')} → ${fmtD(d.vedukienn)}</small>`
-      : `—<small>${tr('needs ex-works and port arrival','cần ngày xuất xưởng và ngày cập cảng')}</small>`;
+    const ch = quDiff(x0,f,false), m = quMerge(x0,ch), bad = quSeq(m);
+    // viền cam + dòng nhắc dưới ô sớm hơn ngày đứng trước nó
+    QU_DATES.forEach(k=>{ const p = bad[k];
+      quEl('quf_'+k).classList.toggle('seq', !!p);
+      quEl('qun_'+k).textContent = p ? tr(`Earlier than ${quLbl(p)} (${fmtD(m[p])})`,`Sớm hơn ${quLbl(p)} (${fmtD(m[p])})`) : ''; });
     const w = quWarn(x0,ch);
     quEl('quWarnBox').innerHTML = w.length ? `<div class="qu-warn">${w.map(t=>`<div>${t}</div>`).join('')}</div>` : '';
   };
@@ -2661,6 +2688,8 @@ function quForm(list, keep){
       locale:(LANG==='vi' && flatpickr.l10ns && flatpickr.l10ns.vn) ? 'vn' : 'default' }); });
   mBody.querySelectorAll('[data-clr]').forEach(b=>b.onclick=()=>{ const k = b.dataset.clr;
     if(fp[k]) fp[k].clear(); else document.getElementById('qu_'+k).value = ''; upd(); });
+  QU_DATES.forEach(k=>{ const el = fp[k] && fp[k].altInput; if(el) el.addEventListener('keydown', e=>{
+    if(e.key==='Delete' || e.key==='Backspace'){ e.preventDefault(); fp[k].clear(); fp[k].close(); upd(); } }); });
   quEl('qu_giaitrinh').oninput = upd;
   quEl('quCancel').onclick = () => mBg.classList.remove('show');
   upd();
@@ -2676,6 +2705,13 @@ function quForm(list, keep){
     if(!Object.keys(ch).length){ quEl('quMsg').style.color = 'var(--muted)'; quEl('quMsg').textContent = tr('No changes.','Không có thay đổi nào.'); return; }
     if(quWarn(x0,ch).length && !armed){ armed = true; quEl('quSave').textContent = tr('⚠ Save anyway','⚠ Vẫn lưu');
       quEl('quMsg').style.color = 'var(--amber)'; quEl('quMsg').textContent = tr('Check the warning above. Press the button again to save anyway.','Kiểm tra cảnh báo ở trên. Bấm nút lần nữa để vẫn lưu.'); return; }
+    if('dathang' in ch && x0.dathang){
+      confirmBox({ title: tr('Change the order date?','Đổi ngày đặt hàng?'), sub: QU_DH_MSG(), ok: tr('Continue','Tiếp tục'), onOk: ()=>quDoSave(ch) });
+      return;
+    }
+    quDoSave(ch);
+  };
+  const quDoSave = async ch => {
     quEl('quSave').disabled = true; quEl('quMsg').style.color = 'var(--muted)'; quEl('quMsg').textContent = tr('Saving…','Đang lưu…');
     window.__selfWriting = true;
     try{
@@ -2688,10 +2724,12 @@ function quForm(list, keep){
 }
 /* bảng xác nhận: Máy – Trường – Cũ → Mới (kèm các giá trị trigger sẽ tự tính) */
 function quReview(list, f, plan){
-  const sv = (k,v) => k==='giaitrinh' ? (v ? escH(v) : '—') : fmtD(v);
+  const sv = (k,v) => k==='giaitrinh' ? (v ? escH(v) : '—') : k==='danhgia' ? dgT(v) : fmtD(v);
   const rows = plan.map(p=>{
     const m = quMerge(p.x, p.ch), d = quDerive(m), w = quWarn(p.x, p.ch);
-    const lines = Object.keys(p.ch).map(k=>[k, quCur(p.x,k), p.ch[k], false]);
+    const lines = Object.keys(p.ch).map(k=>[k, quCur(p.x,k), p.ch[k], false]), pl = quPlan(p.x, p.ch);
+    if('vekh' in pl && (pl.vekh||null) !== (p.x.vekh||null)) lines.push(['vekh', p.x.vekh, pl.vekh, true]);
+    if('danhgia' in pl && pl.danhgia !== (p.x.danhgia||'')) lines.push(['danhgia', p.x.danhgia, pl.danhgia, true]);
     if(d.ditautt !== p.x.ditautt) lines.push(['ditautt', p.x.ditautt, d.ditautt, true]);
     if(d.lanhtt !== p.x.lanhtt) lines.push(['lanhtt', p.x.lanhtt, d.lanhtt, true]);
     if(d.vedukienn !== p.x.vedukienn) lines.push(['vedukienn', p.x.vedukienn, d.vedukienn, true]);
@@ -2701,14 +2739,18 @@ function quReview(list, f, plan){
   }).join('');
   const skip = list.length - plan.length;
   mTitle.textContent = tr(`⚡ Review: ${plan.length} machine(s)`,`⚡ Xác nhận: ${plan.length} máy`);
-  mSub.innerHTML = tr('Check old → new values. Rows in italics are calculated by the server from the actual dates.','Kiểm tra giá trị cũ → mới. Dòng in nghiêng do máy chủ tự tính từ ngày thực tế.')
+  mSub.innerHTML = tr('Check old → new values. Rows in italics are calculated automatically from the dates.','Kiểm tra giá trị cũ → mới. Dòng in nghiêng được tính tự động từ các ngày.')
     + (skip ? ' ' + tr(`${skip} selected machine(s) have no changes and are skipped.`,`${skip} máy đã chọn không có thay đổi, sẽ bỏ qua.`) : '');
   mBody.innerHTML = `<div class="qu-tbl"><table><thead><tr><th>${tr('Machine','Máy')}</th><th>${tr('Field','Trường')}</th><th>${tr('Old → New','Cũ → Mới')}</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div id="quMsg" style="min-height:1.2em;font-size:13px;margin-bottom:8px"></div>
     <div class="add-actions"><button type="button" class="nbtn2 ghost" id="quBack">${tr('← Back to edit','← Quay lại sửa')}</button>
       <button type="button" class="nbtn2" id="quGoSave">${tr(`💾 Save ${plan.length} machine(s)`,`💾 Lưu ${plan.length} máy`)}</button></div>`;
   quEl('quBack').onclick = () => quForm(list, f);
-  quEl('quGoSave').onclick = async () => {
+  const nDh = plan.filter(p=>'dathang' in p.ch && p.x.dathang).length;
+  quEl('quGoSave').onclick = () => nDh
+    ? confirmBox({ title: tr(`Change the order date of ${nDh} machine(s)?`,`Đổi ngày đặt hàng của ${nDh} máy?`), sub: QU_DH_MSG(), ok: tr('Continue','Tiếp tục'), onOk: quRun })
+    : quRun();
+  const quRun = async () => {
     quEl('quGoSave').disabled = quEl('quBack').disabled = true;
     window.__selfWriting = true;
     const res = [];
