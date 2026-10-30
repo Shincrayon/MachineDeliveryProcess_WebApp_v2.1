@@ -17,7 +17,7 @@ const num = v => { if(v === null || v === undefined || v === '') return null; co
 /* các trường: [field, kiểu s=chữ · n=số · d=ngày, mặc định chọn]. Nhãn lấy đúng nhãn app đang hiển thị (REC_LABEL / REC_LABEL_EN). */
 const DEF = [
   ['ten','s',1], ['sl','n',1], ['noilapdat','s',1], ['ncc','s',1], ['xuatxu','s',1], ['phutrach','s',1],
-  ['vnd','n',1], ['usd','n',1], ['dathang','d',1], ['vekh','d',1], ['vedukienn','d',1], ['status','s',1], ['danhgia','s',1],
+  ['vnd','n',1], ['usd','n',1], ['dathang','d',1], ['vekh','d',1], ['vedukienn','d',1], ['status','s',1], ['arrival_kind','s',0], ['danhgia','s',1],
   ['company','s',0], ['daysleft','n',0], ['congsuat','s',0], ['model','s',0], ['serial','s',0], ['duyet','d',0],
   ['ctu','n',0], ['tamungtt','d',0], ['tamung_days','n',0], ['ditaukh','n',0], ['ditautt','n',0], ['lanhkh','n',0], ['lanhtt','n',0],
   ['sonagyctm','n',0], ['workingday','s',0], ['xuatxuong','d',0], ['tauchay_tt','d',0], ['capcang_tt','d',0],
@@ -29,13 +29,14 @@ const TYPE = Object.fromEntries(DEF.map(([k,t])=>[k,t]));
 function label(k){
   const L = CTX().labels;
   const extra = { status: tr('Status','Trạng thái'), company: tr('Company','Công ty'), daysleft: tr('Days to arrival','Số ngày còn lại'),
-                  tamung_days: tr('Advance-payment days','Số ngày tạm ứng') };
+                  tamung_days: tr('Advance-payment days','Số ngày tạm ứng'), arrival_kind: tr('Arrival date type','Trạng thái ngày về') };
   return extra[k] || (L && L[k]) || k;
 }
 /* giá trị 1 ô: null = để trống; ngày giữ dạng ISO 'YYYY-MM-DD' để định dạng sau */
 function cell(x, k){
   const t = TYPE[k];
-  if(k === 'status') return (x.status && CTX().LBL[x.status]) || null;
+  if(k === 'status') return (x.status && CTX().LBL[x.status]) || null;   // trạng thái mới: DM.arrivalStatus (index.html)
+  if(k === 'arrival_kind') return x.venm_tt ? tr('Actual','Thực tế') : x.vedukienn ? tr('Expected','Dự kiến') : null;
   if(k === 'tamung_days') return calcAdvanceDays(x);
   if(k === 'company') return (window.DM && DM.companyCode(plain(x.noilapdat))) || null;
   if(k === 'danhgia'){ const v = plain(x.danhgia); return v ? CTX().dgT(v) : '?'; }   // thiếu ngày -> "?" như file Excel gốc

@@ -7,9 +7,11 @@
    delivery_milestones (dtr_machinery_schema.sql):
      contract_signed : actual = dathang
      shipped         : xuatxuong  (≤ hôm qua = actual, từ hôm nay trở đi = forecast)
-     arrived_site    : planned = vekh, vedukienn (≤ hôm qua = actual, còn lại = forecast)
+     arrived_site    : planned = vekh, actual = venm_tt (Ngày máy về NM TT),
+                       forecast = vedukienn khi chưa có venm_tt (kể cả khi đã qua ngày đó)
    Sau này chuyển sang delivery_milestones thì chỉ sửa DM.milestones().
-   Quy ước "đã về" giống app: ngày về NM trước hôm nay (daysleft < 0).
+   "Đã về" CHỈ KHI có venm_tt; quá ngày dự kiến mà chưa có = 'overdue' (Quá hạn – chưa xác nhận).
+   Trạng thái 1 máy: DM.arrivalStatus() — mọi nơi trong app dùng chung hàm này.
    ===================================================================== */
 (function(){
   const DAY = 86400000;
@@ -49,8 +51,19 @@
     return [
       { milestone: 'contract_signed', planned: null, forecast: null, actual: iso(x.dathang) },
       Object.assign({ milestone: 'shipped', planned: null }, split(iso(x.xuatxuong))),
-      Object.assign({ milestone: 'arrived_site', planned: iso(x.vekh) }, split(iso(x.vedukienn)))
+      { milestone: 'arrived_site', planned: iso(x.vekh), actual: iso(x.venm_tt), forecast: iso(x.venm_tt) ? null : iso(x.vedukienn) }
     ];
+  };
+  /* ---------- trạng thái ngày về NM (dùng chung: bảng, chi tiết, Cập nhật nhanh, biểu đồ, xuất dữ liệu) ----------
+     arrived  có venm_tt · overdue chưa có venm_tt, ngày dự kiến < hôm nay · soon 0–15 ngày · waiting > 15 ngày
+     unknown  không có ngày nào. daysleft = ngày (TT hoặc dự kiến) − hôm nay; actual = ngày đó là ngày thực tế. */
+  DM.ARRIVAL = ['arrived', 'overdue', 'soon', 'waiting', 'unknown'];
+  DM.arrivalStatus = x => {
+    const act = iso(x && x.venm_tt), d = act || iso(x && x.vedukienn);
+    if (!d) return { status: 'unknown', daysleft: null, actual: false, date: null };
+    const daysleft = DM.days(DM.todayIso(), d);
+    if (act) return { status: 'arrived', daysleft, actual: true, date: act };
+    return { status: daysleft < 0 ? 'overdue' : daysleft <= 15 ? 'soon' : 'waiting', daysleft, actual: false, date: d };
   };
   const ms = (x, name) => DM.milestones(x).find(m => m.milestone === name);
 
@@ -67,15 +80,19 @@
 
   /* ---------- trễ ----------
      Mốc chưa xong có ngày kế hoạch: trễ = (dự kiến, hoặc hôm nay nếu chưa có dự kiến) − kế hoạch.
-     Trả mốc trễ nhiều nhất, hoặc null nếu không trễ. Mốc thiếu planned_date thì không đánh giá. */
+     Ngày về NM đã qua mà chưa xác nhận (unconfirmed): luôn tính là trễ, số ngày = hôm nay − kế hoạch (tối thiểu 0;
+     thiếu kế hoạch thì 0) — máy kẹt cảng không ai cập nhật không được "biến mất" khỏi nhóm trễ.
+     Trả mốc trễ nhiều nhất, hoặc null nếu không trễ. Mốc thiếu planned_date (và không quá hạn) thì không đánh giá. */
   DM.delay = x => {
     const t = DM.todayIso();
     let worst = null;
     DM.milestones(x).forEach(m => {
-      if (m.actual || !m.planned) return;
-      const days = DM.days(m.planned, m.forecast || t);
-      if (days > 0 && (!worst || days > worst.days))
-        worst = { milestone: m.milestone, planned: m.planned, forecast: m.forecast, days, overdue: !m.forecast };
+      if (m.actual) return;
+      const unconfirmed = m.milestone === 'arrived_site' && !!m.forecast && m.forecast < t;
+      if (!m.planned && !unconfirmed) return;
+      const days = unconfirmed ? (m.planned ? Math.max(0, DM.days(m.planned, t)) : 0) : DM.days(m.planned, m.forecast || t);
+      if ((days > 0 || unconfirmed) && (!worst || days > worst.days || (days === worst.days && unconfirmed)))
+        worst = { milestone: m.milestone, planned: m.planned, forecast: m.forecast, days, overdue: !m.forecast || unconfirmed, unconfirmed };
     });
     return worst;
   };
@@ -87,14 +104,15 @@
   };
 
   /* ---------- bộ lọc chung ----------
-     f = { co, sup, st, m, y }: mã công ty, NCC, trạng thái (lifecycle hoặc 'delayed'), tháng '01'..'12', năm 'YYYY'.
+     f = { co, sup, st, m, y }: mã công ty, NCC, trạng thái (lifecycle, 'delayed' hoặc 'overdue'), tháng '01'..'12', năm 'YYYY'.
      Tháng/năm lọc theo ngày về NM (vedukienn). */
   DM.FILTER_KEYS = ['co', 'sup', 'st', 'm', 'y'];
   DM.filter = (rows, f) => rows.filter(x => {
     const d = iso(x.vedukienn);
     if (f.co && DM.companyCode(x.noilapdat) !== f.co) return false;
     if (f.sup && (x.ncc || '') !== f.sup) return false;
-    if (f.st === 'delayed' ? !DM.delay(x) : f.st && DM.lifecycle(x) !== f.st) return false;
+    if (f.st === 'delayed' ? !DM.delay(x) : f.st === 'overdue' ? DM.arrivalStatus(x).status !== 'overdue'
+        : f.st && DM.lifecycle(x) !== f.st) return false;
     if ((f.m || f.y) && !d) return false;
     if (f.y && d.slice(0, 4) !== f.y) return false;
     if (f.m && d.slice(5, 7) !== f.m) return false;
@@ -130,7 +148,7 @@
 
     // 1. đang trong tiến trình: chưa về NM (chưa có dữ liệu nghiệm thu nên máy đã về không tính)
     const pipe = rows.filter(x => DM.lifecycle(x) !== 'arrived');
-    // 2. đúng hạn: mốc arrived_site đã có thực tế + có kế hoạch, thực tế ≤ kế hoạch
+    // 2. đúng hạn: mốc arrived_site đã có thực tế (venm_tt) + có kế hoạch, thực tế ≤ kế hoạch
     const done = rows.map(x => ({ x, m: ms(x, 'arrived_site') }))
                      .filter(o => o.m.actual && o.m.planned && (!from || o.m.actual >= from));
     const onTime = done.filter(o => o.m.actual <= o.m.planned);
@@ -139,6 +157,8 @@
     // 4. về trong 30 ngày: dự kiến arrived_site trong [hôm nay, hôm nay + 30]
     const to30 = DM.addDays(t, 30);
     const soon = rows.filter(x => { const m = ms(x, 'arrived_site'); return m.forecast && m.forecast >= t && m.forecast <= to30; });
+    // 5. quá ngày dự kiến mà chưa xác nhận ngày về NM TT (không vào tỷ lệ đúng hạn cho tới khi xác nhận)
+    const unconf = rows.filter(x => DM.arrivalStatus(x).status === 'overdue');
 
     return {
       pipeline:  { rows: pipe, count: pipe.length, vnd: pipe.reduce((s, x) => s + (+x.vnd || 0), 0) },
@@ -147,6 +167,7 @@
       delayed:   { rows: late.map(o => o.x), count: late.length,
                    avgDays: late.length ? late.reduce((s, o) => s + o.d.days, 0) / late.length : null },
       arriving:  { rows: soon, count: soon.length },
+      unconfirmed: { rows: unconf, count: unconf.length },
       commissioning: null   // bảng machines chưa có dữ liệu nghiệm thu
     };
   };
@@ -159,6 +180,7 @@
 
   /* ---------- Gantt kế hoạch so với thực tế ----------
      Mỗi máy 1 thanh mờ (kế hoạch) + 1 thanh đậm (thực tế, hoặc dự kiến nếu chưa về), từ contract_signed tới arrived_site.
+     endKind: 'actual' (có venm_tt) · 'forecast' · 'overdue' (đã qua ngày dự kiến, chưa xác nhận).
      Kế hoạch: bảng machines không có ngày ký HĐ kế hoạch nên đầu thanh kế hoạch = ngày ký HĐ thực tế.
      opt.recentDays: ngoài máy chưa về, chỉ lấy máy đã về trong N ngày qua (null = lấy hết). Nhóm theo công ty. */
   DM.gantt = (rows, opt) => {
@@ -170,7 +192,7 @@
       if (!c.actual || (!end && !a.planned)) return null;
       if (from && a.actual && a.actual < from) return null;
       return { x, group: DM.companyCode(x.noilapdat) || 'Other', start: c.actual,
-               planEnd: a.planned, end, endKind: a.actual ? 'actual' : 'forecast',
+               planEnd: a.planned, end, endKind: a.actual ? 'actual' : a.forecast < DM.todayIso() ? 'overdue' : 'forecast',
                sev: DM.severity(x), delay: DM.delay(x), milestones: m };
     }).filter(Boolean);
     const order = [...DM.COMPANIES, 'Other'];
@@ -198,7 +220,7 @@
 
   /* ---------- Bảng điểm nhà cung cấp (thay cho view v_supplier_scorecard: tên NCC đã mã hoá) ----------
      Mỗi NCC 1 dòng, tính trên mốc arrived_site:
-       delivered      số máy đã về NM (có actual)
+       delivered      số máy đã về NM (có actual = venm_tt; máy quá hạn chưa xác nhận không tính)
        onTimePct      % máy đã về có planned mà actual ≤ planned (null nếu không máy nào có planned)
        avgLateDays    trung bình (actual − planned) của riêng các máy về trễ (null nếu không trễ)
        committedLT /  lead time cam kết (planned − ngày ký HĐ) / thực tế (actual − ngày ký HĐ), trung bình,
@@ -286,7 +308,7 @@
      Quy VNĐ: VND giữ nguyên; USD dùng tỷ giá riêng của máy (vnd/usd của chính máy đó, coi như tỷ giá chốt),
      không có thì tỷ giá mới nhất (exchange_rates); EUR dùng tỷ giá mới nhất. Thiếu tỷ giá / ngày -> 'unscheduled'. */
   DM.msDate = (x, ms) => !x ? null : ms === 'contract_signed' ? iso(x.dathang) : ms === 'shipped' ? iso(x.xuatxuong)
-    : ms === 'arrived_site' ? iso(x.vedukienn) : null;
+    : ms === 'arrived_site' ? (iso(x.venm_tt) || iso(x.vedukienn)) : null;
   DM.payVnd = (p, x, rates) => {
     const cur = p.currency || 'VND';
     const amt = p.amount != null && p.amount !== '' ? +p.amount
@@ -329,6 +351,7 @@
 
   /* ---------- 5.3 Lookahead 90 ngày: sẵn sàng mặt bằng ----------
      Máy chưa về, ngày về dự kiến trong [hôm nay, hôm nay + 90]; nhóm 0–30 / 31–60 / 61–90 ngày.
+     Máy quá hạn chưa xác nhận (dự kiến < hôm nay) không vào đây — đã nằm trong nhóm trễ / Cần chú ý.
      Checklist 5 mục; mục chưa có dòng = 'todo'. Cờ đỏ: còn mục chưa xong (không phải done/na) và còn ≤ 14 ngày. */
   DM.READY_ITEMS = ['foundation', 'power_supply', 'lifting', 'installer', 'utilities'];
   DM.lookahead = (rows, readiness, opt) => {
@@ -336,7 +359,7 @@
     const by = {};
     (readiness || []).forEach(r => { (by[r.machine_id] = by[r.machine_id] || {})[r.item] = r; });
     return rows.map(x => ({ x, m: ms(x, 'arrived_site') }))
-      .filter(o => o.m.forecast && DM.days(t, o.m.forecast) <= days)
+      .filter(o => o.m.forecast && o.m.forecast >= t && DM.days(t, o.m.forecast) <= days)
       .map(({ x, m }) => {
         const d = DM.days(t, m.forecast), rd = by[x._id] || {};
         const items = DM.READY_ITEMS.map(k => Object.assign({ item: k, status: 'todo' }, rd[k] || {}));

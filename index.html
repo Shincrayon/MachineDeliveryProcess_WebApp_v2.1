@@ -143,6 +143,26 @@ tbody tr:hover{background:rgba(96,165,250,.07)}
 .b-arrived{background:rgba(52,211,153,.13);color:var(--green)}
 .b-soon{background:rgba(251,191,36,.13);color:var(--amber)}
 .b-waiting{background:rgba(96,165,250,.13);color:var(--blue)}
+.b-overdue{background:rgba(251,146,60,.15);color:var(--st-over);box-shadow:inset 0 0 0 1px rgba(251,146,60,.35)}
+.fbtn.active.o{background:var(--st-over);border-color:var(--st-over);color:#1a0f05}
+.nm-kind{display:block;font-size:10.5px;font-weight:600;color:var(--muted)}
+.nm-kind.tt{color:var(--st-ok)}
+.ac-open{margin-left:0!important;border-color:var(--st-over)!important;color:var(--st-over)!important}
+.ac-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;font-size:12.5px}
+.ac-tools select,.ac-tools input{padding:6px 9px;border-radius:9px;border:1px solid var(--border);background:var(--panel);color:var(--txt);font:inherit;font-size:12.5px}
+.ac-tools input[type=number]{width:64px}
+.ac-tools .nbtn2{padding:6px 12px;font-size:12px}
+.ac-tbl{max-height:50vh}
+.ac-tbl table{min-width:640px}            /* điện thoại: bảng cuộn ngang trong khung, tên máy không vỡ chữ */
+.ac-tbl td.m{min-width:150px}
+.ac-tbl td input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:pointer}
+.ac-tbl td input.acd{width:118px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--txt);font:inherit;font-size:12.5px}
+.ac-tbl tr.on td{background:rgba(52,211,153,.08)}
+.ac-tbl td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ac-cnt{margin-right:auto;font-size:12.5px;color:var(--muted);align-self:center}
+.qu-use{margin-top:4px;align-self:flex-start;background:transparent;border:1px dashed var(--blue);border-radius:8px;color:var(--sky);font-size:11px;font-weight:700;padding:3px 8px;cursor:pointer}
+.qu-use:hover{background:rgba(96,165,250,.1)}
+.qu-use[hidden]{display:none}
 tr.late-flag td{position:relative}
 tr.late-flag{animation:latePulse 1.6s ease-in-out infinite;box-shadow:inset 3px 0 0 var(--red)}
 tr.late-flag td:first-child{box-shadow:inset 3px 0 0 var(--red)}
@@ -581,8 +601,8 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 [data-theme="light"] .app-banner,
 [data-theme="light"] .leaflet-popup-content-wrapper,[data-theme="light"] .leaflet-popup-tip{box-shadow:0 8px 24px rgba(15,23,42,.15)}
 /* ===== Dashboard Tiến độ máy về: màu trạng thái thống nhất ===== */
-:root{--st-ok:#34d399; --st-warn:#fbbf24; --st-bad:#f87171; --st-done:#94a3b8}
-:root[data-theme="light"]{--st-ok:#059669; --st-warn:#b45309; --st-bad:#dc2626; --st-done:#64748b}
+:root{--st-ok:#34d399; --st-warn:#fbbf24; --st-bad:#f87171; --st-done:#94a3b8; --st-over:#fb923c}
+:root[data-theme="light"]{--st-ok:#059669; --st-warn:#b45309; --st-bad:#dc2626; --st-done:#64748b; --st-over:#c2410c}
 .dm-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
 .dm-filters select,.dm-filters button{padding:7px 10px;font-size:13px;font-weight:600;border-radius:9px;border:1px solid var(--border);
   background:var(--field);color:var(--txt);outline:none;cursor:pointer;max-width:100%}
@@ -610,6 +630,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 .dm-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:-2px 0 10px}
 .dm-legend i{display:inline-block;width:20px;height:9px;border-radius:3px;vertical-align:-1px;margin-right:5px}
 .dm-legend i.fc{background:transparent!important;border:1.5px dashed var(--muted)}
+.dm-legend i.ov{background:rgba(251,146,60,.15)!important;border:1.5px dashed var(--st-over)}
 .dm-gwrap{max-height:560px;overflow-y:auto;overflow-x:hidden}
 .dm-hint{color:var(--muted);padding:16px 4px;font-size:13px}
 .ov-top{margin-bottom:12px}
@@ -789,6 +810,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <button class="fbtn g" data-f="arrived">✅ Arrived</button>
       <button class="fbtn a" data-f="soon">🚢 Arriving soon</button>
       <button class="fbtn" data-f="waiting">⏳ Awaiting</button>
+      <button class="fbtn o" data-f="overdue">⚠ Overdue – unconfirmed</button>
       <button class="fbtn r" data-f="delay">⚠️ Delay notes</button>
       <select id="fLoc"><option value="">Site: All</option></select>
       <select id="fOrigin"><option value="">Origin: All</option></select>
@@ -796,6 +818,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <select id="fMon" title="Month of arrival at plant"><option value="">Month: All</option></select>
       <select id="fYr" title="Year of arrival at plant"><option value="">Year: All</option></select>
       <button type="button" class="exp-open" id="btnExp" onclick="expOpen()">📤 Export data</button>
+      <button type="button" class="exp-open ac-open" id="btnAc" hidden onclick="acOpen()">✅ Confirm arrivals</button>
     </div>
     <div class="qu-bar" id="quBar" hidden></div>
     <div class="tablewrap">
@@ -871,16 +894,10 @@ let DATA = window.__DATA || [];
 let DATA_TS = window.__DATA_TS || new Date().toISOString();
 
 
-/* ===== trạng thái tính theo ngày hiện tại ===== */
-(function(){
-  const t0 = new Date(); t0.setHours(0,0,0,0);
-  DATA.forEach(x=>{
-    if(x.vedukienn){
-      x.daysleft = Math.round((new Date(x.vedukienn)-t0)/86400000);
-      x.status = x.daysleft<0 ? 'arrived' : x.daysleft<=15 ? 'soon' : 'waiting';
-    } else { x.daysleft = null; x.status = 'unknown'; }
-  });
-})();
+/* ===== trạng thái ngày về NM: CHỈ một nơi tính — DM.arrivalStatus (metrics.js) =====
+   arrived = có Ngày máy về NM TT · overdue = quá ngày dự kiến, chưa xác nhận · soon ≤ 15 ngày · waiting · unknown */
+function setArrival(x){ const a = DM.arrivalStatus(x); x.status = a.status; x.daysleft = a.daysleft; return x; }
+DATA.forEach(setArrival);
 
 /* ===== AGG tính từ DATA ===== */
 let AGG = (function(){
@@ -1202,9 +1219,10 @@ function updCalc(){
     : `<span class="muted">${tr('needs both dates above','cần đủ 2 ngày ở trên')}</span>`;
   let st = `<span class="muted">—</span>`;
   if(c.veNM){
-    const now = new Date(), t0 = Math.round((Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())-XL_EPOCH)/86400000);
-    const d = c.veNM - t0, s = d<0 ? 'arrived' : d<=15 ? 'soon' : 'waiting';
-    st = `<span class="badge b-${s}">${LBL[s]}</span><small>${d<0 ? tr(`arrived ${nd(-d)} ago`,`đã về ${nd(-d)} trước`) : tr(`${nd(d)} to go`,`còn ${nd(d)}`)}</small>`;
+    const cur = window.__editId ? DATA.find(x=>x._id===window.__editId) : null;
+    const a = DM.arrivalStatus({ venm_tt: cur && cur.venm_tt, vedukienn: serialToISO(c.veNM) }), d = a.daysleft;
+    st = `<span class="badge b-${a.status}">${LBL[a.status]}</span><small>${a.status==='arrived' ? tr(`arrived ${nd(-d)} ago`,`đã về ${nd(-d)} trước`)
+      : a.status==='overdue' ? tr(`${nd(-d)} past expected date — not confirmed`,`quá ngày dự kiến ${nd(-d)} — chưa xác nhận`) : tr(`${nd(d)} to go`,`còn ${nd(d)}`)}</small>`;
   }
   const it = (k,v) => `<div class="dt-i"><span class="dt-k">${k}</span><span class="dt-v">${v}</span></div>`;
   box.innerHTML = `<h5>🧮 ${tr('Calculated automatically','Tự động tính')}</h5><div class="dt-grid">
@@ -1310,9 +1328,9 @@ fileUpd.onchange = async e => {
   e.target.value = '';
 };
 
-const C = {arrived:'#34d399', soon:'#fbbf24', waiting:'#60a5fa'};
-const LBL = tr({arrived:'Arrived', soon:'Arriving soon (≤15 days)', waiting:'Awaiting'},
-  {arrived:'Đã về', soon:'Sắp về (≤15 ngày)', waiting:'Chờ về'});
+const C = {arrived:'#34d399', overdue:'#fb923c', soon:'#fbbf24', waiting:'#60a5fa'};
+const LBL = tr({arrived:'Arrived', overdue:'⚠ Overdue – unconfirmed', soon:'Arriving soon (≤15 days)', waiting:'Awaiting'},
+  {arrived:'Đã về', overdue:'⚠ Quá hạn – chưa xác nhận', soon:'Sắp về (≤15 ngày)', waiting:'Chờ về'});
 const MON = tr(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
   ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12']);
 /* tên nước lưu tiếng Việt trong dữ liệu -> khi chọn tiếng Anh thì hiển thị tiếng Anh */
@@ -1405,8 +1423,8 @@ const ovLabel = () => {
   if(!y) return tr(MON[+m-1]+' (all years)', 'Tháng '+(+m)+' (mọi năm)');
   return tr(MON[+m-1]+' '+y, 'Tháng '+(+m)+'/'+y);
 };
-const OV_LC = tr({planned:'Not yet ordered', manufacturing:'Manufacturing', shipping:'Shipping', arrived:'Arrived', delayed:'Delayed'},
-              {planned:'Chưa đặt hàng', manufacturing:'Đang chế tạo', shipping:'Đang vận chuyển', arrived:'Đã về', delayed:'Đang trễ'});
+const OV_LC = tr({planned:'Not yet ordered', manufacturing:'Manufacturing', shipping:'Shipping', arrived:'Arrived', delayed:'Delayed', overdue:'⚠ Overdue – unconfirmed'},
+              {planned:'Chưa đặt hàng', manufacturing:'Đang chế tạo', shipping:'Đang vận chuyển', arrived:'Đã về', delayed:'Đang trễ', overdue:'⚠ Quá hạn – chưa xác nhận'});
 const OV_MS = tr({contract_signed:'Contract signed', shipped:'Ex-works / shipped', arrived_site:'Arrival at site'},
                {contract_signed:'Ký hợp đồng', shipped:'Xuất xưởng', arrived_site:'Về nhà máy'});
 const dmD = s => s ? s.split('-').reverse().join('/') : '—';
@@ -1421,7 +1439,7 @@ const ovEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&am
   opt(fSup, '', tr('All suppliers', 'Tất cả NCC'));
   Object.keys(SUP).sort((a, b) => SUP[a].localeCompare(SUP[b])).forEach(k => opt(fSup, k, SUP[k]));
   opt(fSt, '', tr('All statuses', 'Tất cả trạng thái'));
-  [...DM.LIFECYCLE, 'delayed'].forEach(k => opt(fSt, k, OV_LC[k]));
+  [...DM.LIFECYCLE, 'delayed', 'overdue'].forEach(k => opt(fSt, k, OV_LC[k]));
   opt(ovMonth, '', tr('Month: All', 'Tháng: Tất cả'));
   for(let i=1;i<=12;i++) opt(ovMonth, String(i).padStart(2,'0'), tr(MON[i-1],'Tháng '+i));
   opt(ovYear, '', tr('Year: All', 'Năm: Tất cả'));
@@ -1484,7 +1502,8 @@ let KP = null;
         o.rate == null ? '—' : dmN(o.rate * 100) + '%',
         (o.den ? o.num + '/' + o.den + tr(' arrivals on or before plan', ' lần về đúng hoặc sớm hạn')
                : tr('no arrivals with a planned date', 'chưa có lần về nào có ngày kế hoạch')) +
-        ' · ' + (period ? ovLabel() : tr('last 90 days', '90 ngày qua')));
+        ' · ' + (period ? ovLabel() : tr('last 90 days', '90 ngày qua')) +
+        (KP.unconfirmed.count ? ' · ⚠ ' + dmN(KP.unconfirmed.count) + tr(' arrival(s) not confirmed', ' máy chưa xác nhận ngày về') : ''));
     set('delayed', !dl.count ? 'var(--st-ok)' : dl.avgDays > 14 ? 'var(--st-bad)' : 'var(--st-warn)', dmN(dl.count),
         dl.count ? tr('avg ', 'trung bình ') + dmN(dl.avgDays, 1) + tr(' days late', ' ngày trễ') : tr('no machine behind plan', 'không có máy nào trễ'));
     set('arriving', 'var(--blue)', dmN(KP.arriving.count),
@@ -1501,7 +1520,8 @@ let KP = null;
                  ['STT', 'Tên máy', 'Công ty', 'NCC', 'Mốc đang trễ', 'Số ngày trễ', 'Ghi chú / lý do', 'Phụ trách']);
     attBox.innerHTML = `<table><thead><tr>${H.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${list.map(({x, d}) => {
       const sev = d.days > 14 ? 'bad' : 'warn';
-      const when = d.overdue ? tr('overdue · plan ', 'quá hạn · KH ') + dmD(d.planned)
+      const when = d.unconfirmed ? tr('not confirmed · expected ', 'chưa xác nhận · dự kiến ') + dmD(d.forecast) + (d.planned ? ' · ' + tr('plan ', 'KH ') + dmD(d.planned) : '')
+                 : d.overdue ? tr('overdue · plan ', 'quá hạn · KH ') + dmD(d.planned)
                              : tr('plan ', 'KH ') + dmD(d.planned) + ' → ' + tr('forecast ', 'dự kiến ') + dmD(d.forecast);
       return `<tr onclick="showDetail(${DATA.indexOf(x)})">` +
         `<td data-l="${H[0]}">${x._order || '—'}</td>` +
@@ -1509,7 +1529,7 @@ let KP = null;
         `<td data-l="${H[2]}">${DM.companyCode(x.noilapdat) || ovEsc(x.noilapdat) || '—'}</td>` +
         `<td data-l="${H[3]}">${ovEsc(x.ncc) || '—'}</td>` +
         `<td data-l="${H[4]}"><span>${OV_MS[d.milestone]}<small>${when}</small></span></td>` +
-        `<td data-l="${H[5]}"><span class="sev sev-${sev}">+${d.days} ${tr('d', 'ngày')}</span></td>` +
+        `<td data-l="${H[5]}"><span class="sev sev-${sev}">${d.unconfirmed ? '⚠ ' : ''}+${d.days} ${tr('d', 'ngày')}</span></td>` +
         `<td data-l="${H[6]}" class="note">${ovEsc(x.giaitrinh) || '—'}</td>` +
         `<td data-l="${H[7]}">${ovEsc(x.phutrach) || '—'}</td></tr>`;
     }).join('')}</tbody></table>`;
@@ -1546,9 +1566,10 @@ let KP = null;
     gnLegend.innerHTML = [
       [rgba(cssv('--muted'), .3), tr('Plan: contract → planned arrival', 'Kế hoạch: ký HĐ → ngày về KH')],
       [C.ok, tr('On schedule', 'Đúng hạn')], [C.warn, tr('Late ≤ 14 days', 'Trễ ≤ 14 ngày')],
-      [C.bad, tr('Late > 14 days', 'Trễ > 14 ngày')], [C.done, tr('Arrived', 'Đã về')]
+      [C.bad, tr('Late > 14 days', 'Trễ > 14 ngày')], [C.done, tr('Arrived (confirmed)', 'Đã về (đã xác nhận)')]
     ].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('') +
-      `<span><i class="fc"></i>${tr('Forecast (not yet arrived)', 'Dự kiến (chưa về)')}</span>`;
+      `<span><i class="fc"></i>${tr('Forecast (not yet arrived)', 'Dự kiến (chưa về)')}</span>` +
+      `<span><i class="ov"></i>${tr('Overdue – unconfirmed', 'Quá hạn – chưa xác nhận')}</span>`;
     const cats = [], plan = [], act = [];
     GN.groups.forEach(g => {
       cats.push({ h: true, t: '▸ ' + g.group + ' (' + g.items.length + ')' });
@@ -1597,7 +1618,9 @@ let KP = null;
         { type:'custom', name:'plan', renderItem:bar(.72, () => ({ fill:rgba(cssv('--muted'), .28) })), encode:{ x:[1, 2], y:0 }, data:plan,
           markLine:{ silent:true, symbol:'none', data:[{ xAxis:today }], lineStyle:{ color:C.bad, width:1.5, type:'solid' },
                      label:{ formatter:tr('Today','Hôm nay'), color:C.bad, fontWeight:'bold', position:'start', distance:24 } } },
-        { type:'custom', name:'actual', renderItem:bar(.36, it => it.endKind === 'forecast'
+        { type:'custom', name:'actual', renderItem:bar(.36, it => it.endKind === 'overdue'
+            ? { fill:rgba(cssv('--st-over'), .18), stroke:cssv('--st-over'), lineWidth:1.6, lineDash:[5, 3] }
+            : it.endKind === 'forecast'
             ? { fill:rgba(C[it.sev], .55), stroke:C[it.sev], lineWidth:1.2, lineDash:[4, 3] } : { fill:C[it.sev] }),
           encode:{ x:[1, 2], y:0 }, data:act }
       ]
@@ -1680,7 +1703,7 @@ const DGC = {'Sớm':'#2dd4bf','Đúng tiến độ':'#a78bfa','Trễ':'#f87171'
 /* giá trị Đánh giá lưu tiếng Việt trong dữ liệu -> khi chọn tiếng Anh thì hiển thị tiếng Anh */
 const DGL = {'Sớm':'Early','Đúng tiến độ':'On time','Trễ':'Late'};
 const dgT = v => (LANG==='en' && DGL[v]) || v || '—';
-const STS = ['arrived','soon','waiting'];
+const STS = ['arrived','overdue','soon','waiting'];
 function statusRings(){
   const rows = ovRows();
   const outer = STS.map(s=>rows.filter(x=>x.status===s).length);
@@ -1702,9 +1725,9 @@ function updateStatusChart(){
 function initP1(){
   const r0 = statusRings();
   stChart = new Chart(chStatus,{type:'doughnut',data:{
-    labels:[LBL.arrived,LBL.soon,LBL.waiting],
+    labels:STS.map(s=>LBL[s]),
     datasets:[
-      {data:r0.outer, backgroundColor:[C.arrived,C.soon,C.waiting],
+      {data:r0.outer, backgroundColor:STS.map(s=>C[s]),
        borderColor:()=>cssv('--panel'),borderWidth:3, weight:1.1,
        hoverOffset:22, hoverBorderColor:'#fff', hoverBorderWidth:3},
       {data:r0.inner, customLabels:r0.innerLbl, backgroundColor:r0.innerCol,
@@ -1719,7 +1742,7 @@ function initP1(){
       plugins:{
       legend:{position:'bottom',labels:{padding:10,usePointStyle:true,font:{size:11.5},
         generateLabels: chart => [
-          ...[0,1,2].map(i=>({text:[LBL.arrived,LBL.soon,LBL.waiting][i], fillStyle:[C.arrived,C.soon,C.waiting][i], strokeStyle:'transparent', pointStyle:'circle', fontColor:cssv('--muted')})),
+          ...STS.map(s=>({text:LBL[s], fillStyle:C[s], strokeStyle:'transparent', pointStyle:'circle', fontColor:cssv('--muted')})),
           ...DG.map(g=>({text:'◦ '+dgT(g), fillStyle:DGC[g], strokeStyle:'transparent', pointStyle:'rectRounded', fontColor:cssv('--muted')}))
         ]}},
       tooltip:{callbacks:{label: ctx => {
@@ -1739,6 +1762,7 @@ function initP1(){
     const inM = k => base.filter(x=>x.vedukienn && x.vedukienn.slice(0,7)===k);
     return {labels,
       arr: keys.map(k=>inM(k).filter(x=>x.status==='arrived').length),
+      over: keys.map(k=>inM(k).filter(x=>x.status==='overdue').length),
       soon: keys.map(k=>inM(k).filter(x=>x.status==='soon').length),
       wait: keys.map(k=>inM(k).filter(x=>x.status==='waiting').length),
       late: keys.map(k=>inM(k).filter(x=>x.danhgia==='Trễ').length),
@@ -1750,19 +1774,20 @@ function initP1(){
     {type:'line',label:tr('Late','Trễ'),data:md0.late,borderColor:'#f87171',backgroundColor:'#f87171',
      pointBackgroundColor:'#f87171',pointRadius:4,pointHoverRadius:6,borderWidth:2.5,tension:.35,order:0},
     {label:LBL.arrived,data:md0.arr,backgroundColor:fade(C.arrived,md0),borderRadius:5,stack:'s',order:1},
+    {label:LBL.overdue,data:md0.over,backgroundColor:fade(C.overdue,md0),borderRadius:5,stack:'s',order:1},
     {label:LBL.soon,data:md0.soon,backgroundColor:fade(C.soon,md0),borderRadius:5,stack:'s',order:1},
     {label:LBL.waiting,data:md0.wait,backgroundColor:fade(C.waiting,md0),borderRadius:5,stack:'s',order:1}]},
     options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true,
         /* màu chú thích luôn đậm, kể cả khi cột tháng đầu đang mờ */
         generateLabels: ch => Chart.defaults.plugins.legend.labels.generateLabels(ch)
-          .map((l,i)=>({...l, fillStyle:['#f87171',C.arrived,C.soon,C.waiting][i]}))}},
+          .map((l,i)=>({...l, fillStyle:['#f87171',C.arrived,C.overdue,C.soon,C.waiting][i]}))}},
       tooltip:{callbacks:{label: ctx => ctx.dataset.label+': '+ctx.parsed.y+tr(' machines',' thiết bị')}}},
       scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{stepSize:1}}}}});
   OV_HOOKS.push(()=>{
     const md = monthData();
     mChart.data.labels = md.labels;
     mChart.data.datasets[0].data = md.late;
-    [['arr',C.arrived],['soon',C.soon],['wait',C.waiting]].forEach(([k,col],i)=>{
+    [['arr',C.arrived],['over',C.overdue],['soon',C.soon],['wait',C.waiting]].forEach(([k,col],i)=>{
       mChart.data.datasets[i+1].data = md[k];
       mChart.data.datasets[i+1].backgroundColor = fade(col, md);
     });
@@ -1856,6 +1881,7 @@ function initP2(){
   const byStatus = s => pics.map(p => DATA.filter(x=>x.phutrach===p && x.status===s).length);
   new Chart(chPICtrack,{type:'bar',data:{labels:pics,datasets:[
     {label:LBL.arrived,data:byStatus('arrived'),backgroundColor:C.arrived,borderRadius:5,stack:'s'},
+    {label:LBL.overdue,data:byStatus('overdue'),backgroundColor:C.overdue,borderRadius:5,stack:'s'},
     {label:LBL.soon,data:byStatus('soon'),backgroundColor:C.soon,borderRadius:5,stack:'s'},
     {label:LBL.waiting,data:byStatus('waiting'),backgroundColor:C.waiting,borderRadius:5,stack:'s'}]},
     options:{indexAxis:'y',plugins:{legend:{position:'bottom',labels:{usePointStyle:true}},
@@ -2102,8 +2128,11 @@ function plDrawMta(){
     xAxis:{ type:'time', min:x0, max:x1, axisLabel:{ color:cssv('--muted'), fontSize:11, hideOverlap:true, formatter:{ year:'{yyyy}', month:tr('{MMM}', 'T{M}'), day:'{dd}/{MM}' } },
       splitLine:{ show:false }, axisLine:{ lineStyle:{ color:cssv('--border') } } },
     yAxis:{ type:'time', min:lo, max:hi, axisLabel:{ color:cssv('--muted'), fontSize:11, formatter: v => fmt(v).slice(3) }, splitLine:{ lineStyle:{ color:cssv('--border') } } },
-    series: M.series.map(se => ({ name: plName(se.id), type:'line', step:'end', symbol:'circle', symbolSize:4, connectNulls:false,
-        lineStyle:{ width:2 }, data: M.weeks.map((w, i) => [TS(w), se.values[i] ? TS(se.values[i]) : null]) }))
+    series: M.series.map(se => { const x = DATA.find(d => d._id === se.id), ov = !!x && x.status === 'overdue';
+        const cut = x && x.venm_tt ? DM.weekEnd(x.venm_tt) : null, oc = cssv('--st-over');
+        return { name: (ov ? '⚠ ' : '') + plName(se.id), type:'line', step:'end', symbol:'circle', symbolSize:4, connectNulls:false,
+          lineStyle: ov ? { width:2, type:'dashed', color:oc } : { width:2 }, itemStyle: ov ? { color:oc } : undefined,
+          data: M.weeks.map((w, i) => [TS(w), se.values[i] && (!cut || w <= cut) ? TS(se.values[i]) : null]) }; })
       .concat([{ name:'diag', type:'line', silent:true, symbol:'none', legendHoverLink:false, tooltip:{ show:false },
         lineStyle:{ color:cssv('--muted'), type:'dashed', width:1 }, data:[[x0, x0], [x1, x1]] }]),
   }, true);
@@ -2254,8 +2283,8 @@ function initP4(){
 /* ===== table + filters + pagination ===== */
 let filter='all', loc='', origin='', pic='', q='', sortKey='__prio', sortDir=1, pageNo=1;
 const QU_SEL = new Set();          // _id các máy đang được chọn để ⚡ Cập nhật nhanh hàng loạt
-const PRIO = {soon:0, waiting:1, arrived:2};
-const GPRIO = x => (({soon:0, waiting:10, arrived:20})[x.status]??30) + (x.danhgia==='Trễ' ? 0 : x.danhgia==='Đúng tiến độ' ? 1 : x.danhgia==='Sớm' ? 2 : 3);
+const PRIO = {overdue:-1, soon:0, waiting:1, arrived:2};
+const GPRIO = x => (({overdue:-10, soon:0, waiting:10, arrived:20})[x.status]??30) + (x.danhgia==='Trễ' ? 0 : x.danhgia==='Đúng tiến độ' ? 1 : x.danhgia==='Sớm' ? 2 : 3);
 const PAGE_SIZE = 10;
 const fmtD = s => s? s.split('-').reverse().join('/') : '—';
 const fmtU = v => v.toLocaleString('en-US',{maximumFractionDigits:0});
@@ -2305,7 +2334,7 @@ function render(){
     <td>${x.phutrach||'—'}</td>
     <td class="money">${fmtM(x.vnd)} ₫</td>
     <td class="money" style="color:var(--sky)">${fmtU(x.usd)}$</td>
-    <td>${fmtD(x.dathang)}</td><td>${fmtD(x.vekh)}</td><td><b>${fmtD(x.vedukienn)}</b></td>
+    <td>${fmtD(x.dathang)}</td><td>${fmtD(x.vekh)}</td><td><b>${fmtD(x.vedukienn)}</b>${x.vedukienn ? (x.venm_tt ? `<small class="nm-kind tt">${tr('Arrived at plant','Đã về NM')}</small>` : `<small class="nm-kind">${tr('Expected at plant','Dự kiến về NM')}</small>`) : ''}</td>
     <td><span class="badge b-${x.status}">${LBL[x.status]}</span></td>
     <td><span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}">${dgT(x.danhgia)}${x.giaitrinh?' 📝':''}</span></td></tr>`).join('');
   const val = rows.reduce((s,x)=>s+x.vnd,0), usd = rows.reduce((s,x)=>s+x.usd,0);
@@ -2357,7 +2386,10 @@ window.showDetail = i => {
   mTitle.textContent = x.ten;
   mSub.innerHTML = `<span class="badge b-${x.status}" style="font-size:10.5px;padding:2px 8px">${LBL[x.status]||tr('Unknown','Chưa xác định')}</span>
     &nbsp;${tr('Rating','Đánh giá')}: <b style="color:${dgColor}">${dgT(x.danhgia)}</b>
-    &nbsp;·&nbsp; ${x.daysleft!=null ? (x.daysleft<0 ? tr(`arrived ${Math.abs(x.daysleft)} days ago`,`đã về ${Math.abs(x.daysleft)} ngày trước`) : tr(`${x.daysleft} days to go`,`còn ${x.daysleft} ngày`)) : tr('no arrival date yet','chưa có ngày về')}`;
+    &nbsp;·&nbsp; ${x.daysleft==null ? tr('no arrival date yet','chưa có ngày về')
+      : x.status==='arrived' ? tr(`arrived ${Math.abs(x.daysleft)} days ago`,`đã về ${Math.abs(x.daysleft)} ngày trước`)
+      : x.status==='overdue' ? tr(`${Math.abs(x.daysleft)} days past the expected date — arrival not confirmed`,`quá ngày dự kiến ${Math.abs(x.daysleft)} ngày — chưa xác nhận đã về`)
+      : tr(`${x.daysleft} days to go`,`còn ${x.daysleft} ngày`)}`;
 
   mBody.innerHTML = `<div class="dt-wrap">
     ${sec(tr('General','Thông tin chung'),[
@@ -2390,7 +2422,7 @@ window.showDetail = i => {
       it(tr('Arrival at plant (actual)','Ngày máy về NM TT'), fmtD(x.venm_tt)),
       it(tr('Shipping time (actual)','TG đi tàu TT'), Dy(x.ditautt)),
       it(tr('Clearance & pickup (actual)','TG lãnh máy TT'), Dy(x.lanhtt)),
-      it(tr('Expected arrival at plant','Ngày dự kiến máy về NM'), `<b>${fmtD(x.vedukienn)}</b>`,'hl'),
+      it(x.venm_tt ? tr('Arrived at plant','Đã về NM') : tr('Expected at plant','Dự kiến về NM'), `<b>${fmtD(x.vedukienn)}</b>`,'hl'),
       it(tr('Rating','Đánh giá'), `<b style="color:${dgColor}">${dgT(x.danhgia)}</b>`,'hl')])}
     <div class="dt-sec"><h5>${tr(`Delay note`,`Giải trình`)}</h5>
       ${x.giaitrinh
@@ -2412,7 +2444,7 @@ window.showDetail = i => {
 window.showGT = i => {
   const x = DATA[i];
   mTitle.textContent = x.ten;
-  mSub.innerHTML = `${x.phutrach||'—'} · ${x.noilapdat} · ${x.ncc} · ${tr('At plant','Về NM')}: <b>${fmtD(x.vedukienn)}</b> (${tr('plan','KH')}: ${fmtD(x.vekh)}) · ${tr('Rating','Đánh giá')}: <b style="color:${x.danhgia==='Trễ'?'var(--red)':x.danhgia==='Sớm'?'var(--green)':'var(--blue)'}">${dgT(x.danhgia)}</b>`;
+  mSub.innerHTML = `${x.phutrach||'—'} · ${x.noilapdat} · ${x.ncc} · ${x.venm_tt ? tr('Arrived at plant','Đã về NM') : tr('Expected at plant','Dự kiến về NM')}: <b>${fmtD(x.vedukienn)}</b> (${tr('plan','KH')}: ${fmtD(x.vekh)}) · ${tr('Rating','Đánh giá')}: <b style="color:${x.danhgia==='Trễ'?'var(--red)':x.danhgia==='Sớm'?'var(--green)':'var(--blue)'}">${dgT(x.danhgia)}</b>`;
   mBody.innerHTML = x.giaitrinh
     ? `<div class="m-gt">⚠️ <b>${tr(`Delay note:`,`Giải trình:`)}</b>\n${x.giaitrinh}</div>`
     : `<div class="m-ok">✅ ${tr(`No delay note — the machine ${x.danhgia==='Trễ'?'is late but has no note yet':'is on schedule'}.`,`Không có giải trình — thiết bị ${x.danhgia==='Trễ'?'trễ nhưng chưa có ghi chú':'theo tiến độ'}.`)}</div>`;
@@ -2547,11 +2579,7 @@ const QU_DATES = QU_KEYS.filter(k=>k!=='giaitrinh');
 const QU_FUT = ['tamungtt','tauchay_tt','capcang_tt','venm_tt'];      // ngày thực tế: không nên nằm ở tương lai
 const quLbl = k => k==='dathang' ? tr('Contract signed / order date','Ngày ký HĐ/đặt hàng') : (LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k];
 const quCur = (x,k) => k==='giaitrinh' ? unescH(x.giaitrinh||'') : (x[k]||null);
-function quStatus(x){
-  const t0 = new Date(); t0.setHours(0,0,0,0);
-  if(x.vedukienn){ x.daysleft = Math.round((new Date(x.vedukienn)-t0)/86400000); x.status = x.daysleft<0 ? 'arrived' : x.daysleft<=15 ? 'soon' : 'waiting'; }
-  else { x.daysleft = null; x.status = 'unknown'; }
-}
+const quStatus = setArrival;
 /* giống trigger machines_actual_sync: m = giá trị sau khi sửa */
 function quDerive(m){
   const o = { ditautt:m.ditautt, lanhtt:m.lanhtt, vedukienn:m.vedukienn };
@@ -2652,7 +2680,7 @@ function quForm(list, keep){
       + `<div class="qu-names">${list.slice(0,12).map(x=>`<span>${x.ten}</span>`).join('')}${list.length>12?`<span>+${list.length-12}</span>`:''}</div>`
     : tr('Only the boxes you change are saved. Empty a date box (×) to clear it.','Chỉ lưu các ô bạn đổi. Bấm × để xoá một ngày.');
   // nút × không nằm trong thứ tự Tab (Tab đi lần lượt từng ngày); xoá bằng bàn phím: Delete / Backspace
-  const dIn = k => `<label><span class="qu-cap">${quLbl(k)}</span><span class="qu-f" id="quf_${k}"><input id="qu_${k}" value="${escH(val(k))}" placeholder="${batch ? tr('keep','giữ nguyên') : '—'}"><button type="button" class="qu-clr" data-clr="${k}" tabindex="-1" title="${tr('Clear','Xoá')}">×</button></span><small class="qu-note" id="qun_${k}"></small></label>`;
+  const dIn = k => `<label><span class="qu-cap">${quLbl(k)}</span><span class="qu-f" id="quf_${k}"><input id="qu_${k}" value="${escH(val(k))}" placeholder="${batch ? tr('keep','giữ nguyên') : '—'}"><button type="button" class="qu-clr" data-clr="${k}" tabindex="-1" title="${tr('Clear','Xoá')}">×</button></span><small class="qu-note" id="qun_${k}"></small>${k==='venm_tt' && !batch ? `<button type="button" class="qu-use" id="quUseFc" hidden>${tr('Use expected date','Dùng ngày dự kiến')} (${fmtD(x0.vedukienn)})</button>` : ''}</label>`;
   const grp = t => `<div class="qu-grp">${t}</div>`;
   mBody.innerHTML = `<form id="quForm" novalidate><div class="add-grid qu-grid">
       ${grp(tr('Purchasing','Mua hàng'))}${QU_DATES.slice(0,3).map(dIn).join('')}
@@ -2676,6 +2704,7 @@ function quForm(list, keep){
       return;
     }
     const ch = quDiff(x0,f,false), m = quMerge(x0,ch), bad = quSeq(m);
+    quEl('quUseFc').hidden = !!f.venm_tt || !x0.vedukienn;     // chỉ hiện khi ô trống và máy có ngày dự kiến
     // viền cam + dòng nhắc dưới ô sớm hơn ngày đứng trước nó
     QU_DATES.forEach(k=>{ const p = bad[k];
       quEl('quf_'+k).classList.toggle('seq', !!p);
@@ -2691,6 +2720,8 @@ function quForm(list, keep){
   QU_DATES.forEach(k=>{ const el = fp[k] && fp[k].altInput; if(el) el.addEventListener('keydown', e=>{
     if(e.key==='Delete' || e.key==='Backspace'){ e.preventDefault(); fp[k].clear(); fp[k].close(); upd(); } }); });
   quEl('qu_giaitrinh').oninput = upd;
+  if(!batch) quEl('quUseFc').onclick = () => {                 // điền ngày dự kiến vào ô — vẫn phải bấm Lưu
+    if(fp.venm_tt) fp.venm_tt.setDate(x0.vedukienn, true); else { quEl('qu_venm_tt').value = x0.vedukienn; upd(); } };
   quEl('quCancel').onclick = () => mBg.classList.remove('show');
   upd();
   document.getElementById('quForm').onsubmit = async ev => {
@@ -2770,6 +2801,109 @@ function quReview(list, f, plan){
     if(!bad) quToast(tr(`✅ Updated ${ok} machine(s)`,`✅ Đã cập nhật ${ok} máy`));
   };
 }
+/* ---- ✅ Xác nhận ngày về NM hàng loạt (chỉ admin) ----
+   Danh sách máy 'overdue' (quá ngày dự kiến, chưa có venm_tt). Mỗi dòng: ô chọn + Ngày về NM TT (mặc định = ngày dự kiến,
+   sửa được, không cho ngày tương lai). Chỉ ghi dòng được chọn, sau bước xác nhận cuối; từng máy qua quSaveOne
+   (kiểm tra version, RLS, trigger machines_actual_trg tính lại). Mặc định không chọn sẵn dòng nào. */
+const AC = { sel:new Set(), date:{}, site:'', fp:[] };
+const acAll = () => DATA.filter(x=>x.status==='overdue').sort((a,b)=>String(a.vedukienn).localeCompare(String(b.vedukienn)));
+const acRows = () => acAll().filter(x=>!AC.site || unescH(x.noilapdat)===AC.site);
+const acPast = x => -(x.daysleft||0);
+/* file rà soát: Tên hạng mục | Nơi lắp đặt | NCC | Ngày dự kiến về NM (ngày thật) | Số ngày đã qua */
+function acExport(rows){
+  const loc = s => { const [y,m,d] = s.slice(0,10).split('-').map(Number); return new Date(y, m-1, d); };
+  const aoa = [[tr('Machine','Tên hạng mục'), tr('Installation site','Nơi lắp đặt'), tr('Supplier','NCC'), tr('Expected at plant','Ngày dự kiến về NM'), tr('Days past','Số ngày đã qua')]]
+    .concat(rows.map(x=>[unescH(x.ten).trim(), unescH(x.noilapdat).trim(), unescH(x.ncc).trim(), loc(x.vedukienn), acPast(x)]));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:42},{wch:14},{wch:26},{wch:16},{wch:12}];
+  for(let r=1; r<aoa.length; r++){ const c = ws[XLSX.utils.encode_cell({r, c:3})]; if(c) c.z = 'dd/mm/yyyy'; }
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'RaSoat');
+  const fn = `RaSoat_MayVe_ChuaXacNhan_${DM.todayIso()}.xlsx`; XLSX.writeFile(wb, fn); return fn;
+}
+function acDraw(){
+  AC.fp.forEach(f=>{ try{ f.destroy(); }catch(e){} }); AC.fp = [];
+  const rows = acRows(), t = DM.todayIso();
+  quEl('acBody').innerHTML = rows.map(x=>`<tr class="${AC.sel.has(x._id)?'on':''}" data-id="${x._id}">
+      <td><input type="checkbox" class="acc" data-id="${x._id}"${AC.sel.has(x._id)?' checked':''} aria-label="${tr('Confirm','Xác nhận')}"></td>
+      <td class="m">${x.ten}</td><td>${x.noilapdat||'—'}</td><td>${x.ncc||'—'}</td>
+      <td>${fmtD(x.vedukienn)}</td><td class="n">${acPast(x)} ${tr('d','ngày')}</td>
+      <td><input class="acd" id="acd_${x._id}" value="${AC.date[x._id]||x.vedukienn}"></td></tr>`).join('')
+    || `<tr><td colspan="7" style="color:var(--muted)">${tr('No overdue machine at this site.','Nơi lắp đặt này không còn máy quá hạn.')}</td></tr>`;
+  if(window.flatpickr) rows.forEach(x=>{ const el = quEl('acd_'+x._id); if(!el) return;
+    AC.fp.push(flatpickr(el, { dateFormat:'Y-m-d', altInput:true, altFormat:'d/m/Y', allowInput:false, disableMobile:true, maxDate:t,
+      locale:(LANG==='vi' && flatpickr.l10ns && flatpickr.l10ns.vn) ? 'vn' : 'default',
+      onChange:(d, iso)=>{ AC.date[x._id] = iso; } })); });
+  acCount();
+}
+function acCount(){
+  const n = acAll().filter(x=>AC.sel.has(x._id)).length;
+  quEl('acCnt').textContent = tr(`${n} selected · only ticked rows are saved`,`Đã chọn ${n} máy · chỉ lưu dòng được tích`);
+  quEl('acSave').disabled = !n;
+  quEl('acSave').textContent = tr(`💾 Save ${n} machine(s)`,`💾 Lưu ${n} máy`);
+}
+window.acOpen = () => {
+  if(window.__role !== 'admin') return;
+  const all = acAll();
+  AC.sel = new Set([...AC.sel].filter(id=>all.some(x=>x._id===id)));
+  mTitle.textContent = tr(`✅ Confirm arrival at plant (${all.length} overdue)`, `✅ Xác nhận ngày về NM (${all.length} máy quá hạn)`);
+  mSub.innerHTML = tr('Machines past their expected arrival date with no actual arrival date yet. Tick the machines that really arrived and check the date (default = expected date). Only ticked rows are saved.',
+                      'Máy đã qua ngày dự kiến về nhưng chưa có Ngày máy về NM TT. Tích máy đã thực sự về và kiểm tra ngày (mặc định = ngày dự kiến). Chỉ dòng được tích mới được lưu.');
+  if(!all.length){ mBody.innerHTML = `<div class="m-ok">✅ ${tr('No overdue machine — every past arrival is confirmed.','Không còn máy quá hạn — mọi máy đã qua ngày dự kiến đều đã xác nhận.')}</div>`; openM(1); return; }
+  const sites = [...new Set(all.map(x=>unescH(x.noilapdat)).filter(Boolean))].sort();
+  mBody.innerHTML = `<div class="ac-tools">
+      <select id="acSite"><option value="">${tr('Site: All','Nơi lắp đặt: Tất cả')}</option>${sites.map(v=>`<option value="${escH(v)}"${v===AC.site?' selected':''}>${escH(v)}</option>`).join('')}</select>
+      <span>${tr('Select machines past by more than','Chọn máy đã qua hơn')} <input id="acN" type="number" min="0" step="1" value="90"> ${tr('days','ngày')}</span>
+      <button type="button" class="nbtn2 ghost" id="acPick">${tr('Select','Chọn')}</button>
+      <button type="button" class="nbtn2 ghost" id="acAllB">${tr('Select all shown','Chọn tất cả đang hiện')}</button>
+      <button type="button" class="nbtn2 ghost" id="acNone">${tr('Clear','Bỏ chọn')}</button>
+      <button type="button" class="nbtn2 ghost" id="acXls">⬇️ ${tr('Export review list','Xuất danh sách rà soát')}</button></div>
+    <div class="qu-tbl ac-tbl"><table><thead><tr><th></th><th>${tr('Machine','Máy')}</th><th>${tr('Site','Nơi lắp đặt')}</th><th>${tr('Supplier','NCC')}</th>
+      <th>${tr('Expected at plant','Dự kiến về NM')}</th><th>${tr('Past','Đã qua')}</th><th>${tr('Arrival at plant (actual)','Ngày máy về NM TT')}</th></tr></thead><tbody id="acBody"></tbody></table></div>
+    <div id="quMsg" style="min-height:1.2em;font-size:13px;margin-bottom:8px"></div>
+    <div class="add-actions"><span class="ac-cnt" id="acCnt"></span>
+      <button type="button" class="nbtn2 ghost" onclick="mBg.classList.remove('show')">${tr('Close','Đóng')}</button>
+      <button type="button" class="nbtn2" id="acSave"></button></div>`;
+  openM(1);
+  quEl('acSite').onchange = e => { AC.site = e.target.value; acDraw(); };
+  quEl('acPick').onclick = () => { const n = Math.max(0, +quEl('acN').value || 0); acRows().forEach(x=>{ if(acPast(x) > n) AC.sel.add(x._id); }); acDraw(); };
+  quEl('acAllB').onclick = () => { acRows().forEach(x=>AC.sel.add(x._id)); acDraw(); };
+  quEl('acNone').onclick = () => { acRows().forEach(x=>AC.sel.delete(x._id)); acDraw(); };
+  quEl('acXls').onclick = () => { try{ quToast('⬇️ ' + escH(acExport(acRows()))); }catch(e){ quToast('⚠️ ' + escH(e.message)); } };
+  quEl('acBody').addEventListener('change', e=>{ const c = e.target.closest('.acc'); if(!c) return;
+    c.checked ? AC.sel.add(c.dataset.id) : AC.sel.delete(c.dataset.id); c.closest('tr').classList.toggle('on', c.checked); acCount(); });
+  quEl('acSave').onclick = () => {
+    const t = DM.todayIso();
+    const plan = acAll().filter(x=>AC.sel.has(x._id)).map(x=>({ x, d: AC.date[x._id] || x.vedukienn }));
+    const bad = plan.filter(p=>!p.d || p.d > t);
+    if(bad.length){ quEl('quMsg').style.color = 'var(--red)'; quEl('quMsg').textContent = tr(`${bad.length} row(s) have no date or a future date.`,`${bad.length} dòng thiếu ngày hoặc ngày ở tương lai.`); return; }
+    if(!plan.length) return;
+    confirmBox({ title: tr(`Save the actual arrival date for ${plan.length} machine(s)?`,`Ghi Ngày máy về NM TT cho ${plan.length} máy?`),
+      sub: tr('These machines will become “Arrived” and count in the on-time rate and the supplier scorecard. To change one later, use ⚡ Quick update on that machine.',
+              'Các máy này sẽ chuyển sang “Đã về” và được tính vào tỷ lệ đúng hạn, bảng điểm NCC. Muốn sửa lại máy nào thì dùng ⚡ Cập nhật nhanh của máy đó.'),
+      ok: tr('Save','Lưu'), onOk: () => acRun(plan) });
+  };
+  acDraw();
+};
+async function acRun(plan){
+  quEl('acSave').disabled = true;
+  window.__selfWriting = true;
+  const res = [];
+  for(const [n,p] of plan.entries()){
+    quEl('quMsg').style.color = 'var(--muted)'; quEl('quMsg').textContent = tr(`Saving ${n+1}/${plan.length}…`,`Đang lưu ${n+1}/${plan.length}…`);
+    try{ await quSaveOne(p.x, { venm_tt: p.d }); res.push({ x:p.x, d:p.d, ok:true }); AC.sel.delete(p.x._id); delete AC.date[p.x._id]; }
+    catch(err){ res.push({ x:p.x, d:p.d, ok:false, err }); }
+  }
+  quAfterSave();
+  const ok = res.filter(r=>r.ok).length, bad = res.length - ok;
+  mTitle.textContent = bad ? tr(`✅ Confirmed ${ok}/${res.length} — ${bad} failed`,`✅ Đã xác nhận ${ok}/${res.length} — ${bad} máy lỗi`) : tr(`✅ Confirmed ${ok} machine(s)`,`✅ Đã xác nhận ${ok} máy`);
+  mSub.innerHTML = bad ? tr('Failed machines stay selected; press 🔄 Refresh and try again.','Máy lỗi vẫn được giữ chọn; bấm 🔄 Làm mới rồi làm lại.') : '';
+  mBody.innerHTML = `<div class="qu-tbl"><table><thead><tr><th>${tr('Machine','Máy')}</th><th>${tr('Arrival at plant (actual)','Ngày máy về NM TT')}</th><th>${tr('Result','Kết quả')}</th></tr></thead><tbody>
+    ${res.map(r=>`<tr><td class="m">${r.x.ten}</td><td>${fmtD(r.d)}</td>${r.ok ? `<td class="ok">✅ ${tr('Saved','Đã lưu')}</td>` : `<td class="bad">❌ ${dbErrText(r.err)}</td>`}</tr>`).join('')}</tbody></table></div>
+    <div class="add-actions">${acAll().length ? `<button type="button" class="nbtn2 ghost" onclick="acOpen()">${tr('← Back to the list','← Về danh sách')}</button>` : ''}
+      <button type="button" class="nbtn2" onclick="mBg.classList.remove('show')">${tr('Close','Đóng')}</button></div>`;
+  if(!bad) quToast(tr(`✅ Confirmed ${ok} machine(s)`,`✅ Đã xác nhận ${ok} máy`));
+}
+if(window.__role === 'admin') quEl('btnAc').hidden = false;
 window.quickEdit = i => { const x = DATA[i]; if(x && window.__canWrite) quForm([x]); };
 /* chọn nhiều: ô chọn ở đầu dòng, ô ở tiêu đề = chọn / bỏ chọn mọi máy đang lọc (mọi trang) */
 window.quSync = rows => {
@@ -4097,6 +4231,8 @@ const STATIC_VI = new Map([
   ['✅ Arrived','✅ Đã về'],
   ['🚢 Arriving soon','🚢 Sắp về'],
   ['⏳ Awaiting','⏳ Chờ về'],
+  ['⚠ Overdue – unconfirmed','⚠ Quá hạn – chưa xác nhận'],
+  ['✅ Confirm arrivals','✅ Xác nhận về'],
   ['⚠️ Delay notes','⚠️ Giải trình'],
   ['Site: All','Nơi lắp đặt: Tất cả'],
   ['Origin: All','Xuất xứ: Tất cả'],
