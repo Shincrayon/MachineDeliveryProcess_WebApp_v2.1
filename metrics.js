@@ -231,5 +231,25 @@
                       (b.delivered - a.delivered) || a.name.localeCompare(b.name));
   };
 
+  /* ---------- Lịch thanh toán của 1 máy (bảng payment_schedule, đã giải mã) ----------
+     Số tiền mỗi đợt: amount nếu có, không thì percent × giá trị hợp đồng (chỉ khi đợt tính bằng VND).
+     Trả: tổng % đã lên lịch, tổng tiền lên lịch / đã trả / còn lại (VND), số đợt quá hạn chưa trả. */
+  DM.PAY_KINDS = ['deposit', 'before_shipment', 'on_arrival', 'after_commissioning', 'other'];
+  DM.payAmount = (p, contractVnd) => p.amount != null && p.amount !== '' ? +p.amount
+    : (p.percent != null && p.percent !== '' && (p.currency || 'VND') === 'VND' && contractVnd ? Math.round(contractVnd * p.percent / 100) : null);
+  DM.paymentSummary = (pays, contractVnd) => {
+    const t = DM.todayIso(), vnd = pays.filter(p => (p.currency || 'VND') === 'VND');
+    const sched = vnd.reduce((s, p) => s + (DM.payAmount(p, contractVnd) || 0), 0);
+    const paid = vnd.reduce((s, p) => s + (p.paid_date ? (p.paid_amount != null && p.paid_amount !== '' ? +p.paid_amount : (DM.payAmount(p, contractVnd) || 0)) : 0), 0);
+    return {
+      // % đã lên lịch: đợt không ghi % thì quy từ số tiền / giá trị hợp đồng (đợt VND)
+      count: pays.length, pct: pays.reduce((s, p) => s + (p.percent != null && p.percent !== '' ? +p.percent
+        : (p.amount != null && p.amount !== '' && (p.currency || 'VND') === 'VND' && contractVnd ? p.amount / contractVnd * 100 : 0)), 0),
+      scheduled: sched, paid, outstanding: sched - paid,
+      overdue: pays.filter(p => !p.paid_date && p.planned_date && p.planned_date < t).length,
+      foreign: pays.length - vnd.length
+    };
+  };
+
   window.DM = DM;
 })();

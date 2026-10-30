@@ -208,6 +208,16 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 .sc-tbl tbody tr:hover{background:rgba(96,165,250,.07)}
 .sc-sep td{padding:10px 8px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border);text-align:left!important}
 #scChart{height:320px}
+.pay-tbl{overflow:auto;max-height:42vh;margin-top:4px}
+.pay-tbl table{width:100%;min-width:720px;border-collapse:collapse;font-size:12.5px}
+.pay-tbl th{position:sticky;top:0;background:var(--panel2);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+.pay-tbl td{padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums}
+.pay-tbl td small{display:block;color:var(--muted);font-size:11px;white-space:normal}
+.pay-tbl tr.on td{background:rgba(96,165,250,.1)}
+.pay-tbl td.act button{background:transparent;border:1px solid var(--border);border-radius:7px;padding:2px 7px;margin-left:4px;cursor:pointer;color:var(--txt);font-size:12px}
+.pay-tbl td.act button.ask{border-color:var(--st-bad);color:var(--st-bad);font-weight:700}
+.add-grid.pay-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:760px){.add-grid.pay-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:1100px){.sc-wrap{grid-template-columns:1fr}}
 @media(max-width:640px){#scSub{flex-basis:100%;margin:2px 0 0 16px!important}#p4 .card h3{flex-wrap:wrap}}
 
@@ -2026,6 +2036,7 @@ window.showDetail = i => {
     </div>
     <div class="dt-actions">
       <button class="nbtn2 ghost" onclick="showHistory(${i})">${tr(`🕘 History`,`🕘 Lịch sử`)}</button>
+      <button class="nbtn2 ghost" onclick="showPayments(${i})">${tr(`💳 Payments`,`💳 Thanh toán`)}</button>
       ${window.__canWrite ? `<button class="nbtn2 ghost" onclick="askDelete(${i})">${tr(`🗑 Delete machine`,`🗑 Xoá máy`)}</button>
       <button class="nbtn2" onclick="editMachine(${i})">${tr(`✏️ Edit`,`✏️ Sửa thông tin`)}</button>` : ''}</div>
     <div class="dt-note">${tr(`Planned arrival date = Order date + advance-payment wait (plan) + shipping time (plan) + clearance &amp; pickup (plan) + manufacturing days (CTM).<br>
@@ -2268,6 +2279,121 @@ window.showHistory = async i => {
         <b>${escH(h.user_email || tr('Admin (SQL)','Quản trị (SQL)'))}</b><span>${fmtDT(h.at)}</span></div>${body?`<div class="hx-ch">${body}</div>`:''}</div>`;
     }).join('') + '</div>';
   }catch(err){ mBody.innerHTML = `<div class="m-gt">${dbErrText(err)}</div>`; }
+};
+
+/* ---- Lịch thanh toán của 1 máy (bảng payment_schedule; số tiền, mô tả mã hoá trong sec) ---- */
+const PAY_KIND = () => tr({deposit:'Deposit', before_shipment:'Before shipment', on_arrival:'On arrival', after_commissioning:'After commissioning', other:'Other'},
+                          {deposit:'Đặt cọc', before_shipment:'Trước giao hàng', on_arrival:'Khi về NM', after_commissioning:'Sau nghiệm thu', other:'Khác'});
+const PAY_MS = () => tr({contract_signed:'Contract signed', shipped:'Ex-works / shipped', arrived_site:'Arrival at site', installed:'Installed', commissioned:'Commissioned'},
+                        {contract_signed:'Ký hợp đồng', shipped:'Xuất xưởng', arrived_site:'Về nhà máy', installed:'Lắp đặt xong', commissioned:'Nghiệm thu'});
+function payErrText(e){
+  const c = e && e.code, m = String((e && e.message) || '');
+  if(c === '42P01' || c === 'PGRST205' || /payment_schedule/.test(m) && /not find|does not exist|schema cache/i.test(m))
+    return tr('The payment table is not set up yet. Run supabase/migrations/20261030_02_payment_schedule.sql in Supabase › SQL Editor.',
+              'Chưa có bảng lịch thanh toán. Chạy supabase/migrations/20261030_02_payment_schedule.sql trong Supabase › SQL Editor.');
+  if(c === '23505') return tr('This installment number already exists for this machine.', 'Máy này đã có đợt với số thứ tự này.');
+  if(c === '23514') return tr('A value is out of range (percent must be 0–100).', 'Có giá trị không hợp lệ (% phải từ 0 đến 100).');
+  return dbErrText(e);
+}
+window.showPayments = async (i, editId) => {
+  const x = DATA[i]; if(!x) return;
+  const sb = window.__sb, canW = !!window.__canWrite;
+  mTitle.textContent = tr('💳 Payments: ', '💳 Thanh toán: ') + unescH(x.ten);
+  mSub.textContent = tr('Loading…', 'Đang tải…');
+  mBody.innerHTML = ''; openM(1);
+  let pays = [];
+  try{
+    if(!sb) throw { code:'nodb' };
+    const { data, error } = await sb.from('payment_schedule').select('*').eq('machine_id', x._id).order('installment_no');
+    if(error) throw error;
+    pays = await Promise.all((data || []).map(window.__open));
+  }catch(err){
+    mSub.textContent = '';
+    mBody.innerHTML = `<div class="m-gt">${payErrText(err)}</div><div class="dt-actions"><button class="nbtn2 ghost" onclick="showDetail(${i})">${tr('← Machine details','← Chi tiết máy')}</button></div>`;
+    return;
+  }
+  const K = PAY_KIND(), MS = PAY_MS(), S = DM.paymentSummary(pays, x.vnd);
+  const money = (v, cur) => v == null || v === '' ? '—' : dmN(v) + ' ' + (cur === 'USD' ? '$' : cur === 'EUR' ? '€' : '₫');
+  mSub.innerHTML = `${tr('Contract value','Giá trị hợp đồng')}: <b>${x.vnd ? dmN(x.vnd) + ' ₫' : '—'}</b> · ${tr('scheduled','đã lên lịch')} <b style="color:${S.pct > 100.001 ? 'var(--st-bad)' : 'inherit'}">${dmN(S.pct, 2)}%</b>` +
+    ` (${dmN(S.scheduled)} ₫) · ${tr('paid','đã trả')} <b>${dmN(S.paid)} ₫</b> · ${tr('outstanding','còn lại')} <b>${dmN(S.outstanding)} ₫</b>` +
+    (S.overdue ? ` · <b style="color:var(--st-bad)">${S.overdue} ${tr('overdue','quá hạn')}</b>` : '') +
+    (S.foreign ? ` · <span style="color:var(--muted)">${S.foreign} ${tr('in foreign currency (not in VND totals)','ngoại tệ (không cộng vào tổng VNĐ)')}</span>` : '');
+  const ed = editId ? pays.find(p => p.id === editId) : null;
+  const t = DM.todayIso();
+  const rowsHtml = pays.length ? `<div class="pay-tbl"><table><thead><tr>
+      <th>#</th><th>${tr('Type','Loại')}</th><th>%</th><th>${tr('Amount','Số tiền')}</th><th>${tr('Planned','Dự kiến trả')}</th>
+      <th>${tr('Linked milestone','Gắn mốc')}</th><th>${tr('Paid on','Đã trả ngày')}</th><th>${tr('Paid amount','Số đã trả')}</th>${canW ? '<th></th>' : ''}</tr></thead><tbody>` +
+    pays.map(p => {
+      const due = !p.paid_date && p.planned_date && p.planned_date < t;
+      return `<tr class="${p.id === editId ? 'on' : ''}"><td>${p.installment_no}</td><td>${K[p.kind] || p.kind}${p.description ? `<small>${ovEsc(p.description)}</small>` : ''}</td>
+        <td>${p.percent == null ? '—' : dmN(p.percent, 2)}</td><td>${money(DM.payAmount(p, x.vnd), p.currency)}</td>
+        <td style="${due ? 'color:var(--st-bad);font-weight:700' : ''}">${dmD(p.planned_date)}${due ? ' ⚠' : ''}</td><td>${p.linked_milestone ? MS[p.linked_milestone] || p.linked_milestone : '—'}</td>
+        <td style="${p.paid_date ? 'color:var(--st-ok);font-weight:700' : ''}">${p.paid_date ? '✓ ' + dmD(p.paid_date) : '—'}</td><td>${money(p.paid_amount, p.currency)}</td>
+        ${canW ? `<td class="act"><button title="${tr('Edit','Sửa')}" onclick="showPayments(${i},'${p.id}')">✏️</button><button title="${tr('Delete','Xoá')}" data-del="${p.id}">🗑</button></td>` : ''}</tr>`;
+    }).join('') + '</tbody></table></div>'
+    : `<div class="dm-hint">${tr('No payment schedule yet for this machine.', 'Máy này chưa có lịch thanh toán.')}</div>`;
+  const opt = (o, v) => Object.entries(o).map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${l}</option>`).join('');
+  const nextNo = pays.reduce((m, p) => Math.max(m, p.installment_no), 0) + 1;
+  const f = ed || { installment_no: nextNo, kind: pays.length ? 'other' : 'deposit', currency: 'VND' };
+  const v = k => f[k] == null ? '' : ovEsc(f[k]);
+  const formHtml = canW ? `<form id="payForm" novalidate><h5 style="margin:14px 0 4px;font-size:13px">${ed ? tr('✏️ Edit installment ', '✏️ Sửa đợt ') + ed.installment_no : tr('➕ Add installment', '➕ Thêm đợt thanh toán')}</h5>
+    <div class="add-grid pay-grid">
+      <label>${tr('Installment no.','Đợt số')}<input id="pf_no" type="number" min="1" step="1" required value="${v('installment_no')}"></label>
+      <label>${tr('Type','Loại đợt')}<select id="pf_kind">${opt(K, f.kind)}</select></label>
+      <label>${tr('Percent of contract','% giá trị hợp đồng')}<input id="pf_pct" type="number" min="0" max="100" step="0.01" value="${v('percent')}"></label>
+      <label>${tr('Currency','Tiền tệ')}<select id="pf_cur">${opt({ VND:'VND', USD:'USD', EUR:'EUR' }, f.currency || 'VND')}</select></label>
+      <label class="full">${tr('Amount (leave empty = percent × contract value)','Số tiền (để trống = % × giá trị hợp đồng)')}<input id="pf_amt" type="number" min="0" step="1" value="${v('amount')}" placeholder=""></label>
+      <label>${tr('Planned payment date','Ngày dự kiến trả')}<input id="pf_plan" value="${v('planned_date')}"></label>
+      <label>${tr('Linked milestone','Gắn với mốc')}<select id="pf_ms"><option value="">—</option>${opt(MS, f.linked_milestone)}</select></label>
+      <label>${tr('Paid on','Ngày đã trả')}<input id="pf_paid" value="${v('paid_date')}"></label>
+      <label>${tr('Paid amount (empty = full amount)','Số đã trả (trống = đủ số tiền)')}<input id="pf_pamt" type="number" min="0" step="1" value="${v('paid_amount')}"></label>
+      <label class="full">${tr('Description','Mô tả')}<input id="pf_desc" maxlength="300" value="${v('description')}"></label>
+    </div>
+    <div id="payMsg" style="min-height:1.2em;font-size:13px;margin-bottom:8px"></div>
+    <div class="add-actions">${ed ? `<button type="button" class="nbtn2 ghost" onclick="showPayments(${i})">${tr('Cancel edit','Huỷ sửa')}</button>` : ''}
+      <button type="submit" class="nbtn2" id="paySave">${tr('💾 Save','💾 Lưu')}</button></div></form>` : '';
+  mBody.innerHTML = rowsHtml + formHtml +
+    `<div class="dt-actions"><button class="nbtn2 ghost" onclick="showDetail(${i})">${tr('← Machine details','← Chi tiết máy')}</button></div>`;
+  // xoá: bấm 2 lần (lần 1 hỏi lại ngay trên nút)
+  mBody.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if(!b.classList.contains('ask')){ b.classList.add('ask'); b.textContent = tr('Delete?', 'Xoá?'); setTimeout(() => { b.classList.remove('ask'); b.textContent = '🗑'; }, 3000); return; }
+    const { error } = await sb.from('payment_schedule').delete().eq('id', b.dataset.del);
+    if(error){ const m = document.getElementById('payMsg'); if(m){ m.style.color = 'var(--red)'; m.textContent = payErrText(error); } return; }
+    showPayments(i);
+  });
+  if(!canW) return;
+  const fp = {};
+  if(window.flatpickr) ['pf_plan', 'pf_paid'].forEach(id => { fp[id] = flatpickr(document.getElementById(id),
+    { dateFormat:'Y-m-d', altInput:true, altFormat:'d/m/Y', allowInput:false, disableMobile:true,
+      locale:(LANG === 'vi' && flatpickr.l10ns && flatpickr.l10ns.vn) ? 'vn' : 'default' }); });
+  const pct = document.getElementById('pf_pct'), amt = document.getElementById('pf_amt'), cur = document.getElementById('pf_cur');
+  const hint = () => { const a = DM.payAmount({ percent: pct.value === '' ? null : +pct.value, currency: cur.value }, x.vnd);
+    amt.placeholder = a == null ? '' : '≈ ' + dmN(a) + ' ₫'; };
+  pct.oninput = cur.onchange = hint; hint();
+  document.getElementById('payForm').onsubmit = async ev => {
+    ev.preventDefault();
+    const msg = document.getElementById('payMsg'), save = document.getElementById('paySave');
+    const num = id => { const s = document.getElementById(id).value.trim(); return s === '' ? null : +s; };
+    const val = id => document.getElementById(id).value.trim() || null;
+    const row = { machine_id: x._id, installment_no: num('pf_no'), kind: val('pf_kind'), percent: num('pf_pct'), currency: val('pf_cur'),
+      amount: num('pf_amt'), linked_milestone: val('pf_ms'), planned_date: val('pf_plan'), paid_date: val('pf_paid'),
+      paid_amount: num('pf_pamt'), description: val('pf_desc') };
+    const bad = !row.installment_no || row.installment_no < 1 ? tr('Enter an installment number (1, 2, 3…).', 'Nhập số thứ tự đợt (1, 2, 3…).')
+      : row.percent != null && (row.percent < 0 || row.percent > 100) ? tr('Percent must be between 0 and 100.', '% phải từ 0 đến 100.')
+      : row.percent == null && row.amount == null ? tr('Enter a percent or an amount.', 'Nhập % hoặc số tiền.')
+      : !row.planned_date && !row.linked_milestone ? tr('Enter a planned date or link the installment to a milestone.', 'Nhập ngày dự kiến trả hoặc gắn đợt với một mốc.')
+      : row.paid_amount != null && !row.paid_date ? tr('Enter the date it was paid.', 'Nhập ngày đã trả.') : '';
+    if(bad){ msg.style.color = 'var(--red)'; msg.textContent = bad; return; }
+    save.disabled = true; msg.style.color = 'var(--muted)'; msg.textContent = tr('Saving…', 'Đang lưu…');
+    try{
+      const sealed = await window.__seal('payment_schedule', row);          // mã hoá số tiền, mô tả
+      const q = ed ? sb.from('payment_schedule').update(sealed).eq('id', ed.id).select('id') : sb.from('payment_schedule').insert(sealed).select('id');
+      const { data, error } = await q;
+      if(error) throw error;
+      if(!data || !data.length) throw { code:'42501' };
+      showPayments(i);                        // tổng % > 100 sẽ hiện màu đỏ ở dòng tóm tắt
+    }catch(err){ save.disabled = false; msg.style.color = 'var(--red)'; msg.textContent = payErrText(err); }
+  };
 };
 
 /* ---- Đổi mật khẩu (người dùng tự đổi khi đã đăng nhập) ---- */
@@ -3473,7 +3599,9 @@ const SEC = {
                      blank:{ name:'', model:null, manufacturer:null, serial_number:null, capacity_value:null, capacity_unit:null,
                              contract_amount:null, locked_rate:null, notes:null, engineer:null, manager:null, asset_code:null } },
   suppliers:       { f:['name','contact','notes'], blank:{ contact:null, notes:null } },   // name -> id (cột name là unique)
-  production_lines:{ f:['name'], blank:{ name:'' } }
+  production_lines:{ f:['name'], blank:{ name:'' } },
+  payment_schedule:{ f:['description','amount','paid_amount'], blank:{ description:null, amount:null, paid_amount:null } },
+  site_readiness:  { f:['owner','note'], blank:{ owner:null, note:null } }
 };
 /* mã hoá 1 dòng trước khi ghi (chỉ khi dòng có trường nhạy cảm; chưa bật mã hoá thì giữ nguyên) */
 window.__seal = async (table, row) => {
