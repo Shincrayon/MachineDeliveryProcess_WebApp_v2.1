@@ -19,7 +19,7 @@ const DEF = [
   ['ten','s',1], ['sl','n',1], ['noilapdat','s',1], ['ncc','s',1], ['xuatxu','s',1], ['phutrach','s',1],
   ['vnd','n',1], ['usd','n',1], ['dathang','d',1], ['vekh','d',1], ['vedukienn','d',1], ['status','s',1], ['danhgia','s',1],
   ['company','s',0], ['daysleft','n',0], ['congsuat','s',0], ['model','s',0], ['serial','s',0], ['duyet','d',0],
-  ['ctu','n',0], ['tamungtt','d',0], ['ditaukh','n',0], ['ditautt','n',0], ['lanhkh','n',0], ['lanhtt','n',0],
+  ['ctu','n',0], ['tamungtt','d',0], ['tamung_days','n',0], ['ditaukh','n',0], ['ditautt','n',0], ['lanhkh','n',0], ['lanhtt','n',0],
   ['sonagyctm','n',0], ['workingday','s',0], ['xuatxuong','d',0], ['tauchay_tt','d',0], ['capcang_tt','d',0],
   ['venm_tt','d',0], ['giaitrinh','s',0]
 ];
@@ -28,13 +28,15 @@ const CTX = () => (window.__expCtx && window.__expCtx()) || { labels:{}, LBL:{},
 const TYPE = Object.fromEntries(DEF.map(([k,t])=>[k,t]));
 function label(k){
   const L = CTX().labels;
-  const extra = { status: tr('Status','Trạng thái'), company: tr('Company','Công ty'), daysleft: tr('Days to arrival','Số ngày còn lại') };
+  const extra = { status: tr('Status','Trạng thái'), company: tr('Company','Công ty'), daysleft: tr('Days to arrival','Số ngày còn lại'),
+                  tamung_days: tr('Advance-payment days','Số ngày tạm ứng') };
   return extra[k] || (L && L[k]) || k;
 }
 /* giá trị 1 ô: null = để trống; ngày giữ dạng ISO 'YYYY-MM-DD' để định dạng sau */
 function cell(x, k){
   const t = TYPE[k];
   if(k === 'status') return (x.status && CTX().LBL[x.status]) || null;
+  if(k === 'tamung_days') return calcAdvanceDays(x);
   if(k === 'company') return (window.DM && DM.companyCode(plain(x.noilapdat))) || null;
   if(k === 'danhgia'){ const v = plain(x.danhgia); return v ? CTX().dgT(v) : '?'; }   // thiếu ngày -> "?" như file Excel gốc
   if(k === 'xuatxu'){ const v = plain(x.xuatxu); return v ? CTX().ctT(v) : null; }
@@ -44,12 +46,37 @@ function cell(x, k){
 }
 const dmy = iso => iso.slice(8,10) + '/' + iso.slice(5,7) + '/' + iso.slice(0,4);
 
+/* Số ngày tạm ứng = Ngày tạm ứng TT (tamungtt) − Ngày đặt hàng (dathang), ngày lịch, số nguyên.
+   Chỉ tính lúc xuất, không sửa DATA. Ngày là chuỗi 'YYYY-MM-DD' -> đưa về 00:00 UTC rồi trừ (không lệch do múi giờ).
+   Thiếu 1 trong 2 ngày -> null (ô trống). Âm -> vẫn trả số âm + cảnh báo console 1 lần cho mỗi máy / cặp ngày. */
+const utcDay = iso => isoOk(iso) ? Date.UTC(+iso.slice(0,4), +iso.slice(5,7) - 1, +iso.slice(8,10)) : null;
+const warnedAdv = new Set();
+function calcAdvanceDays(row){
+  const a = utcDay(row && row.dathang), b = utcDay(row && row.tamungtt);
+  if(a == null || b == null || !isFinite(a) || !isFinite(b)) return null;
+  const d = Math.round((b - a) / 86400000);
+  if(d < 0){
+    const key = (row._id || plain(row.ten)) + '|' + row.dathang + '|' + row.tamungtt;
+    if(!warnedAdv.has(key)){ warnedAdv.add(key);
+      console.warn(`[Xuất dữ liệu] Số ngày tạm ứng âm (${d}) — "${plain(row.ten)}": ngày tạm ứng ${dmy(row.tamungtt)} trước ngày đặt hàng ${dmy(row.dathang)}. Kiểm tra lại dữ liệu.`); }
+  }
+  return d;
+}
+
 /* ---------- trạng thái lựa chọn ---------- */
 const defaults = () => DEF.map(([k,,on])=>({ k, on: !!on }));
-function normalize(list){                      // bỏ trường lạ, thêm trường mới (bỏ chọn) ở cuối
+/* lựa chọn / mẫu đã lưu từ bản cũ: bỏ trường lạ; trường mới (bỏ chọn) chèn ngay sau trường đứng trước nó trong DEF,
+   vd "Số ngày tạm ứng" vào sau "Ngày tạm ứng TT" theo đúng thứ tự của mẫu đó */
+function normalize(list){
   const seen = new Set(), out = [];
   (Array.isArray(list) ? list : []).forEach(f=>{ if(f && TYPE[f.k] && !seen.has(f.k)){ seen.add(f.k); out.push({ k:f.k, on:!!f.on }); } });
-  DEF.forEach(([k])=>{ if(!seen.has(k)) out.push({ k, on:false }); });
+  DEF.forEach(([k], i)=>{
+    if(seen.has(k)) return;
+    let at = out.length;
+    for(let j = i - 1; j >= 0; j--){ const p = out.findIndex(f=>f.k === DEF[j][0]); if(p >= 0){ at = p + 1; break; } }
+    if(i === 0) at = 0;
+    out.splice(at, 0, { k, on:false }); seen.add(k);
+  });
   return out;
 }
 let S = null, Q = '', VIEW = null, dragK = null;
@@ -252,5 +279,5 @@ window.expOpen = () => {
   bg.classList.add('show');
 };
 /* cho test: các hàm chuyển đổi không phụ thuộc giao diện */
-window.__exp = { cell, toTSV, label, defaults, normalize };
+window.__exp = { cell, toTSV, label, defaults, normalize, calcAdvanceDays };
 })();
