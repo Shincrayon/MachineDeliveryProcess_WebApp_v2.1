@@ -17,6 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
 <script src="metrics.js"></script>
 <script src="export.js"></script>
+<script src="catalog_sync.js"></script>
 <style>
 :root{color-scheme:dark;
   --bg:#0b1220; --panel:#121c31; --panel2:#17233d; --border:rgba(148,163,184,.14);
@@ -160,6 +161,23 @@ tbody tr:hover{background:rgba(96,165,250,.07)}
 .qu-ld.qu-lock{opacity:.45;pointer-events:none}
 .qu-lockmsg{grid-column:1/-1;font-size:12px;color:var(--st-over);margin:-2px 0 4px}
 .qu-lockmsg[hidden]{display:none}
+/* 🔗 Tiến độ ↔ Danh mục (catalog_sync.js) */
+.cs-open{margin-left:0!important;border-color:var(--st-inst)!important;color:var(--st-inst)!important}
+.cs-menu{display:grid;gap:10px}
+.cs-menu button{display:flex;justify-content:space-between;align-items:center;text-align:left;padding:12px 16px}
+.cs-menu small,.cs-tbl small{display:block;color:var(--muted);font-weight:400;font-size:11.5px}
+.cs-menu button small{display:inline}
+.cs-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.cs-tbl select{max-width:100%;padding:5px 8px;border-radius:8px;background:var(--panel);color:var(--txt);border:1px solid var(--border);font-size:12.5px}
+.cs-tbl td.n{white-space:nowrap;font-size:12px;color:var(--muted)}
+.cs-act{white-space:nowrap} .cs-act .nbtn2{padding:4px 10px;font-size:12px}
+.cs-sum{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;font-size:13.5px}
+.cs-why{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.cs-link{cursor:pointer;color:var(--sky);text-decoration:underline dotted}
+.cs-info{font-size:13.5px;line-height:1.7}
+.tag-need{background:color-mix(in srgb,var(--st-inst) 16%,transparent);color:var(--st-inst)}
+.m-need{display:flex;align-items:center;gap:8px;font-weight:400}
+.m-need input{width:auto}
 .in-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 @media(max-width:900px){.in-wrap{grid-template-columns:1fr}}
 .in-tbl{overflow-x:auto}
@@ -862,6 +880,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <button type="button" class="exp-open" id="btnExp" onclick="expOpen()">📤 Export data</button>
       <button type="button" class="exp-open ac-open" id="btnAc" hidden onclick="acOpen()">✅ Confirm arrivals</button>
       <button type="button" class="exp-open ac-open" id="btnMc" hidden onclick="mcOpen()">🏷 Assign machine codes</button>
+      <button type="button" class="exp-open cs-open" id="btnCs" hidden onclick="csOpen()">🔗 Catalog</button>
     </div>
     <div class="qu-bar" id="quBar" hidden></div>
     <div class="tablewrap">
@@ -938,6 +957,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 <script type="text/plain" id="mainSrc">
 let DATA = window.__DATA || [];
 let DATA_TS = window.__DATA_TS || new Date().toISOString();
+window.__trackRows = () => DATA;          // Danh mục MMTB tra mã Tiến độ theo tracking_machine_id (catalog_sync.js)
 
 
 /* ===== trạng thái ngày về NM: CHỈ một nơi tính — DM.arrivalStatus (metrics.js) =====
@@ -2605,6 +2625,7 @@ window.showDetail = i => {
         ? `<b style="color:${ins.acceptDelay > 0 ? 'var(--red)' : 'var(--green)'}">${ins.acceptDelay > 0 ? '+' : ''}${Dy(ins.acceptDelay)}</b>`
         : ins.lateAccept ? `<b style="color:var(--red)">+${Dy(ins.lateDays)}</b> <small>${tr('(not yet commissioned)','(chưa nghiệm thu)')}</small>` : '—','hl')])}
     ${x.ghichu_ld ? `<div class="dt-sec"><h5>${tr('Installation note','Ghi chú lắp đặt')}</h5><div class="m-gt" style="white-space:pre-wrap">${x.ghichu_ld}</div></div>` : ''}
+    ${csBlock(x)}
     <div class="dt-sec"><h5>${tr(`Delay note`,`Giải trình`)}</h5>
       ${x.giaitrinh
         ? `<div class="m-gt">⚠️ ${x.giaitrinh}</div>`
@@ -2761,9 +2782,36 @@ async function saveMachine(m, editId){
     if(!data || !data.length) throw {code:'conflict'};
   } else {
     row.sort_order = DATA.reduce((a,x)=>Math.max(a, isFinite(x._order)?x._order:0), 0) + 1;
-    const { error } = await sb.from('machines').insert(row);
+    const { data, error } = await sb.from('machines').insert(row).select('id');
     if(error) throw error;
+    editId = data && data[0] && data[0].id;
   }
+  if(editId) csAfter([editId]);
+}
+/* 🔗 khối "Danh mục MMTB" trong popup chi tiết: đã chuyển (bấm mở hồ sơ) / chưa chuyển + lý do */
+function csBlock(x){
+  const li = window.CS && CS.linkInfo(x);
+  if(!li || !li.ready) return '';
+  const body = li.cat
+    ? `${tr('Copied to the Catalog','Đã chuyển Danh mục')}: <a class="cs-link" onclick="window.__goCatalog('${li.cat.id}')"><b>${escH(li.cat.machine_code)}</b> ↗</a>`
+      + (li.pending ? ` <span class="badge sm b-wait_install">${tr('waiting to sync','chờ đồng bộ')}</span>` : '')
+      + (li.conflicts ? ` <span class="badge sm b-overdue">⚖️ ${li.conflicts} ${tr('difference(s)','trường lệch')}</span>` : '')
+    : li.pending ? `${tr('Not copied yet','Chưa chuyển')} — <span class="badge sm b-wait_install">${tr('waiting to sync (create)','chờ đồng bộ (tạo mới)')}</span>`
+    : `${tr('Not copied','Chưa chuyển')} — <span style="color:var(--muted)">${escH(li.reason)}</span>`;
+  return `<div class="dt-sec"><h5>${tr('Machinery catalog','Danh mục MMTB')}</h5><div class="cs-info">🔗 ${body}</div></div>`;
+}
+/* 🔗 sau khi lưu bên Tiến độ: đọc lại dòng vừa lưu rồi đồng bộ sang Danh mục (catalog_sync.js).
+   Lưu Tiến độ trước, đồng bộ sau — lỗi đồng bộ chỉ báo, máy nằm lại trong hàng chờ (🔗 Danh mục > Đồng bộ lại). */
+async function csAfter(ids){
+  if(!window.CS || !window.__sb) return;
+  try{
+    const rows = [];
+    for(const id of ids){
+      const { data } = await window.__sb.from('machines').select('*').eq('id', id).is('deleted_at', null).maybeSingle();
+      if(data) rows.push(window.__cleanMachine(await window.__open(data)));
+    }
+    if(rows.length) await CS.afterSave(rows);
+  }catch(e){ console.warn('[Danh mục] chưa đồng bộ được', e); }
 }
 
 /* ---- ⚡ Cập nhật nhanh: ngày thực tế của 1 máy hoặc nhiều máy cùng lô / container ----
@@ -2867,6 +2915,7 @@ async function quSaveOne(x,ch){
   const o = window.__cleanMachine(await window.__open(data[0]));
   if(o.ten==='' && x.ten) o.ten = x.ten;
   Object.assign(x, o); quStatus(x);
+  if(window.CS) CS.afterSave([x]);                     // 🔗 Danh mục: chạy sau, không chờ, lỗi không ảnh hưởng lần lưu
   return (!had && x.ma_may) ? x.ma_may : '';          // mã vừa được trigger cấp (lưu ngày về NM TT lần đầu)
 }
 const quCodeMsg = c => c ? tr(` · Code assigned: <b>${c}</b>`,` · Đã cấp mã <b>${c}</b>`) : '';
@@ -3138,6 +3187,12 @@ async function acRun(plan){
   if(!bad) quToast(tr(`✅ Confirmed ${ok} machine(s)`,`✅ Đã xác nhận ${ok} máy`));
 }
 if(window.__role === 'admin') quEl('btnAc').hidden = false;
+/* 🔗 Tiến độ ↔ Danh mục (admin): số máy chờ đồng bộ hiện trên nút */
+if(window.__role === 'admin' && window.CS){
+  quEl('btnCs').hidden = false;
+  const n = CS.pendingCount(); if(n) quEl('btnCs').textContent += ` · ${n}`;
+  quEl('btnCs').title = n ? tr(`${n} machine(s) waiting to sync to the Catalog`,`${n} máy chờ đồng bộ sang Danh mục`) : tr('Pairing, sync and differences with the Machinery catalog','Ghép cặp, đồng bộ và lệch dữ liệu với Danh mục MMTB');
+}
 /* ---- 🏷 Cấp mã máy cho máy ĐÃ VỀ từ trước (chỉ admin; migrations/20261031_05 + 07) ----
    Máy về sau khi chạy 07: trigger tự cấp lúc nhập Ngày máy về NM TT. Máy chưa về: không có mã.
    Phải làm trong trình duyệt: sắp theo công ty → năm về → ngày về → tên, và tên máy đã mã hoá.
@@ -3349,6 +3404,13 @@ async function importMachines(data, known){
   const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1, id:m.sysid||null}))));     // không gửi Mã máy: chỉ hệ thống cấp
   const { data: res, error } = await sb.rpc('import_machines_by_id', { rows });
   if(error) throw error;
+  // 🔗 Danh mục: đọc lại toàn bộ máy vừa nạp rồi đồng bộ (chỉ máy có thay đổi mới được ghi)
+  if(window.CS) try{
+    btnPick.textContent = tr('⏳ Syncing to the Catalog…','⏳ Đang chuyển sang Danh mục…');
+    const { data: all } = await sb.from('machines').select('*').is('deleted_at', null);
+    const list = await Promise.all((all || []).map(async r => window.__cleanMachine(await window.__open(r))));
+    await CS.afterSave(list.filter(x => x.ma_may));
+  }catch(e){ console.warn('[Danh mục] chưa đồng bộ được', e); }
   return res;
 }
 function confirmBox(o){
@@ -3709,7 +3771,12 @@ function index(){
   MM.machines.filter(x=>!x.parent_machine_id || !byId.has(x.parent_machine_id))
     .sort((a,b)=> String(a.company_code).localeCompare(b.company_code) || so(a,b)).forEach(x=>walk(x, 0));
   MM.machines.forEach(x=>{ if(!treeIdx.has(x.id)) treeIdx.set(x.id, [i++, 0]); });   // dữ liệu lỗi cha-con vòng tròn: vẫn hiện
+  // mã Tiến độ (ma_may) của máy đã liên kết — tra qua tracking_machine_id, không lưu lại bên Danh mục (migrations/20261101_10)
+  const trk = new Map((window.__trackRows ? window.__trackRows() : []).map(t=>[t._id, t]));
+  MM.machines.forEach(x=>{ const t = x.tracking_machine_id && trk.get(x.tracking_machine_id); x.tracking_code = t ? (t.ma_may || '') : null; });
 }
+const hasLink = () => MM.machines.length ? 'needs_info' in MM.machines[0] : false;
+const NEEDS = () => `<span class="tag-temp tag-need" title="${tr('Created from delivery tracking — add area, line, role, materials and a standard name','Tạo từ Tiến độ máy về — cần bổ sung khu vực, chuyền, vai trò, vật liệu, tên chuẩn')}">${tr('needs info','cần bổ sung')}</span>`;
 index();
 const coName = c => { const x = MM.companies.find(o=>o.code===c); return x ? x.name : c; };
 
@@ -3903,7 +3970,7 @@ function drawList(){
         <select id="mmFArea"></select><select id="mmFLine" style="max-width:240px"></select>
         <select id="mmFGrp"><option value="">${tr('Group: All','Nhóm: Tất cả')}</option>${opts(groups.map(g=>[g,g]), F.grp)}</select>
         <select id="mmFSt"><option value="">${tr('Status: All','Trạng thái: Tất cả')}</option>
-          <option value="__prog">${tr('Being invested','Đang đầu tư')}</option>${opts(LC.map(s=>[s, LCL[s]]), F.st)}</select>
+          <option value="__prog">${tr('Being invested','Đang đầu tư')}</option>${hasLink() ? `<option value="__info">⚑ ${tr('Needs info','Cần bổ sung')}</option>` : ''}${opts(LC.map(s=>[s, LCL[s]]), F.st)}</select>
         <button class="pbtn" id="mmFReset" title="${tr('Clear filters','Xoá bộ lọc')}">✕</button>
       </div>
       <div class="tablewrap"><table><thead><tr>${COLS.map(([k,l])=>`<th data-ms="${k}">${l}</th>`).join('')}</tr></thead><tbody id="mmTb"></tbody></table></div>
@@ -3926,8 +3993,8 @@ function filtered(){
   return MM.machines.filter(x=>
     (!F.co || x.company_code===F.co) && (!F.area || x.area_code===F.area) && (!F.line || x.line_id===F.line) &&
     (!F.grp || x.group_name===F.grp) &&
-    (!F.st || (F.st==='__prog' ? LC.indexOf(x.lifecycle_status) < LC.indexOf('in_operation') : x.lifecycle_status===F.st)) &&
-    (!F.q || [x.machine_code, x.legacy_code, x.name, x.model, x.serial_number, x.supplier_name, x.manufacturer, x.line_name, x.notes]
+    (!F.st || (F.st==='__prog' ? LC.indexOf(x.lifecycle_status) < LC.indexOf('in_operation') : F.st==='__info' ? !!x.needs_info : x.lifecycle_status===F.st)) &&
+    (!F.q || [x.machine_code, x.legacy_code, x.tracking_code, x.name, x.model, x.serial_number, x.supplier_name, x.manufacturer, x.line_name, x.notes]
               .some(v=>v && String(v).toLowerCase().includes(F.q))));
 }
 function renderList(){
@@ -3944,7 +4011,7 @@ function renderList(){
     const dep = sortK==='__tree' ? treeIdx.get(x.id)[1] : 0;
     return `<tr class="slide-in${dep?' child':''}" style="--i:${i};cursor:pointer" onclick="mmShow('${x.id}')">
       <td style="white-space:nowrap;color:var(--muted);font-size:12px">${E(x.machine_code)}</td>
-      <td class="name" style="padding-left:${10 + dep*18}px">${dep?'<span class="ind">↳</span>':''}${E(x.name)}${x.model?`<small>${E(x.model)}</small>`:''}</td>
+      <td class="name" style="padding-left:${10 + dep*18}px">${dep?'<span class="ind">↳</span>':''}${E(x.name)}${x.needs_info ? NEEDS() : ''}${x.model || x.tracking_code ? `<small>${E(x.model || '')}${x.model && x.tracking_code ? ' · ' : ''}${x.tracking_code ? '🔗 ' + E(x.tracking_code) : ''}</small>` : ''}</td>
       <td>${E(x.company_code)}</td><td>${T(x.area_name)}</td><td>${T(x.line_name)}</td><td>${T(x.group_name)}</td>
       <td>${T(x.supplier_name)}</td><td>${T(x.manufacturer)}</td><td>${N(x.quantity || 1)}</td>
       <td class="money">${money(x)}</td><td>${badge(x.lifecycle_status)}</td></tr>`; }).join('')
@@ -3971,10 +4038,14 @@ window.mmShow = id => {
   const cap = x.capacity_value != null ? N(x.capacity_value, 3) + ' ' + E(x.capacity_unit || '') : '—';
   const ch = (kids.get(x.id) || []);
   mTitle.textContent = x.name;
-  mSub.innerHTML = `${E(x.machine_code)} · ${E(x.company_code)}${x.area_name?' · '+E(x.area_name):''} · ${badge(x.lifecycle_status)} · ${ROLEL[x.role] || ''}`;
+  mSub.innerHTML = `${E(x.machine_code)} · ${E(x.company_code)}${x.area_name?' · '+E(x.area_name):''} · ${badge(x.lifecycle_status)} · ${ROLEL[x.role] || ''}${x.needs_info ? ' ' + NEEDS() : ''}`;
+  const trk = x.tracking_machine_id
+    ? `<a class="cs-link" onclick="window.__goTracking('${x.tracking_machine_id}')">${E(x.tracking_code || tr('(no code yet)','(chưa có mã)'))} ↗</a>`
+    : `<span style="color:var(--muted)">${tr('not linked','chưa liên kết')}</span>`;
   mBody.innerHTML = `<div class="dt-wrap">
     ${sec(tr('General','Thông tin chung'), [
       it(tr('Machine name','Tên máy'), T(x.name), 'full'),
+      ...(hasLink() ? [it(tr('Delivery tracking code','Mã Tiến độ'), trk, 'full')] : []),
       it(tr('Code','Mã máy'), T(x.machine_code) + (x.code_temp ? `<span class="tag-temp">${tr('temporary','tạm')}</span>` : '') +
         (x.legacy_code ? `<div class="mm-sub">${tr('old code','mã cũ')}: ${E(x.legacy_code)}</div>` : '')), it('Model', T(x.model)),
       it(tr('Brand','Thương hiệu'), T(x.manufacturer)), it(tr('Serial number','Số serial'), T(x.serial_number)),
@@ -4048,6 +4119,7 @@ function buildForm(){
       ${L(tr('Engineer in charge','Kỹ sư phụ trách'), `<input id="m_eng" type="text">`)}
       ${L(tr('Manager','Người quản lý'), `<input id="m_mgr" type="text">`)}
       ${L(tr('Notes','Ghi chú'), `<textarea id="m_notes" rows="2"></textarea>`, 1)}
+      ${hasLink() ? L(tr('Needs info','Cần bổ sung'), `<span class="m-need"><input id="m_needs" type="checkbox"> ${tr('Still missing area / line / role / materials / standard name','Còn thiếu khu vực / chuyền / vai trò / vật liệu / tên chuẩn')}</span>`, 1) : ''}
     </div>
     <div class="add-actions"><button class="nbtn2 ghost" onclick="mmClose()">${tr('Cancel','Hủy')}</button><button class="nbtn2" id="mmSave"></button></div>
   </div>`;
@@ -4119,6 +4191,7 @@ function openForm(x){
   set('m_cur', v.contract_currency || 'VND'); set('m_amt', v.contract_amount); set('m_rate', v.locked_rate);
   set('m_ctm', v.manufacturing_days); set('m_st', v.lifecycle_status || 'planned'); set('m_eng', v.engineer); set('m_mgr', v.manager); set('m_notes', v.notes);
   if(v.role && v.role!=='sub_unit') m_role.value = v.role;
+  if(window.m_needs) m_needs.checked = !!v.needs_info;
   document.querySelectorAll('.m_mat').forEach(c=>c.checked = (v.materials || []).includes(c.value));
   setDate('m_appr', v.approved_date); setDate('m_comm', v.commissioned_date);
   const ms = (x && msBy.get(x.id)) || {};
@@ -4137,6 +4210,7 @@ function toast(msg){
 const errText = e => (e && e.code==='23505') ? tr('This machine code already exists. Choose another code.','Mã máy này đã có. Hãy chọn mã khác.')
   : (e && e.code==='23514') ? tr('Some values are not allowed (check quantity, materials and parent machine).','Có giá trị không hợp lệ (kiểm tra số lượng, vật liệu, máy cha).')
   : dbErrText(e);
+window.__mmReload = () => reload();      // catalog_sync.js: vẽ lại Danh mục sau khi đồng bộ
 async function reload(){
   const fresh = window.__loadMmtb ? await window.__loadMmtb() : null;
   if(fresh && !fresh.err){ MM = fresh; window.__MMTB = MM; }
@@ -4161,6 +4235,7 @@ async function save(){
     manufacturing_days: num('m_ctm') == null ? null : Math.round(num('m_ctm')),
     group_name: val('m_group') || null, equipment_type: val('m_type') || null, origin: val('m_origin') || null,
     engineer: val('m_eng') || null, manager: val('m_mgr') || null, notes: val('m_notes') || null };
+  if(window.m_needs) row.needs_info = m_needs.checked;      // cột của migration 10: chỉ gửi khi form có ô này
   if(MM.hasGroups){   // có cột code_temp (07_library.sql): mã tự cấp = tạm; admin gõ mã khác = mã kế toán
     const cur = editId ? byId.get(editId) : null;
     if(!cur) row.code_temp = !m_code.dataset.touched;
@@ -4532,6 +4607,11 @@ function setMod(m){
   showPage(last[m]);
 }
 document.querySelectorAll('.mod').forEach(b=>b.onclick = ()=>setMod(b.dataset.m));
+/* mở máy ở phân hệ kia (liên kết Tiến độ ↔ Danh mục) */
+window.__goCatalog = id => { mBg.classList.remove('show'); setMod('mmtb'); showPage('c2'); setTimeout(()=>window.mmShow(id), 50); };
+window.__goTracking = id => { mBg.classList.remove('show'); setMod('delivery'); showPage('p3');
+  const rows = window.__trackRows ? window.__trackRows() : [], i = rows.findIndex(t=>t._id===id);
+  if(i >= 0) setTimeout(()=>showDetail(i), 50); };
 setMod(document.body.dataset.mod==='delivery' ? 'delivery' : 'mmtb');
 })();
 </script>
@@ -4594,6 +4674,7 @@ const STATIC_VI = new Map([
   ['Search by machine code, name, supplier...','Tìm theo mã máy, tên máy, nhà cung cấp...'],
   ['Machine code','Mã máy'],
   ['🏷 Assign machine codes','🏷 Cấp mã máy'],
+  ['🔗 Catalog','🔗 Danh mục'],
   ['Assigned automatically on save','Tự cấp khi lưu'],
   ['All','Tất cả'],
   ['✅ Arrived','✅ Đã về'],
