@@ -77,6 +77,10 @@
     if (m[0].actual) return 'manufacturing';
     return 'planned';
   };
+  /* giai đoạn để hiển thị (phễu, bộ lọc trạng thái): như lifecycle, nhưng máy quá ngày dự kiến mà chưa xác nhận
+     về là 'overdue' — không để máy quá hạn 600 ngày nằm ở "đang chế tạo" / "đang vận chuyển" */
+  DM.STAGES = ['planned', 'manufacturing', 'shipping', 'overdue', 'arrived'];
+  DM.stage = x => DM.arrivalStatus(x).status === 'overdue' ? 'overdue' : DM.lifecycle(x);
 
   /* ---------- trễ ----------
      Mốc chưa xong có ngày kế hoạch: trễ = (dự kiến, hoặc hôm nay nếu chưa có dự kiến) − kế hoạch.
@@ -104,15 +108,14 @@
   };
 
   /* ---------- bộ lọc chung ----------
-     f = { co, sup, st, m, y }: mã công ty, NCC, trạng thái (lifecycle, 'delayed' hoặc 'overdue'), tháng '01'..'12', năm 'YYYY'.
+     f = { co, sup, st, m, y }: mã công ty, NCC, trạng thái (giai đoạn DM.stage hoặc 'delayed'), tháng '01'..'12', năm 'YYYY'.
      Tháng/năm lọc theo ngày về NM (vedukienn). */
   DM.FILTER_KEYS = ['co', 'sup', 'st', 'm', 'y'];
   DM.filter = (rows, f) => rows.filter(x => {
     const d = iso(x.vedukienn);
     if (f.co && DM.companyCode(x.noilapdat) !== f.co) return false;
     if (f.sup && (x.ncc || '') !== f.sup) return false;
-    if (f.st === 'delayed' ? !DM.delay(x) : f.st === 'overdue' ? DM.arrivalStatus(x).status !== 'overdue'
-        : f.st && DM.lifecycle(x) !== f.st) return false;
+    if (f.st === 'delayed' ? !DM.delay(x) : f.st && DM.stage(x) !== f.st) return false;
     if ((f.m || f.y) && !d) return false;
     if (f.y && d.slice(0, 4) !== f.y) return false;
     if (f.m && d.slice(5, 7) !== f.m) return false;
@@ -152,8 +155,10 @@
     const done = rows.map(x => ({ x, m: ms(x, 'arrived_site') }))
                      .filter(o => o.m.actual && o.m.planned && (!from || o.m.actual >= from));
     const onTime = done.filter(o => o.m.actual <= o.m.planned);
-    // 3. trễ: máy có mốc chưa xong đang trễ
+    // 3. trễ: máy có mốc chưa xong đang trễ (gồm máy quá hạn chưa xác nhận). Trung bình ngày trễ KHÔNG tính máy quá hạn
+    //    chưa xác nhận — máy cũ từ nhiều năm trước sẽ kéo số trung bình lên hàng trăm ngày; đếm riêng ở delayed.unconfirmed
     const late = rows.map(x => ({ x, d: DM.delay(x) })).filter(o => o.d);
+    const lateFc = late.filter(o => !o.d.unconfirmed);
     // 4. về trong 30 ngày: dự kiến arrived_site trong [hôm nay, hôm nay + 30]
     const to30 = DM.addDays(t, 30);
     const soon = rows.filter(x => { const m = ms(x, 'arrived_site'); return m.forecast && m.forecast >= t && m.forecast <= to30; });
@@ -161,11 +166,12 @@
     const unconf = rows.filter(x => DM.arrivalStatus(x).status === 'overdue');
 
     return {
-      pipeline:  { rows: pipe, count: pipe.length, vnd: pipe.reduce((s, x) => s + (+x.vnd || 0), 0) },
+      pipeline:  { rows: pipe, count: pipe.length, vnd: pipe.reduce((s, x) => s + (+x.vnd || 0), 0),
+                   overdue: pipe.filter(x => DM.arrivalStatus(x).status === 'overdue').length },
       ontime:    { rows: done.map(o => o.x), num: onTime.length, den: done.length,
                    rate: done.length ? onTime.length / done.length : null, window: win },
-      delayed:   { rows: late.map(o => o.x), count: late.length,
-                   avgDays: late.length ? late.reduce((s, o) => s + o.d.days, 0) / late.length : null },
+      delayed:   { rows: late.map(o => o.x), count: late.length, unconfirmed: late.length - lateFc.length,
+                   avgDays: lateFc.length ? lateFc.reduce((s, o) => s + o.d.days, 0) / lateFc.length : null },
       arriving:  { rows: soon, count: soon.length },
       unconfirmed: { rows: unconf, count: unconf.length },
       commissioning: null   // bảng machines chưa có dữ liệu nghiệm thu
@@ -208,12 +214,13 @@
     { key: 'planned',       states: ['planned'] },
     { key: 'manufacturing', states: ['manufacturing'] },
     { key: 'shipping',      states: ['shipping'] },
+    { key: 'overdue',       states: ['overdue'] },     // quá ngày dự kiến, chưa xác nhận về
     { key: 'arrived',       states: ['arrived'] },
     { key: 'installing',    states: [], available: false },
     { key: 'in_operation',  states: [], available: false }   // nghiệm thu trong 12 tháng gần nhất
   ];
   DM.funnel = rows => DM.FUNNEL.map(st => {
-    const r = rows.filter(x => st.states.includes(DM.lifecycle(x)));
+    const r = rows.filter(x => st.states.includes(DM.stage(x)));
     return { key: st.key, available: st.available !== false, rows: r, count: r.length,
              vnd: r.reduce((s, x) => s + (+x.vnd || 0), 0) };
   });
