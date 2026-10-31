@@ -21,7 +21,7 @@ const DEF = [
   ['company','s',0], ['daysleft','n',0], ['congsuat','s',0], ['model','s',0], ['serial','s',0], ['duyet','d',0],
   ['ctu','n',0], ['tamungtt','d',0], ['tamung_days','n',0], ['ditaukh','n',0], ['ditautt','n',0], ['lanhkh','n',0], ['lanhtt','n',0],
   ['sonagyctm','n',0], ['workingday','s',0], ['xuatxuong','d',0], ['tauchay_tt','d',0], ['capcang_tt','d',0],
-  ['venm_tt','d',0], ['giaitrinh','s',0]
+  ['venm_tt','d',0], ['giaitrinh','s',0], ['sysid','s',0]     // ID hệ thống (uuid): khoá khớp dòng khi nạp Excel
 ];
 /* nhãn / bảng dịch giá trị do index.html (mainSrc) đưa ra qua window.__expCtx() */
 const CTX = () => (window.__expCtx && window.__expCtx()) || { labels:{}, LBL:{}, dgT:v=>v, ctT:v=>v };
@@ -38,6 +38,7 @@ function cell(x, k){
   if(k === 'status') return (x.status && x.status !== 'unknown' && CTX().LBL[x.status]) || null;   // trạng thái mới: DM.arrivalStatus (index.html)
   if(k === 'arrival_kind') return x.venm_tt ? tr('Actual','Thực tế') : x.vedukienn ? tr('Expected','Dự kiến') : null;
   if(k === 'tamung_days') return calcAdvanceDays(x);
+  if(k === 'sysid') return x._id || null;
   if(k === 'company') return (window.DM && DM.companyCode(plain(x.noilapdat))) || null;
   if(k === 'danhgia'){ const v = plain(x.danhgia); return v ? CTX().dgT(v) : '?'; }   // thiếu ngày -> "?" như file Excel gốc
   if(k === 'xuatxu'){ const v = plain(x.xuatxu); return v ? CTX().ctT(v) : null; }

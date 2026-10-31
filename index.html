@@ -158,6 +158,7 @@ tbody tr:hover{background:rgba(96,165,250,.07)}
 #tb td.mm-code{z-index:1;font-weight:700;font-size:12px;color:var(--sky);box-shadow:inset -1px 0 0 var(--border)}
 th.mm-code-h{z-index:3}
 #tb td.mm-code .muted{font-weight:400;color:var(--muted)}
+#tb td.mm-code .mc-lost{color:var(--st-over)}
 .mc-tbl{max-height:52vh} .mc-tbl table{min-width:760px} .mc-tbl td.m{white-space:nowrap}
 .mc-tbl tr.mc-note td.mc-n{color:var(--st-over)} .mc-tbl td.mc-n{font-size:11.5px}
 .mc-ok{margin-right:auto;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
@@ -729,9 +730,9 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
   </div>
   <button class="upd-btn" id="btnUpd" title="Refresh — reload the latest data">🔄</button>
   <button class="upd-btn mod-mmtb" id="btnAddM" hidden style="border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.12);color:var(--blue)" title="Add a machine to the catalog">➕ Add</button>
-  <button class="upd-btn mod-delivery" id="btnPick" title="Import an Excel file exported from the app: rows are matched by the machine code column (empty code = new machine)">📂 <span class="btn-t">Import</span></button>
+  <button class="upd-btn mod-delivery" id="btnPick" title="Import an Excel file exported from the app: rows are matched by the System ID column (empty = new machine); the machine code column is read-only">📂 <span class="btn-t">Import</span></button>
   <button class="upd-btn mod-delivery" id="btnAdd" style="border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.12);color:var(--blue)" title="Add a new machine">➕ Add</button>
-  <button class="upd-btn mod-delivery" id="btnExport" hidden title="Download the full list as an Excel file; first column (machine code) is the key when you import it back — do not change it">⬇️ Excel</button>
+  <button class="upd-btn mod-delivery" id="btnExport" hidden title="Download the full list as an Excel file; the last column (System ID) is the key when you import it back — do not change it">⬇️ Excel</button>
   <button class="upd-btn mod-delivery" id="btnTrash" hidden title="Deleted machines — restore or delete permanently">🗑</button>
   <button class="upd-btn" id="btnPw" hidden title="Change password">🔑</button>
   <button class="upd-btn" id="btnLogout" hidden title="Sign out">⎋</button>
@@ -975,7 +976,8 @@ function rowsToData(rows){
     tauchay_tt: 'Ngày tàu chạy TT' in r ? iso(r['Ngày tàu chạy TT']) : undefined,
     capcang_tt: 'Ngày cập cảng TT' in r ? iso(r['Ngày cập cảng TT']) : undefined,
     venm_tt: 'Ngày máy về NM TT' in r ? iso(r['Ngày máy về NM TT']) : undefined,
-    ma_may: 'Mã máy' in r ? String(r['Mã máy']||'').trim().toUpperCase() : undefined
+    ma_may: 'Mã máy' in r ? String(r['Mã máy']||'').trim().toUpperCase() : undefined,
+    sysid: 'ID hệ thống' in r ? String(r['ID hệ thống']||'').trim().toLowerCase() : undefined
   }));
 }
 
@@ -1085,7 +1087,8 @@ function readAll(wb){
       tauchay_tt: H['Ngày tàu chạy TT']!=null ? serialToISO(toSerial(gv(row,'Ngày tàu chạy TT'))) : undefined,
       capcang_tt: H['Ngày cập cảng TT']!=null ? serialToISO(toSerial(gv(row,'Ngày cập cảng TT'))) : undefined,
       venm_tt: H['Ngày máy về NM TT']!=null ? serialToISO(toSerial(gv(row,'Ngày máy về NM TT'))) : undefined,
-      ma_may: H['Mã máy']!=null ? String(gv(row,'Mã máy')||'').trim().toUpperCase() : undefined
+      ma_may: H['Mã máy']!=null ? String(gv(row,'Mã máy')||'').trim().toUpperCase() : undefined,
+      sysid: H['ID hệ thống']!=null ? String(gv(row,'ID hệ thống')||'').trim().toLowerCase() : undefined
     });
   }
   return out;
@@ -1126,31 +1129,39 @@ function sparkDots(c){
   return s;
 }
 
-/* ===== Nạp Excel: khớp từng dòng theo Mã máy (migrations/20261031_05_machine_code.sql, import_machines) =====
-   Có mã -> cập nhật đúng máy đó · không có mã -> máy mới (hỏi xác nhận) · mã không có trong hệ thống -> dừng, không ghi gì ·
-   máy không có trong file -> giữ nguyên. File chưa có cột Mã máy (file gốc) khi app đã có dữ liệu -> chặn (tránh nhân đôi). */
+/* ===== Nạp Excel: khớp từng dòng theo ID hệ thống (migrations/20261031_07_machine_code_on_arrival.sql, import_machines_by_id) =====
+   Có ID -> cập nhật đúng máy đó · không có ID -> máy mới (hỏi xác nhận) · ID không có trong hệ thống -> dừng, không ghi gì ·
+   máy không có trong file -> giữ nguyên. Cột Mã máy chỉ để đọc: sửa trong file thì bỏ qua và cảnh báo.
+   File chưa có cột ID hệ thống (file gốc / file xuất trước bản này) khi app đã có dữ liệu -> chặn (tránh nhân đôi). */
 async function applyBuffer(buf){
   const wb = XLSX.read(buf);
   const data = readAll(wb);
   if(!data.length) throw new Error(tr('no data rows found — the file needs a "📝Cập nhật" sheet with a "Tên máy" column...','không tìm thấy dòng dữ liệu — cần sheet "📝Cập nhật" có cột Tên máy...'));
   const stop = (title, sub) => showNotice({ type:'error', title, sub });
-  if(DATA.length && !data.some(m=>m.ma_may!==undefined))
-    return stop(tr('The file has no “Mã máy” column','File chưa có cột “Mã máy”'),
-      tr('Importing it would add every machine again. Press <b>⬇️ Excel</b> to download the list from the app (first column = Mã máy), edit that file, then import it.',
-         'Nạp file này sẽ thêm lại toàn bộ máy (nhân đôi). Bấm <b>⬇️ Excel</b> để tải danh sách từ app (cột đầu là Mã máy), sửa trên file đó rồi nạp lại.'));
-  const known = new Map(DATA.filter(x=>x.ma_may).map(x=>[x.ma_may, x]));
-  const coded = data.filter(m=>m.ma_may), fresh = data.filter(m=>!m.ma_may);
-  const seen = {}; coded.forEach(m=>{ seen[m.ma_may] = (seen[m.ma_may]||0) + 1; });
-  const dup = Object.keys(seen).filter(c=>seen[c] > 1), bad = [...new Set(coded.map(m=>m.ma_may).filter(c=>!known.has(c)))];
-  if(dup.length) return stop(tr('Duplicate machine codes in the file','Mã máy bị lặp trong file'), escH(dup.join(', ')) + tr(' — each code may appear only once. Nothing was imported.',' — mỗi mã chỉ được xuất hiện 1 lần. Chưa nạp gì.'));
-  if(bad.length) return stop(tr('Machine codes not found','Mã máy không có trong hệ thống'), escH(bad.join(', ')) +
-    tr('<br>Codes are never created from a file. Fix or clear these codes (empty = new machine). Nothing was imported.','<br>App không tự tạo mã từ file. Sửa lại hoặc xoá trống các mã này (để trống = máy mới). Chưa nạp gì.'));
-  const keep = DATA.length - new Set(coded.map(m=>m.ma_may)).size;
+  if(DATA.length && !data.some(m=>m.sysid!==undefined))
+    return stop(tr('The file has no “ID hệ thống” column','File chưa có cột “ID hệ thống”'),
+      tr('Importing it would add every machine again. Press <b>⬇️ Excel</b> to download the list from the app (last column = ID hệ thống), edit that file, then import it.',
+         'Nạp file này sẽ thêm lại toàn bộ máy (nhân đôi). Bấm <b>⬇️ Excel</b> để tải danh sách từ app (cột cuối là ID hệ thống), sửa trên file đó rồi nạp lại.'));
+  const known = new Map(DATA.map(x=>[x._id, x]));
+  const keyed = data.filter(m=>m.sysid), fresh = data.filter(m=>!m.sysid);
+  const seen = {}; keyed.forEach(m=>{ seen[m.sysid] = (seen[m.sysid]||0) + 1; });
+  const dup = Object.keys(seen).filter(c=>seen[c] > 1), bad = [...new Set(keyed.map(m=>m.sysid).filter(c=>!known.has(c)))];
+  const nm = m => escH(m.ten || '?');
+  if(dup.length) return stop(tr('Duplicate system IDs in the file','ID hệ thống bị lặp trong file'),
+    keyed.filter(m=>dup.includes(m.sysid)).map(nm).join(', ') + tr(' — each machine may appear only once. Nothing was imported.',' — mỗi máy chỉ được xuất hiện 1 lần. Chưa nạp gì.'));
+  if(bad.length) return stop(tr('System IDs not found','ID hệ thống không có trong hệ thống'),
+    keyed.filter(m=>bad.includes(m.sysid)).map(nm).join(', ') +
+    tr('<br>The machine was deleted or the ID was edited. Do not edit the “ID hệ thống” column (empty = new machine). Nothing was imported.',
+       '<br>Máy đã bị xoá hoặc ID bị sửa. Không sửa cột “ID hệ thống” (để trống = máy mới). Chưa nạp gì.'));
+  // Mã máy chỉ đọc: khác với hệ thống -> bỏ qua, liệt kê để người nạp biết
+  const codeEdits = keyed.filter(m=>m.ma_may!==undefined && m.ma_may !== String(known.get(m.sysid).ma_may||''));
+  const keep = DATA.length - new Set(keyed.map(m=>m.sysid)).size;
   confirmBox({
     title:tr('Import data from Excel?','Nạp dữ liệu từ Excel?'),
-    sub:tr(`<b>${coded.length}</b> machine(s) will be updated by machine code.`,`<b>${coded.length}</b> máy được cập nhật theo Mã máy.`)
-      + (fresh.length ? tr(`<br><b style="color:var(--st-over)">${fresh.length} row(s) have no code and will be added as NEW machines</b> (a code is assigned when saved).`,`<br><b style="color:var(--st-over)">${fresh.length} dòng không có mã sẽ được thêm thành máy MỚI</b> (tự cấp mã khi lưu).`) : '')
-      + (keep > 0 ? tr(`<br>${keep} machine(s) in the app are not in the file and stay unchanged.`,`<br>${keep} máy đang có không nằm trong file — giữ nguyên.`) : ''),
+    sub:tr(`<b>${keyed.length}</b> machine(s) will be updated (matched by system ID).`,`<b>${keyed.length}</b> máy được cập nhật (khớp theo ID hệ thống).`)
+      + (fresh.length ? tr(`<br><b style="color:var(--st-over)">${fresh.length} row(s) have no system ID and will be added as NEW machines</b>.`,`<br><b style="color:var(--st-over)">${fresh.length} dòng không có ID hệ thống sẽ được thêm thành máy MỚI</b>.`) : '')
+      + (keep > 0 ? tr(`<br>${keep} machine(s) in the app are not in the file and stay unchanged.`,`<br>${keep} máy đang có không nằm trong file — giữ nguyên.`) : '')
+      + (codeEdits.length ? `<br><span class="mc-edit" style="color:var(--st-over)">⚠ ${tr(`Machine code was changed in the file for ${codeEdits.length} row(s) — ignored (codes are assigned by the system only)`,`Mã máy bị sửa trong file ở ${codeEdits.length} dòng — bỏ qua (mã chỉ do hệ thống cấp)`)}: ${codeEdits.slice(0,8).map(m=>`${nm(m)} (${escH(m.ma_may||tr('empty','trống'))})`).join(', ')}${codeEdits.length>8?' …':''}</span>` : ''),
     ok: fresh.length ? tr(`Import + add ${fresh.length} new`,`Nạp + thêm ${fresh.length} máy mới`) : tr('Import','Nạp dữ liệu'),
     onOk: async ()=>{
       try{
@@ -2360,6 +2371,12 @@ function filtered(){
   return rows;
 }
 
+/* ô Mã máy: chưa về -> "—"; đã về mà chưa cấp (chờ 🏷) -> "chưa có mã"; có mã nhưng mất ngày về TT -> ⚠ */
+const MC_LOST = () => tr('This machine has a code but lost its actual arrival date','Máy đã có mã nhưng mất ngày về TT');
+function mcCell(x){
+  if(x.ma_may) return x.venm_tt ? x.ma_may : `<span class="mc-lost" title="${MC_LOST()}">⚠ ${x.ma_may}</span>`;
+  return x.venm_tt ? `<span class="muted">${tr('no code','chưa có mã')}</span>` : `<span class="muted" title="${tr('A code is assigned when the machine arrives at the plant','Cấp mã khi máy về NM')}">—</span>`;
+}
 function render(){
   const rows = filtered();
   const nPages = Math.max(1, Math.ceil(rows.length/PAGE_SIZE));
@@ -2367,7 +2384,7 @@ function render(){
   const view = rows.slice((pageNo-1)*PAGE_SIZE, pageNo*PAGE_SIZE);
   const qw = !!window.__canWrite;
   tb.innerHTML = view.map((x,i)=>`<tr class="${x.status!=='arrived'&&x.danhgia==='Trễ'?'late-flag':''} slide-in" style="--i:${i};cursor:pointer" onclick="showDetail(${DATA.indexOf(x)})" title="${tr('Click to view full machine details','Bấm để xem đầy đủ thông tin thiết bị')}">
-    <td class="mm-code">${x.ma_may || `<span class="muted">${tr('no code','chưa có mã')}</span>`}</td>
+    <td class="mm-code">${mcCell(x)}</td>
     ${qw ? `<td class="qu-c" onclick="event.stopPropagation()"><input type="checkbox" class="qu-ck" data-id="${x._id}"${QU_SEL.has(x._id)?' checked':''} aria-label="${tr('Select for quick update','Chọn để cập nhật nhanh')}"><button type="button" class="qu-btn" title="${tr('⚡ Quick update','⚡ Cập nhật nhanh')}" onclick="quickEdit(${DATA.indexOf(x)})">⚡</button></td>` : ''}
     <td class="name">${x.ten}${x.congsuat?`<small>${x.congsuat}</small>`:''}</td>
     <td>${x.sl}</td><td>${x.noilapdat}</td><td>${x.ncc}</td><td>${ctT(x.xuatxu)}</td>
@@ -2433,7 +2450,8 @@ window.showDetail = i => {
 
   mBody.innerHTML = `<div class="dt-wrap">
     ${sec(tr('General','Thông tin chung'),[
-      it(tr('Machine code','Mã máy'), `<b>${T(x.ma_may)}</b>`),
+      it(tr('Machine code','Mã máy'), x.ma_may ? `<b>${T(x.ma_may)}</b>` + (x.venm_tt ? '' : `<br><small style="color:var(--st-over)">⚠ ${MC_LOST()}</small>`)
+        : `<span style="color:var(--muted)">${x.venm_tt ? tr('Not assigned yet (admin: 🏷 Assign machine codes)','Chưa cấp (admin: 🏷 Cấp mã máy)') : tr('— assigned when the machine arrives at the plant','— cấp khi máy về NM')}</span>`),
       it(tr('Machine name','Tên máy'), T(x.ten),'full'),
       it(tr('Person in charge','Người phụ trách'), T(x.phutrach)),
       it(tr('Quantity','Số lượng'), N(x.sl)),
@@ -2549,8 +2567,8 @@ function dbErrText(e){
   const c = e && e.code;
   if(c==='conflict') return tr('Someone else just edited or deleted this machine. Press <b>🔄 Refresh</b> to see the latest version, then try again.','Máy này vừa được người khác sửa hoặc xoá. Bấm <b>🔄 Làm mới</b> để xem bản mới nhất rồi làm lại.');
   if(c==='42501' || c==='perm') return tr('Your account does not have permission to do this. Ask an admin for editor access.','Tài khoản của bạn không có quyền làm việc này. Nhờ admin cấp quyền editor.');
-  if((c==='PGRST202' || c==='42883' || c==='42703' || c==='PGRST204') && /import_machines|ma_may/.test(e.message||'')) return tr('The database does not have machine codes yet. An admin needs to run <b>supabase/migrations/20261031_05_machine_code.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có Mã máy. Admin cần chạy file <b>supabase/migrations/20261031_05_machine_code.sql</b> trong Supabase > SQL Editor.');
-  if(c==='P0002' || c==='23505') return escH(e.message||'');
+  if((c==='PGRST202' || c==='42883' || c==='42703' || c==='PGRST204') && /import_machines|ma_may/.test(e.message||'')) return tr('The database does not have machine codes yet. An admin needs to run <b>supabase/migrations/20261031_05_machine_code.sql</b> then <b>20261031_07_machine_code_on_arrival.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có Mã máy. Admin cần chạy file <b>supabase/migrations/20261031_05_machine_code.sql</b> trong Supabase > SQL Editor.');
+  if(c==='P0002' || c==='23505' || c==='22P02' || c==='23514') return escH(e.message||'');
   if((c==='PGRST204' || c==='42703') && /tauchay_tt|capcang_tt|venm_tt/.test(e.message||'')) return tr('The database does not have the actual-date columns yet. An admin needs to run <b>supabase/migrations/20261030_04_quick_update.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có cột ngày thực tế. Admin cần chạy file <b>supabase/migrations/20261030_04_quick_update.sql</b> trong Supabase > SQL Editor.');
   if(c==='locked') return tr('This machine could not be decrypted in this tab, so it cannot be updated. Reload and unlock the data first.','Máy này chưa giải mã được trong tab này nên chưa sửa được. Tải lại trang và mở khoá dữ liệu trước.');
   if(c==='PGRST204' && /model|serial/.test(e.message||'')) return tr('The database does not have the Model / Serial number columns yet. An admin needs to run <b>supabase/04_model_serial.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có cột Model / Số serial. Admin cần chạy file <b>supabase/04_model_serial.sql</b> trong Supabase > SQL Editor.');
@@ -2566,7 +2584,7 @@ const REC_LABEL = {ten:'Tên máy', phutrach:'Người phụ trách', sl:'Số l
   sonagyctm:'Số ngày CTM', giaitrinh:'Giải trình', ctu:'TG chờ tạm ứng KH (ngày)', tamungtt:'Ngày tạm ứng TT',
   ditaukh:'TG đi tàu KH (ngày)', ditautt:'TG đi tàu TT (ngày)', lanhkh:'TG lãnh máy KH (ngày)', lanhtt:'TG lãnh máy TT (ngày)',
   xuatxuong:'Xác nhận/dự kiến xuất xưởng', workingday:'Working day',
-  tauchay_tt:'Ngày tàu chạy TT', capcang_tt:'Ngày cập cảng TT', venm_tt:'Ngày máy về NM TT', ma_may:'Mã máy'};
+  tauchay_tt:'Ngày tàu chạy TT', capcang_tt:'Ngày cập cảng TT', venm_tt:'Ngày máy về NM TT', ma_may:'Mã máy', sysid:'ID hệ thống'};
 /* nhãn hiển thị khi chọn tiếng Anh; REC_LABEL ở trên giữ tiếng Việt vì là tên cột Excel */
 const REC_LABEL_EN = {ten:'Machine name', phutrach:'Person in charge', sl:'Quantity', congsuat:'Capacity', noilapdat:'Installation site',
   ncc:'Supplier', xuatxu:'Origin', model:'Model', serial:'Serial number', vnd:'Total value (VND)', usd:'Total value (USD)', duyet:'Proposal approval date',
@@ -2574,7 +2592,7 @@ const REC_LABEL_EN = {ten:'Machine name', phutrach:'Person in charge', sl:'Quant
   sonagyctm:'Manufacturing days (CTM)', giaitrinh:'Delay note', ctu:'Advance-payment wait, plan (days)', tamungtt:'Advance-payment date, actual',
   ditaukh:'Shipping time, plan (days)', ditautt:'Shipping time, actual (days)', lanhkh:'Clearance & pickup, plan (days)', lanhtt:'Clearance & pickup, actual (days)',
   xuatxuong:'Confirmed/expected ex-works', workingday:'Working day',
-  tauchay_tt:'Vessel departure, actual', capcang_tt:'Port arrival, actual', venm_tt:'Arrival at plant, actual', ma_may:'Machine code'};
+  tauchay_tt:'Vessel departure, actual', capcang_tt:'Port arrival, actual', venm_tt:'Arrival at plant, actual', ma_may:'Machine code', sysid:'System ID'};
 /* ngày thực tế nhập qua ⚡ Cập nhật nhanh (migrations/20261030_04): KHÔNG nằm trong REC_KEYS
    để form Sửa đầy đủ (toRow) không ghi đè chúng; trigger machines_actual_trg tính ditautt / lanhtt / vedukienn từ đây */
 const ACT_KEYS = ['tauchay_tt','capcang_tt','venm_tt'];
@@ -2698,10 +2716,13 @@ async function quSaveOne(x,ch){
     const { data: cur } = await sb.from('machines').select('version').eq('id', x._id).is('deleted_at', null).maybeSingle();
     throw { code: (cur && Number(cur.version)===x._ver) ? 'perm' : 'conflict' };
   }
+  const had = x.ma_may;
   const o = window.__cleanMachine(await window.__open(data[0]));
   if(o.ten==='' && x.ten) o.ten = x.ten;
   Object.assign(x, o); quStatus(x);
+  return (!had && x.ma_may) ? x.ma_may : '';          // mã vừa được trigger cấp (lưu ngày về NM TT lần đầu)
 }
+const quCodeMsg = c => c ? tr(` · Code assigned: <b>${c}</b>`,` · Đã cấp mã <b>${c}</b>`) : '';
 function quAfterSave(){
   render();
   try{ OV_HOOKS.forEach(f=>f()); }catch(e){}
@@ -2789,9 +2810,9 @@ function quForm(list, keep){
     quEl('quSave').disabled = true; quEl('quMsg').style.color = 'var(--muted)'; quEl('quMsg').textContent = tr('Saving…','Đang lưu…');
     window.__selfWriting = true;
     try{
-      await quSaveOne(x0, ch);
+      const code = await quSaveOne(x0, ch);
       mBg.classList.remove('show');
-      quToast(tr('✅ Updated: ','✅ Đã cập nhật: ') + x0.ten);
+      quToast(tr('✅ Updated: ','✅ Đã cập nhật: ') + x0.ten + quCodeMsg(code));
     }catch(err){ quEl('quSave').disabled = false; quEl('quMsg').style.color = 'var(--red)'; quEl('quMsg').innerHTML = dbErrText(err); }
     finally{ quAfterSave(); }
   };
@@ -2830,7 +2851,7 @@ function quReview(list, f, plan){
     const res = [];
     for(const [n,p] of plan.entries()){
       quEl('quMsg').style.color = 'var(--muted)'; quEl('quMsg').textContent = tr(`Saving ${n+1}/${plan.length}…`,`Đang lưu ${n+1}/${plan.length}…`);
-      try{ await quSaveOne(p.x, p.ch); res.push({ x:p.x, ok:true }); QU_SEL.delete(p.x._id); }
+      try{ const code = await quSaveOne(p.x, p.ch); res.push({ x:p.x, ok:true, code }); QU_SEL.delete(p.x._id); }
       catch(err){ res.push({ x:p.x, ok:false, err }); }
     }
     quAfterSave();
@@ -2839,7 +2860,7 @@ function quReview(list, f, plan){
                              : tr(`⚡ Saved ${ok} machine(s)`,`⚡ Đã lưu ${ok} máy`);
     mSub.innerHTML = bad ? tr('Machines that failed are still selected so you can try again after 🔄 Refresh.','Các máy lỗi vẫn được giữ chọn để làm lại sau khi bấm 🔄 Làm mới.') : '';
     mBody.innerHTML = `<div class="qu-tbl"><table><thead><tr><th>${tr('Machine','Máy')}</th><th>${tr('Result','Kết quả')}</th></tr></thead><tbody>
-      ${res.map(r=>`<tr><td class="m">${r.x.ten}</td>${r.ok ? `<td class="ok">✅ ${tr('Saved','Đã lưu')}</td>` : `<td class="bad">❌ ${dbErrText(r.err)}</td>`}</tr>`).join('')}</tbody></table></div>
+      ${res.map(r=>`<tr><td class="m">${r.x.ten}</td>${r.ok ? `<td class="ok">✅ ${tr('Saved','Đã lưu')}${quCodeMsg(r.code)}</td>` : `<td class="bad">❌ ${dbErrText(r.err)}</td>`}</tr>`).join('')}</tbody></table></div>
       <div class="add-actions"><button type="button" class="nbtn2" onclick="mBg.classList.remove('show')">${tr('Close','Đóng')}</button></div>`;
     if(!bad) quToast(tr(`✅ Updated ${ok} machine(s)`,`✅ Đã cập nhật ${ok} máy`));
   };
@@ -2944,25 +2965,26 @@ async function acRun(plan){
   const res = [];
   for(const [n,p] of plan.entries()){
     quEl('quMsg').style.color = 'var(--muted)'; quEl('quMsg').textContent = tr(`Saving ${n+1}/${plan.length}…`,`Đang lưu ${n+1}/${plan.length}…`);
-    try{ await quSaveOne(p.x, { venm_tt: p.d }); res.push({ x:p.x, d:p.d, ok:true }); AC.sel.delete(p.x._id); delete AC.date[p.x._id]; }
+    try{ const code = await quSaveOne(p.x, { venm_tt: p.d }); res.push({ x:p.x, d:p.d, ok:true, code }); AC.sel.delete(p.x._id); delete AC.date[p.x._id]; }
     catch(err){ res.push({ x:p.x, d:p.d, ok:false, err }); }
   }
   quAfterSave();
   const ok = res.filter(r=>r.ok).length, bad = res.length - ok;
   mTitle.textContent = bad ? tr(`✅ Confirmed ${ok}/${res.length} — ${bad} failed`,`✅ Đã xác nhận ${ok}/${res.length} — ${bad} máy lỗi`) : tr(`✅ Confirmed ${ok} machine(s)`,`✅ Đã xác nhận ${ok} máy`);
   mSub.innerHTML = bad ? tr('Failed machines stay selected; press 🔄 Refresh and try again.','Máy lỗi vẫn được giữ chọn; bấm 🔄 Làm mới rồi làm lại.') : '';
-  mBody.innerHTML = `<div class="qu-tbl"><table><thead><tr><th>${tr('Machine','Máy')}</th><th>${tr('Arrival at plant (actual)','Ngày máy về NM TT')}</th><th>${tr('Result','Kết quả')}</th></tr></thead><tbody>
-    ${res.map(r=>`<tr><td class="m">${r.x.ten}</td><td>${fmtD(r.d)}</td>${r.ok ? `<td class="ok">✅ ${tr('Saved','Đã lưu')}</td>` : `<td class="bad">❌ ${dbErrText(r.err)}</td>`}</tr>`).join('')}</tbody></table></div>
+  mBody.innerHTML = `<div class="qu-tbl"><table><thead><tr><th>${tr('Machine','Máy')}</th><th>${tr('Arrival at plant (actual)','Ngày máy về NM TT')}</th><th>${tr('Machine code','Mã máy')}</th><th>${tr('Result','Kết quả')}</th></tr></thead><tbody>
+    ${res.map(r=>`<tr><td class="m">${r.x.ten}</td><td>${fmtD(r.d)}</td><td><b>${r.x.ma_may||'—'}</b></td>${r.ok ? `<td class="ok">✅ ${tr('Saved','Đã lưu')}${r.code ? tr(' · code assigned',' · đã cấp mã') : ''}</td>` : `<td class="bad">❌ ${dbErrText(r.err)}</td>`}</tr>`).join('')}</tbody></table></div>
     <div class="add-actions">${acAll().length ? `<button type="button" class="nbtn2 ghost" onclick="acOpen()">${tr('← Back to the list','← Về danh sách')}</button>` : ''}
       <button type="button" class="nbtn2" onclick="mBg.classList.remove('show')">${tr('Close','Đóng')}</button></div>`;
   if(!bad) quToast(tr(`✅ Confirmed ${ok} machine(s)`,`✅ Đã xác nhận ${ok} máy`));
 }
 if(window.__role === 'admin') quEl('btnAc').hidden = false;
-/* ---- 🏷 Cấp mã máy cho máy đang có (chỉ admin; migrations/20261031_05_machine_code.sql) ----
-   Phải làm trong trình duyệt: sắp theo công ty → ngày đặt hàng → tên, và tên máy đã mã hoá.
+/* ---- 🏷 Cấp mã máy cho máy ĐÃ VỀ từ trước (chỉ admin; migrations/20261031_05 + 07) ----
+   Máy về sau khi chạy 07: trigger tự cấp lúc nhập Ngày máy về NM TT. Máy chưa về: không có mã.
+   Phải làm trong trình duyệt: sắp theo công ty → năm về → ngày về → tên, và tên máy đã mã hoá.
    Bước 1: tạo đề xuất + tải DeXuat_MaMay_YYYY-MM-DD.xlsx (chưa ghi gì). Bước 2: admin duyệt file, tích xác nhận,
    bấm Ghi -> cắt khoảng trắng tên (mã hoá lại, kiểm tra version) rồi assign_machine_codes() ghi mã (tất cả hoặc không).
-   Gồm cả máy trong thùng rác (để chạy được migration 06 NOT NULL). */
+   Gồm cả máy trong thùng rác (để chạy được migration 08: máy đã về phải có mã). */
 const MC = { rows:[], plan:[], trim:[], dl:false };
 const mcPad = n => n < 1000 ? String(n).padStart(3,'0') : String(n);
 const mcCo = x => DM.companyCode(unescH(x.noilapdat||'')) || 'KXD';
@@ -2976,37 +2998,42 @@ async function mcLoad(){
   return { rows: opened.map(r=>({ r, x: window.__cleanMachine(r), raw: String(r.ten == null ? '' : r.ten), del: !!r.deleted_at })), counters: cnt.data || [] };
 }
 function mcPlan(rows, counters){
-  const yNow = DM.todayIso().slice(0,4), next = {};
+  const next = {};
   (counters||[]).forEach(c=>{ next[c.company+'-'+c.year] = Number(c.last_no)||0; });
   rows.forEach(o=>{ const m = /^([A-Z]{2,4})-(\d{4})-(\d{3,})$/.exec(o.r.ma_may||''); if(!m) return;
     const k = m[1]+'-'+m[2]; next[k] = Math.max(next[k]||0, +m[3]); });
   const nm = o => o.raw.trim().toLocaleLowerCase('vi');
   const dup = {}; rows.forEach(o=>{ dup[nm(o)] = (dup[nm(o)]||0) + 1; });
   const order = [...DM.COMPANIES, 'KXD'];
-  const pend = rows.filter(o=>!o.r.ma_may).map(o=>({ o, co: mcCo(o.x), yr: o.x.dathang ? o.x.dathang.slice(0,4) : yNow }));
-  pend.sort((a,b)=> order.indexOf(a.co) - order.indexOf(b.co)
-    || (a.o.x.dathang ? 0 : 1) - (b.o.x.dathang ? 0 : 1) || String(a.o.x.dathang||'').localeCompare(String(b.o.x.dathang||''))
-    || a.o.raw.trim().localeCompare(b.o.raw.trim(), 'vi'));
+  // chỉ máy ĐÃ VỀ (có Ngày máy về NM TT); năm = năm về; trong mỗi công ty + năm xếp theo ngày về rồi tên
+  const pend = rows.filter(o=>!o.r.ma_may && o.x.venm_tt).map(o=>({ o, co: mcCo(o.x), yr: o.x.venm_tt.slice(0,4) }));
+  pend.sort((a,b)=> order.indexOf(a.co) - order.indexOf(b.co) || a.yr.localeCompare(b.yr)
+    || a.o.x.venm_tt.localeCompare(b.o.x.venm_tt) || a.o.raw.trim().localeCompare(b.o.raw.trim(), 'vi'));
   return pend.map(p=>{
     const k = p.co+'-'+p.yr; next[k] = (next[k]||0) + 1;
     const notes = [];
     if(dup[nm(p.o)] > 1) notes.push(tr(`Duplicate name (${dup[nm(p.o)]} machines)`,`Tên trùng (${dup[nm(p.o)]} máy)`));
-    if(!p.o.x.dathang) notes.push(tr(`No order date — year ${yNow} used`,`Thiếu ngày đặt hàng — dùng năm ${yNow}`));
     if(p.co==='KXD') notes.push(tr(`Company not recognised ("${unescH(p.o.x.noilapdat)||'empty'}")`,`Không xác định công ty ("${unescH(p.o.x.noilapdat)||'trống'}")`));
     if(p.o.raw !== p.o.raw.trim()) notes.push(tr('Extra spaces in the name — will be trimmed','Tên có khoảng trắng thừa — sẽ cắt'));
     if(p.o.del) notes.push(tr('In the trash','Đang trong thùng rác'));
-    const f = { dup: dup[nm(p.o)] > 1, nodh: !p.o.x.dathang, kxd: p.co==='KXD', ws: p.o.raw !== p.o.raw.trim(), del: p.o.del };
+    const f = { dup: dup[nm(p.o)] > 1, kxd: p.co==='KXD', ws: p.o.raw !== p.o.raw.trim(), del: p.o.del };
     return { o:p.o, code:`${k}-${mcPad(next[k])}`, notes, f };
   });
 }
 function mcExport(){
   const loc = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
-  const aoa = [[tr('Proposed code','Mã đề xuất'), tr('Machine','Tên hạng mục'), tr('Installation site','Nơi lắp đặt'), tr('Supplier','NCC'), tr('Order date','Ngày đặt hàng'), tr('Notes','Ghi chú')]]
-    .concat(MC.plan.map(p=>[p.code, p.o.raw.trim(), unescH(p.o.x.noilapdat||'').trim(), unescH(p.o.x.ncc||'').trim(), p.o.x.dathang ? loc(p.o.x.dathang) : '', p.notes.join('; ')]));
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{wch:15},{wch:42},{wch:14},{wch:24},{wch:14},{wch:60}];
-  for(let r=1; r<aoa.length; r++){ const c = ws[XLSX.utils.encode_cell({r, c:4})]; if(c && c.t==='n') c.z = 'dd/mm/yyyy'; }
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'DeXuat');
+  const sheet = (aoa, dc) => { const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:15},{wch:42},{wch:14},{wch:24},{wch:14},{wch:60}];
+    for(let r=1; r<aoa.length; r++) dc.forEach(c0=>{ const c = ws[XLSX.utils.encode_cell({r, c:c0})]; if(c && c.t==='n') c.z = 'dd/mm/yyyy'; });
+    return ws; };
+  const aoa = [[tr('Proposed code','Mã đề xuất'), tr('Machine','Tên hạng mục'), tr('Installation site','Nơi lắp đặt'), tr('Supplier','NCC'), tr('Arrival at plant (actual)','Ngày về NM TT'), tr('Notes','Ghi chú')]]
+    .concat(MC.plan.map(p=>[p.code, p.o.raw.trim(), unescH(p.o.x.noilapdat||'').trim(), unescH(p.o.x.ncc||'').trim(), loc(p.o.x.venm_tt), p.notes.join('; ')]));
+  // sheet 2: máy quá hạn – chưa xác nhận ngày về (chưa có mã cho tới khi xác nhận)
+  const od = [[tr('Machine','Tên hạng mục'), tr('Installation site','Nơi lắp đặt'), tr('Supplier','NCC'), tr('Expected arrival at plant','Ngày dự kiến về NM'), tr('Days overdue','Số ngày quá hạn'), tr('Notes','Ghi chú')]]
+    .concat(MC.overdue.map(o=>[o.raw.trim(), unescH(o.x.noilapdat||'').trim(), unescH(o.x.ncc||'').trim(), o.x.vedukienn ? loc(o.x.vedukienn) : '',
+      Math.abs(DM.arrivalStatus(o.x).daysleft||0), tr('No code until the arrival date is confirmed','Chưa có mã cho tới khi xác nhận ngày về')]));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, sheet(aoa, [4]), 'DeXuat');
+  XLSX.utils.book_append_sheet(wb, sheet(od, [3]), 'QuaHan_ChuaXacNhan');
   const fn = `DeXuat_MaMay_${DM.todayIso()}.xlsx`; XLSX.writeFile(wb, fn); return fn;
 }
 window.mcOpen = async () => {
@@ -3015,23 +3042,27 @@ window.mcOpen = async () => {
   try{ const L = await mcLoad(); MC.rows = L.rows; MC.plan = mcPlan(L.rows, L.counters); }
   catch(err){ mSub.textContent = ''; mBody.innerHTML = `<div class="m-gt">${mcErr(err)}</div>`; return; }
   MC.trim = MC.rows.filter(o=>o.raw !== o.raw.trim()); MC.dl = false;
+  MC.overdue = MC.rows.filter(o=>!o.del && !o.x.venm_tt && DM.arrivalStatus(o.x).status==='overdue');
+  MC.lost = MC.rows.filter(o=>!o.del && o.r.ma_may && !o.x.venm_tt);
   const nNote = k => MC.plan.filter(p=>p.f[k]).length;
   mSub.innerHTML = MC.plan.length
-    ? tr(`<b>${MC.plan.length}</b> machine(s) without a code (incl. ${MC.plan.filter(p=>p.o.del).length} in the trash). Format: COMPANY-YEAR-NO., e.g. DTR-2026-001. Nothing is saved until you review the file and press Save.`,
-         `<b>${MC.plan.length}</b> máy chưa có mã (gồm ${MC.plan.filter(p=>p.o.del).length} máy trong thùng rác). Định dạng: CÔNG TY-NĂM-STT, VD DTR-2026-001. Chưa ghi gì cho tới khi bạn duyệt file và bấm Ghi.`)
-      + `<div class="qu-names"><span>${tr('Duplicate names','Tên trùng')}: ${nNote('dup')}</span><span>${tr('No order date','Thiếu ngày đặt hàng')}: ${nNote('nodh')}</span>`
-      + `<span>${tr('Unknown company','Không xác định công ty')}: ${nNote('kxd')}</span><span>${tr('Names to trim','Tên cần cắt khoảng trắng')}: ${MC.trim.length}</span></div>`
-    : tr('Every machine already has a code.','Mọi máy đều đã có mã.');
-  if(!MC.plan.length && !MC.trim.length){ mBody.innerHTML = `<div class="m-ok">✅ ${tr('Nothing to do. You can now run supabase/migrations/20261031_06_machine_code_not_null.sql.','Không còn gì cần làm. Có thể chạy supabase/migrations/20261031_06_machine_code_not_null.sql.')}</div>`; return; }
-  mBody.innerHTML = `<div class="qu-tbl mc-tbl"><table><thead><tr><th>${tr('Proposed code','Mã đề xuất')}</th><th>${tr('Machine','Tên hạng mục')}</th><th>${tr('Site','Nơi lắp đặt')}</th>
-      <th>${tr('Supplier','NCC')}</th><th>${tr('Order date','Ngày đặt hàng')}</th><th>${tr('Notes','Ghi chú')}</th></tr></thead><tbody>
+    ? tr(`<b>${MC.plan.length}</b> arrived machine(s) without a code (incl. ${MC.plan.filter(p=>p.o.del).length} in the trash). Format: COMPANY-ARRIVAL YEAR-NO., e.g. DTR-2026-001. Machines not yet arrived get no code. Nothing is saved until you review the file and press Save.`,
+         `<b>${MC.plan.length}</b> máy đã về chưa có mã (gồm ${MC.plan.filter(p=>p.o.del).length} máy trong thùng rác). Định dạng: CÔNG TY-NĂM VỀ-STT, VD DTR-2026-001. Máy chưa về không cấp mã. Chưa ghi gì cho tới khi bạn duyệt file và bấm Ghi.`)
+      + `<div class="qu-names"><span>${tr('Duplicate names','Tên trùng')}: ${nNote('dup')}</span>`
+      + `<span>${tr('Unknown company','Không xác định công ty')}: ${nNote('kxd')}</span><span>${tr('Names to trim','Tên cần cắt khoảng trắng')}: ${MC.trim.length}</span>`
+      + `<span>${tr('Overdue – unconfirmed (sheet 2, no code yet)','Quá hạn – chưa xác nhận (sheet 2, chưa cấp mã)')}: ${MC.overdue.length}</span></div>`
+    : tr('Every arrived machine already has a code.','Mọi máy đã về đều đã có mã.');
+  const lostHtml = MC.lost.length ? `<div class="m-gt" style="margin-bottom:10px">⚠ ${tr(`${MC.lost.length} machine(s) have a code but lost the actual arrival date (the code is kept). Re-enter the date with ⚡ Quick update if it was deleted by mistake:`,`${MC.lost.length} máy đã có mã nhưng mất ngày về TT (mã vẫn giữ). Nếu ngày bị xoá nhầm, nhập lại bằng ⚡ Cập nhật nhanh:`)}<br>${MC.lost.map(o=>`<b>${o.r.ma_may}</b> ${escH(o.raw.trim())}`).join('<br>')}</div>` : '';
+  if(!MC.plan.length && !MC.trim.length){ mBody.innerHTML = lostHtml + `<div class="m-ok">✅ ${tr('Nothing to assign. You can now run supabase/migrations/20261031_08_machine_code_arrived_check.sql.','Không còn máy nào cần cấp mã. Có thể chạy supabase/migrations/20261031_08_machine_code_arrived_check.sql.')}</div>`; return; }
+  mBody.innerHTML = lostHtml + `<div class="qu-tbl mc-tbl"><table><thead><tr><th>${tr('Proposed code','Mã đề xuất')}</th><th>${tr('Machine','Tên hạng mục')}</th><th>${tr('Site','Nơi lắp đặt')}</th>
+      <th>${tr('Supplier','NCC')}</th><th>${tr('Arrival at plant (actual)','Ngày về NM TT')}</th><th>${tr('Notes','Ghi chú')}</th></tr></thead><tbody>
       ${MC.plan.map(p=>`<tr class="${p.notes.length?'mc-note':''}"><td class="m">${p.code}</td><td>${escH(p.o.raw.trim())}</td><td>${p.o.x.noilapdat||'—'}</td><td>${p.o.x.ncc||'—'}</td>
-        <td>${fmtD(p.o.x.dathang)}</td><td class="mc-n">${p.notes.map(escH).join('<br>')}</td></tr>`).join('')}</tbody></table></div>
+        <td>${fmtD(p.o.x.venm_tt)}</td><td class="mc-n">${p.notes.map(escH).join('<br>')}</td></tr>`).join('')}</tbody></table></div>
     <div id="quMsg" style="min-height:1.2em;font-size:13px;margin-bottom:8px"></div>
     <div class="add-actions">
       <label class="mc-ok"><input type="checkbox" id="mcOk" disabled> ${tr('I have reviewed the proposal file','Tôi đã duyệt file đề xuất')}</label>
       <button type="button" class="nbtn2 ghost" id="mcXls">⬇️ ${tr('Download proposal file','Tải file đề xuất')}</button>
-      <button type="button" class="nbtn2" id="mcSave" disabled>💾 ${tr(`Save codes (${MC.plan.length})`,`Ghi mã (${MC.plan.length} máy)`)}</button></div>`;
+      <button type="button" class="nbtn2" id="mcSave" disabled>💾 ${MC.plan.length ? tr(`Save codes (${MC.plan.length})`,`Ghi mã (${MC.plan.length} máy)`) : tr('Trim names','Cắt khoảng trắng tên')}</button></div>`;
   quEl('mcXls').onclick = () => { try{ quToast('⬇️ ' + escH(mcExport())); MC.dl = true; quEl('mcOk').disabled = false; }catch(e){ quToast('⚠️ ' + escH(e.message)); } };
   quEl('mcOk').onchange = e => { quEl('mcSave').disabled = !e.target.checked; };
   quEl('mcSave').onclick = () => confirmBox({
@@ -3043,8 +3074,8 @@ window.mcOpen = async () => {
 function mcErr(e){
   const m = String((e && e.message) || '');
   if((e && (e.code==='PGRST202' || e.code==='42883')) || /machine_code_counters|assign_machine_codes/.test(m) && /not find|does not exist|schema cache/i.test(m))
-    return tr('The database is not ready yet. An admin needs to run <b>supabase/migrations/20261031_05_machine_code.sql</b> in Supabase > SQL Editor.',
-              'Cơ sở dữ liệu chưa sẵn sàng. Admin cần chạy file <b>supabase/migrations/20261031_05_machine_code.sql</b> trong Supabase > SQL Editor.');
+    return tr('The database is not ready yet. An admin needs to run <b>supabase/migrations/20261031_05_machine_code.sql</b> then <b>20261031_07_machine_code_on_arrival.sql</b> in Supabase > SQL Editor.',
+              'Cơ sở dữ liệu chưa sẵn sàng. Admin cần chạy file <b>supabase/migrations/20261031_05_machine_code.sql</b> rồi <b>20261031_07_machine_code_on_arrival.sql</b> trong Supabase > SQL Editor.');
   return dbErrText(e);
 }
 async function mcRun(){
@@ -3066,18 +3097,20 @@ async function mcRun(){
   }
   // 2) ghi mã: tất cả hoặc không
   msg.textContent = tr('Saving codes…','Đang ghi mã…');
-  const { data: n, error } = await sb.rpc('assign_machine_codes', { p: MC.plan.map(p=>({ id: p.o.r.id, ma_may: p.code })) });
+  const { data: n, error } = MC.plan.length ? await sb.rpc('assign_machine_codes', { p: MC.plan.map(p=>({ id: p.o.r.id, ma_may: p.code })) }) : { data: 0, error: null };
   setTimeout(()=>{ window.__selfWriting = false; }, 1500);
   mTitle.textContent = error ? tr('🏷 Codes NOT saved','🏷 Chưa ghi được mã') : tr(`🏷 Saved ${n} machine code(s)`,`🏷 Đã ghi ${n} mã máy`);
   mSub.innerHTML = '';
-  mBody.innerHTML = (error ? `<div class="m-gt">${mcErr(error)}</div>` : `<div class="m-ok">✅ ${tr(`${n} machines now have a code. Next: run supabase/migrations/20261031_06_machine_code_not_null.sql.`,`${n} máy đã có mã. Bước tiếp theo: chạy supabase/migrations/20261031_06_machine_code_not_null.sql.`)}</div>`)
+  mBody.innerHTML = (error ? `<div class="m-gt">${mcErr(error)}</div>` : `<div class="m-ok">✅ ${tr(`${n} machines now have a code. Next: run supabase/migrations/20261031_08_machine_code_arrived_check.sql.`,`${n} máy đã có mã. Bước tiếp theo: chạy supabase/migrations/20261031_08_machine_code_arrived_check.sql.`)}</div>`)
     + (MC.trim.length ? `<div class="${tFail.length?'m-gt':'m-ok'}" style="margin-top:8px">${tr(`Names trimmed: ${MC.trim.length - tFail.length}/${MC.trim.length}`,`Đã cắt khoảng trắng tên: ${MC.trim.length - tFail.length}/${MC.trim.length}`)}`
        + tFail.map(f=>`<br>❌ ${escH(f.o.raw.trim())}: ${dbErrText(f.err)}`).join('') + '</div>' : '')
     + `<div class="add-actions" style="margin-top:12px"><button type="button" class="nbtn2" onclick="location.reload()">🔄 ${tr('Reload the page','Tải lại trang')}</button></div>`;
 }
-/* nút 🏷 chỉ hiện với admin khi còn máy chưa có mã (kể cả trong thùng rác) */
+/* nút 🏷 chỉ hiện với admin khi còn máy ĐÃ VỀ chưa có mã (kể cả trong thùng rác) hoặc máy có mã nhưng mất ngày về TT */
 if(window.__role === 'admin' && window.__sb){
-  window.__sb.from('machines').select('id', { count:'exact', head:true }).is('ma_may', null)
+  const lost = DATA.filter(x=>x.ma_may && !x.venm_tt).length;
+  if(lost){ quEl('btnMc').hidden = false; quEl('btnMc').textContent += ` · ⚠ ${lost}`; quEl('btnMc').title = MC_LOST(); }
+  window.__sb.from('machines').select('id', { count:'exact', head:true }).is('ma_may', null).not('venm_tt', 'is', null)
     .then(r => { if(!r.error && r.count) quEl('btnMc').hidden = false; });
 }
 window.quickEdit = i => { const x = DATA[i]; if(x && window.__canWrite) quForm([x]); };
@@ -3114,21 +3147,25 @@ quSync(filtered());
 /* ---- Xuất Excel: cùng cấu trúc sheet "📝Cập nhật" nên nạp lại được bằng 📂 Nạp Excel ---- */
 /* Mã máy đứng đầu: là khoá khi nạp lại (giữ nguyên mã = cập nhật đúng máy; để trống = máy mới) */
 const XL_COLS = ['ma_may','ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','ctu','tamungtt',
-  'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'].concat(ACT_KEYS);
+  'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'].concat(ACT_KEYS, ['sysid']);
 const pad2 = n=>String(n).padStart(2,'0');
 function stampNow(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes()); }
 function exportExcel(prefix){
   const rows = [XL_COLS.map(k=>REC_LABEL[k])];
   DATA.forEach(x=>{
     rows.push(XL_COLS.map(k=>{
-      const v = x[k];
+      const v = k==='sysid' ? x._id : x[k];
       if(DATE_KEYS.includes(k)) return v ? {t:'n', v:isoToSerial(v), z:'dd/mm/yyyy'} : '';
       if(typeof v==='number') return v;
       return unescH(v==null?'':v);
     }));
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = XL_COLS.map(k=> ({wch: k==='ten'||k==='giaitrinh' ? 36 : 16}));
+  ws['!cols'] = XL_COLS.map(k=> ({wch: k==='ten'||k==='giaitrinh' ? 36 : k==='sysid' ? 38 : 16}));
+  // ghi chú trên tiêu đề: Mã máy chỉ đọc, ID hệ thống là khoá khớp dòng khi nạp lại
+  const note = (k, t) => { const c = ws[XLSX.utils.encode_cell({r:0, c:XL_COLS.indexOf(k)})]; if(c){ c.c = [{a:'TienDoMayVe', t}]; c.c.hidden = true; } };
+  note('ma_may', 'Chỉ đọc — mã do hệ thống cấp khi máy về NM. Sửa ở đây sẽ bị bỏ qua khi nạp lại.');
+  note('sysid', 'KHÔNG SỬA — khoá để nạp lại đúng máy. Để trống = thêm máy mới.');
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '📝Cập nhật');
   const fname = (prefix||'TienDoMayVe') + '_' + stampNow() + '.xlsx';
@@ -3141,16 +3178,16 @@ async function importMachines(data, known){
   if(DATA.length){ try{ exportExcel('Backup_BeforeImport'); }catch(e){} }   // tự sao lưu dữ liệu đang có
   window.__selfWriting = true;
   btnPick.textContent = tr('⏳ Importing…','⏳ Đang nạp…');
-  /* file thiếu cột Model / Số serial / ngày thực tế: lấy lại giá trị của ĐÚNG máy đó (theo Mã máy), để nạp Excel không xoá mất */
+  /* file thiếu cột Model / Số serial / ngày thực tế: lấy lại giá trị của ĐÚNG máy đó (theo ID hệ thống), để nạp Excel không xoá mất */
   data.forEach(m=>{
-    const old = m.ma_may && known.get(m.ma_may); if(!old) return;
+    const old = m.sysid && known.get(m.sysid); if(!old) return;
     if(m.model===undefined) m.model = unescH(old.model);
     if(m.serial===undefined) m.serial = unescH(old.serial);
     ACT_KEYS.forEach(k=>{ if(m[k]===undefined) m[k] = old[k]; });
   });
   const actRow = m => Object.fromEntries(ACT_KEYS.map(k=>[k, (typeof m[k]==='string' && /^\d{4}-\d{2}-\d{2}$/.test(m[k])) ? m[k] : null]));
-  const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1, ma_may:m.ma_may||null}))));
-  const { data: res, error } = await sb.rpc('import_machines', { rows });
+  const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1, id:m.sysid||null}))));     // không gửi Mã máy: chỉ hệ thống cấp
+  const { data: res, error } = await sb.rpc('import_machines_by_id', { rows });
   if(error) throw error;
   return res;
 }
@@ -4364,9 +4401,9 @@ const STATIC_VI = new Map([
   ['📂 Import','📂 Nạp Excel'],
   ['➕ Add','➕ Thêm'],
   ['Refresh — reload the latest data','Làm mới — tải lại dữ liệu mới nhất'],
-  ['Import an Excel file exported from the app: rows are matched by the machine code column (empty code = new machine)','Nạp file Excel xuất từ app: khớp từng dòng theo cột Mã máy (để trống mã = máy mới)'],
+  ['Import an Excel file exported from the app: rows are matched by the System ID column (empty = new machine); the machine code column is read-only','Nạp file Excel xuất từ app: khớp từng dòng theo cột ID hệ thống (để trống = máy mới); cột Mã máy chỉ để đọc'],
   ['Add a new machine','Nhập một máy mới'],
-  ['Download the full list as an Excel file; first column (machine code) is the key when you import it back — do not change it','Tải toàn bộ danh sách ra file Excel; cột đầu Mã máy là khoá khi nạp lại — đừng sửa cột này'],
+  ['Download the full list as an Excel file; the last column (System ID) is the key when you import it back — do not change it','Tải toàn bộ danh sách ra file Excel; cột cuối ID hệ thống là khoá khi nạp lại — đừng sửa cột này'],
   ['Deleted machines — restore or delete permanently','Máy đã xoá — khôi phục hoặc xoá hẳn'],
   ['Sign out','Đăng xuất'],
   ['Change password','Đổi mật khẩu'],
