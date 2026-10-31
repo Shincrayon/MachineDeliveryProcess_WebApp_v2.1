@@ -143,6 +143,7 @@ tbody tr:hover{background:rgba(96,165,250,.07)}
 .b-arrived{background:rgba(52,211,153,.13);color:var(--green)}
 .b-soon{background:rgba(251,191,36,.13);color:var(--amber)}
 .b-waiting{background:rgba(96,165,250,.13);color:var(--blue)}
+.b-unknown{background:rgba(148,163,184,.12);color:var(--muted)}
 .b-overdue{background:rgba(251,146,60,.15);color:var(--st-over);box-shadow:inset 0 0 0 1px rgba(251,146,60,.35)}
 .fbtn.active.o{background:var(--st-over);border-color:var(--st-over);color:#1a0f05}
 .nm-kind{display:block;font-size:10.5px;font-weight:600;color:var(--muted)}
@@ -152,6 +153,16 @@ tbody tr:hover{background:rgba(96,165,250,.07)}
 .ac-tools select,.ac-tools input{padding:6px 9px;border-radius:9px;border:1px solid var(--border);background:var(--panel);color:var(--txt);font:inherit;font-size:12.5px}
 .ac-tools input[type=number]{width:64px}
 .ac-tools .nbtn2{padding:6px 12px;font-size:12px}
+/* 🏷 Mã máy: cột đầu bảng Danh sách, cố định khi cuộn ngang */
+#tb td.mm-code,th.mm-code-h{position:sticky;left:0;background:var(--panel);white-space:nowrap;font-variant-numeric:tabular-nums}
+#tb td.mm-code{z-index:1;font-weight:700;font-size:12px;color:var(--sky);box-shadow:inset -1px 0 0 var(--border)}
+th.mm-code-h{z-index:3}
+#tb td.mm-code .muted{font-weight:400;color:var(--muted)}
+.mc-tbl{max-height:52vh} .mc-tbl table{min-width:760px} .mc-tbl td.m{white-space:nowrap}
+.mc-tbl tr.mc-note td.mc-n{color:var(--st-over)} .mc-tbl td.mc-n{font-size:11.5px}
+.mc-ok{margin-right:auto;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.mc-ok input{width:16px;height:16px;accent-color:var(--blue)}
+#mcSave:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.6)}
 .ac-tbl{max-height:50vh}
 .ac-tbl table{min-width:640px}            /* điện thoại: bảng cuộn ngang trong khung, tên máy không vỡ chữ */
 .ac-tbl td.m{min-width:150px}
@@ -718,9 +729,9 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
   </div>
   <button class="upd-btn" id="btnUpd" title="Refresh — reload the latest data">🔄</button>
   <button class="upd-btn mod-mmtb" id="btnAddM" hidden style="border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.12);color:var(--blue)" title="Add a machine to the catalog">➕ Add</button>
-  <button class="upd-btn mod-delivery" id="btnPick" title="Replace all app data with the TienDoMayVe.xlsx file">📂 <span class="btn-t">Import</span></button>
+  <button class="upd-btn mod-delivery" id="btnPick" title="Import an Excel file exported from the app: rows are matched by the machine code column (empty code = new machine)">📂 <span class="btn-t">Import</span></button>
   <button class="upd-btn mod-delivery" id="btnAdd" style="border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.12);color:var(--blue)" title="Add a new machine">➕ Add</button>
-  <button class="upd-btn mod-delivery" id="btnExport" hidden title="Download the full list as an Excel file (can be re-imported with 📂 Import Excel)">⬇️ Excel</button>
+  <button class="upd-btn mod-delivery" id="btnExport" hidden title="Download the full list as an Excel file; first column (machine code) is the key when you import it back — do not change it">⬇️ Excel</button>
   <button class="upd-btn mod-delivery" id="btnTrash" hidden title="Deleted machines — restore or delete permanently">🗑</button>
   <button class="upd-btn" id="btnPw" hidden title="Change password">🔑</button>
   <button class="upd-btn" id="btnLogout" hidden title="Sign out">⎋</button>
@@ -806,7 +817,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
   <!-- ============ PAGE 3: DANH SÁCH ============ -->
   <div class="page" id="p3">
     <div class="toolbar">
-      <div class="search"><input id="q" type="text" placeholder="Search by machine name, supplier..."></div>
+      <div class="search"><input id="q" type="text" placeholder="Search by machine code, name, supplier..."></div>
       <button class="fbtn active" data-f="all">All</button>
       <button class="fbtn g" data-f="arrived">✅ Arrived</button>
       <button class="fbtn a" data-f="soon">🚢 Arriving soon</button>
@@ -820,11 +831,13 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <select id="fYr" title="Year of arrival at plant"><option value="">Year: All</option></select>
       <button type="button" class="exp-open" id="btnExp" onclick="expOpen()">📤 Export data</button>
       <button type="button" class="exp-open ac-open" id="btnAc" hidden onclick="acOpen()">✅ Confirm arrivals</button>
+      <button type="button" class="exp-open ac-open" id="btnMc" hidden onclick="mcOpen()">🏷 Assign machine codes</button>
     </div>
     <div class="qu-bar" id="quBar" hidden></div>
     <div class="tablewrap">
       <table>
         <thead><tr>
+          <th class="mm-code-h" data-s="ma_may">Machine code</th>
           <th class="qu-h" id="quTh" hidden><input type="checkbox" id="quAll"></th>
           <th data-s="ten">Machine</th><th data-s="sl">Qty</th><th data-s="noilapdat">Site</th>
           <th data-s="ncc">Supplier</th><th data-s="xuatxu">Origin</th><th data-s="phutrach">Person in charge</th>
@@ -858,6 +871,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
     <h4 id="addTitle">➕ Add new machine</h4>
     <div class="m-sub">The machine is saved to the app and everyone with the link sees it right away. After saving, you get a data row to paste into Excel (sheet Cập nhật) if you want to keep the Excel file in sync.</div>
     <div class="add-grid" id="addGrid">
+      <label class="full">Machine code<input id="f_mamay" type="text" readonly tabindex="-1" placeholder="Assigned automatically on save" style="opacity:.75;cursor:not-allowed"></label>
       <label class="full">Machine name *<input id="f_ten" class="req" type="text" placeholder="e.g. Bottle label remover 3 t/h"></label>
       <label>Person in charge<input id="f_pt" type="text"></label>
       <label>Quantity<input id="f_sl" type="number" value="1" min="1"></label>
@@ -960,7 +974,8 @@ function rowsToData(rows){
     // ngày thực tế (Cập nhật nhanh): file không có cột -> undefined, replaceAll giữ giá trị đang có
     tauchay_tt: 'Ngày tàu chạy TT' in r ? iso(r['Ngày tàu chạy TT']) : undefined,
     capcang_tt: 'Ngày cập cảng TT' in r ? iso(r['Ngày cập cảng TT']) : undefined,
-    venm_tt: 'Ngày máy về NM TT' in r ? iso(r['Ngày máy về NM TT']) : undefined
+    venm_tt: 'Ngày máy về NM TT' in r ? iso(r['Ngày máy về NM TT']) : undefined,
+    ma_may: 'Mã máy' in r ? String(r['Mã máy']||'').trim().toUpperCase() : undefined
   }));
 }
 
@@ -1069,7 +1084,8 @@ function readAll(wb){
       xuatxuong:serialToISO(xxg), workingday:(wd||''),
       tauchay_tt: H['Ngày tàu chạy TT']!=null ? serialToISO(toSerial(gv(row,'Ngày tàu chạy TT'))) : undefined,
       capcang_tt: H['Ngày cập cảng TT']!=null ? serialToISO(toSerial(gv(row,'Ngày cập cảng TT'))) : undefined,
-      venm_tt: H['Ngày máy về NM TT']!=null ? serialToISO(toSerial(gv(row,'Ngày máy về NM TT'))) : undefined
+      venm_tt: H['Ngày máy về NM TT']!=null ? serialToISO(toSerial(gv(row,'Ngày máy về NM TT'))) : undefined,
+      ma_may: H['Mã máy']!=null ? String(gv(row,'Mã máy')||'').trim().toUpperCase() : undefined
     });
   }
   return out;
@@ -1110,18 +1126,35 @@ function sparkDots(c){
   return s;
 }
 
-/* ===== Nạp Excel: thay toàn bộ dữ liệu trên app ===== */
+/* ===== Nạp Excel: khớp từng dòng theo Mã máy (migrations/20261031_05_machine_code.sql, import_machines) =====
+   Có mã -> cập nhật đúng máy đó · không có mã -> máy mới (hỏi xác nhận) · mã không có trong hệ thống -> dừng, không ghi gì ·
+   máy không có trong file -> giữ nguyên. File chưa có cột Mã máy (file gốc) khi app đã có dữ liệu -> chặn (tránh nhân đôi). */
 async function applyBuffer(buf){
   const wb = XLSX.read(buf);
   const data = readAll(wb);
   if(!data.length) throw new Error(tr('no data rows found — the file needs a "📝Cập nhật" sheet with a "Tên máy" column...','không tìm thấy dòng dữ liệu — cần sheet "📝Cập nhật" có cột Tên máy...'));
+  const stop = (title, sub) => showNotice({ type:'error', title, sub });
+  if(DATA.length && !data.some(m=>m.ma_may!==undefined))
+    return stop(tr('The file has no “Mã máy” column','File chưa có cột “Mã máy”'),
+      tr('Importing it would add every machine again. Press <b>⬇️ Excel</b> to download the list from the app (first column = Mã máy), edit that file, then import it.',
+         'Nạp file này sẽ thêm lại toàn bộ máy (nhân đôi). Bấm <b>⬇️ Excel</b> để tải danh sách từ app (cột đầu là Mã máy), sửa trên file đó rồi nạp lại.'));
+  const known = new Map(DATA.filter(x=>x.ma_may).map(x=>[x.ma_may, x]));
+  const coded = data.filter(m=>m.ma_may), fresh = data.filter(m=>!m.ma_may);
+  const seen = {}; coded.forEach(m=>{ seen[m.ma_may] = (seen[m.ma_may]||0) + 1; });
+  const dup = Object.keys(seen).filter(c=>seen[c] > 1), bad = [...new Set(coded.map(m=>m.ma_may).filter(c=>!known.has(c)))];
+  if(dup.length) return stop(tr('Duplicate machine codes in the file','Mã máy bị lặp trong file'), escH(dup.join(', ')) + tr(' — each code may appear only once. Nothing was imported.',' — mỗi mã chỉ được xuất hiện 1 lần. Chưa nạp gì.'));
+  if(bad.length) return stop(tr('Machine codes not found','Mã máy không có trong hệ thống'), escH(bad.join(', ')) +
+    tr('<br>Codes are never created from a file. Fix or clear these codes (empty = new machine). Nothing was imported.','<br>App không tự tạo mã từ file. Sửa lại hoặc xoá trống các mã này (để trống = máy mới). Chưa nạp gì.'));
+  const keep = DATA.length - new Set(coded.map(m=>m.ma_may)).size;
   confirmBox({
     title:tr('Import data from Excel?','Nạp dữ liệu từ Excel?'),
-    sub:tr(`The file has <b>${data.length}</b> machines. All <b>${DATA.length}</b> machines currently in the app will be replaced by the file's data, including edits made directly in the app.`,`File có <b>${data.length}</b> máy. Toàn bộ <b>${DATA.length}</b> máy đang có trên app sẽ được thay bằng dữ liệu trong file, kể cả những sửa đổi đã nhập trực tiếp trên app.`),
-    ok:tr('Replace with Excel data','Thay bằng dữ liệu Excel'),
+    sub:tr(`<b>${coded.length}</b> machine(s) will be updated by machine code.`,`<b>${coded.length}</b> máy được cập nhật theo Mã máy.`)
+      + (fresh.length ? tr(`<br><b style="color:var(--st-over)">${fresh.length} row(s) have no code and will be added as NEW machines</b> (a code is assigned when saved).`,`<br><b style="color:var(--st-over)">${fresh.length} dòng không có mã sẽ được thêm thành máy MỚI</b> (tự cấp mã khi lưu).`) : '')
+      + (keep > 0 ? tr(`<br>${keep} machine(s) in the app are not in the file and stay unchanged.`,`<br>${keep} máy đang có không nằm trong file — giữ nguyên.`) : ''),
+    ok: fresh.length ? tr(`Import + add ${fresh.length} new`,`Nạp + thêm ${fresh.length} máy mới`) : tr('Import','Nạp dữ liệu'),
     onOk: async ()=>{
       try{
-        await replaceAll(data);
+        await importMachines(data, known);
         showNotice({ type:'success', count:data.length, last:escH((data[data.length-1]||{}).ten), onOk:()=>location.reload() });
       }catch(err){ showNotice({type:'error', title:tr('Could not save the data','Chưa lưu được dữ liệu'), sub:dbErrText(err)}); }
       finally{ btnPick.textContent=tr('📂 Import','📂 Nạp Excel'); }
@@ -1307,7 +1340,7 @@ async function submitAdd(){
 }
 
 function resetAddForm(){
-  ['f_ten','f_pt','f_cs','f_nld','f_ncc','f_xx','f_model','f_serial','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_gt'].forEach(id=>document.getElementById(id).value='');
+  ['f_mamay','f_ten','f_pt','f_cs','f_nld','f_ncc','f_xx','f_model','f_serial','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_gt'].forEach(id=>document.getElementById(id).value='');
   ['f_duyet','f_dh','f_tutt','f_xxg'].forEach(id=>{ if(window.fpickers && window.fpickers[id]) window.fpickers[id].clear(); });
   ['f_ctu','f_dt','f_lm','f_ctm'].forEach(id=>document.getElementById(id).value='0');
   ['f_dttt','f_lmtt'].forEach(id=>document.getElementById(id).value='');     // trống = lấy theo KH
@@ -1330,8 +1363,8 @@ fileUpd.onchange = async e => {
 };
 
 const C = {arrived:'#34d399', overdue:'#fb923c', soon:'#fbbf24', waiting:'#60a5fa'};
-const LBL = tr({arrived:'Arrived', overdue:'⚠ Overdue – unconfirmed', soon:'Arriving soon (≤15 days)', waiting:'Awaiting'},
-  {arrived:'Đã về', overdue:'⚠ Quá hạn – chưa xác nhận', soon:'Sắp về (≤15 ngày)', waiting:'Chờ về'});
+const LBL = tr({arrived:'Arrived', overdue:'⚠ Overdue – unconfirmed', soon:'Arriving soon (≤15 days)', waiting:'Awaiting', unknown:'No date yet'},
+  {arrived:'Đã về', overdue:'⚠ Quá hạn – chưa xác nhận', soon:'Sắp về (≤15 ngày)', waiting:'Chờ về', unknown:'Chưa có ngày'});
 const MON = tr(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
   ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12']);
 /* tên nước lưu tiếng Việt trong dữ liệu -> khi chọn tiếng Anh thì hiển thị tiếng Anh */
@@ -1602,7 +1635,7 @@ let KP = null;
       const it = GN.items[p.value[3]];
       const row = (lbl, m) => `<tr><td style="padding-right:10px;color:${cssv('--muted')}">${lbl}</td><td>${dmD(m.planned)}</td><td>${dmD(m.forecast)}</td><td>${dmD(m.actual)}</td></tr>`;
       const d = it.delay;
-      return `<b>${ovEsc(it.x.ten)}</b><br><span style="color:${cssv('--muted')}">${ovEsc(it.x.ncc) || '—'} · ${it.group} · ${ovEsc(it.x.phutrach) || '—'}</span>` +
+      return `<b>${it.x.ma_may ? it.x.ma_may + ' · ' : ''}${ovEsc(it.x.ten)}</b><br><span style="color:${cssv('--muted')}">${ovEsc(it.x.ncc) || '—'} · ${it.group} · ${ovEsc(it.x.phutrach) || '—'}</span>` +
         `<table style="margin-top:6px;font-size:12px;border-collapse:collapse"><tr style="color:${cssv('--muted')}"><td></td><td>${tr('Planned','Kế hoạch')}</td><td style="padding:0 8px">${tr('Forecast','Dự kiến')}</td><td>${tr('Actual','Thực tế')}</td></tr>` +
         it.milestones.map(m => row(OV_MS[m.milestone], m)).join('') + `</table>` +
         (d ? `<div style="margin-top:6px;color:${d.days > 14 ? C.bad : C.warn};font-weight:700">+${d.days} ${tr('days late','ngày trễ')}</div>`
@@ -1837,7 +1870,7 @@ function initP2(){
     mk.bindTooltip(`${ctT(name)}: ${rows.length} ${tr('machines','thiết bị')}`,{direction:'top'});
     mk.bindPopup(`<div class="mp-title" style="color:${o.col}">🌍 ${ctT(name)}</div>
       <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')} · ${(v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')}<br>${tr('Suppliers','NCC')}: ${nccs.join(', ')}</div>
-      <div class="mp-list">${rows.map(x=>`<div>${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
+      <div class="mp-list">${rows.map(x=>`<div>${x.ma_may ? `<small>${x.ma_may}</small> ` : ''}${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
       {maxWidth:290});
     if(name!=='Việt Nam'){
       const mid = [(o.c[0]+DEST[0])/2 + Math.abs(o.c[1]-DEST[1])*0.12, (o.c[1]+DEST[1])/2];
@@ -1875,7 +1908,7 @@ function initP2(){
     mk.bindTooltip(`${ctT(name)}: ${rows.length} ${tr('machines','thiết bị')}`,{direction:'top'});
     mk.bindPopup(`<div class="mp-title">📍 ${name}</div>
       <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')} · ${(v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')}</div>
-      <div class="mp-list">${rows.map(x=>`<div>${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
+      <div class="mp-list">${rows.map(x=>`<div>${x.ma_may ? `<small>${x.ma_may}</small> ` : ''}${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
       {maxWidth:290});
     pts.push(coord);
   });
@@ -2084,7 +2117,7 @@ const READY_S = () => tr({ todo:'To do', in_progress:'In progress', done:'Done',
 const plMissing = (e, file) => { const c = e && e.code, m = String((e && e.message) || '');
   return c === '42P01' || c === 'PGRST205' || /not find|does not exist|schema cache/i.test(m)
     ? tr(`Table not set up yet — run supabase/migrations/${file} in Supabase › SQL Editor.`, `Chưa có bảng — chạy supabase/migrations/${file} trong Supabase › SQL Editor.`) : dbErrText(e); };
-const plName = id => { const x = DATA.find(d => d._id === id); return x ? x.ten : '—'; };
+const plName = id => { const x = DATA.find(d => d._id === id); return x ? (x.ma_may ? x.ma_may + ' · ' : '') + unescH(x.ten) : '—'; };
 async function plLoad(){
   const sb = window.__sb; PL.err = {};
   const q = async (k, f) => { if(!sb){ PL.err[k] = { code:'nodb' }; return []; }
@@ -2309,7 +2342,7 @@ function filtered(){
   let rows = DATA.filter(x=>
     (filter==='all' || (filter==='delay'? x.giaitrinh : x.status===filter)) &&
     (!loc || x.noilapdat===loc) && (!origin || x.xuatxu===origin) && (!pic || x.phutrach===pic) &&
-    (!q || (x.ten+' '+x.ncc).toLowerCase().includes(q)) &&
+    (!q || (x.ten+' '+x.ncc+' '+(x.ma_may||'')).toLowerCase().includes(q)) &&
     (!lMon || (x.vedukienn && x.vedukienn.slice(5,7)===lMon)) && (!lYr || (x.vedukienn && x.vedukienn.slice(0,4)===lYr)));
   rows.sort((a,b)=>{
     if(sortKey==='__prio'){
@@ -2334,6 +2367,7 @@ function render(){
   const view = rows.slice((pageNo-1)*PAGE_SIZE, pageNo*PAGE_SIZE);
   const qw = !!window.__canWrite;
   tb.innerHTML = view.map((x,i)=>`<tr class="${x.status!=='arrived'&&x.danhgia==='Trễ'?'late-flag':''} slide-in" style="--i:${i};cursor:pointer" onclick="showDetail(${DATA.indexOf(x)})" title="${tr('Click to view full machine details','Bấm để xem đầy đủ thông tin thiết bị')}">
+    <td class="mm-code">${x.ma_may || `<span class="muted">${tr('no code','chưa có mã')}</span>`}</td>
     ${qw ? `<td class="qu-c" onclick="event.stopPropagation()"><input type="checkbox" class="qu-ck" data-id="${x._id}"${QU_SEL.has(x._id)?' checked':''} aria-label="${tr('Select for quick update','Chọn để cập nhật nhanh')}"><button type="button" class="qu-btn" title="${tr('⚡ Quick update','⚡ Cập nhật nhanh')}" onclick="quickEdit(${DATA.indexOf(x)})">⚡</button></td>` : ''}
     <td class="name">${x.ten}${x.congsuat?`<small>${x.congsuat}</small>`:''}</td>
     <td>${x.sl}</td><td>${x.noilapdat}</td><td>${x.ncc}</td><td>${ctT(x.xuatxu)}</td>
@@ -2389,7 +2423,7 @@ window.showDetail = i => {
   const sec = (title,items) => `<div class="dt-sec"><h5>${title}</h5><div class="dt-grid">${items.join('')}</div></div>`;
   const ctm = x.sonagyctm ?? x.sonagytm;
 
-  mTitle.textContent = x.ten;
+  mTitle.textContent = (x.ma_may ? x.ma_may + ' · ' : '') + unescH(x.ten);
   mSub.innerHTML = `<span class="badge b-${x.status}" style="font-size:10.5px;padding:2px 8px">${LBL[x.status]||tr('Unknown','Chưa xác định')}</span>
     &nbsp;${tr('Rating','Đánh giá')}: <b style="color:${dgColor}">${dgT(x.danhgia)}</b>
     &nbsp;·&nbsp; ${x.daysleft==null ? tr('no arrival date yet','chưa có ngày về')
@@ -2399,6 +2433,7 @@ window.showDetail = i => {
 
   mBody.innerHTML = `<div class="dt-wrap">
     ${sec(tr('General','Thông tin chung'),[
+      it(tr('Machine code','Mã máy'), `<b>${T(x.ma_may)}</b>`),
       it(tr('Machine name','Tên máy'), T(x.ten),'full'),
       it(tr('Person in charge','Người phụ trách'), T(x.phutrach)),
       it(tr('Quantity','Số lượng'), N(x.sl)),
@@ -2514,6 +2549,8 @@ function dbErrText(e){
   const c = e && e.code;
   if(c==='conflict') return tr('Someone else just edited or deleted this machine. Press <b>🔄 Refresh</b> to see the latest version, then try again.','Máy này vừa được người khác sửa hoặc xoá. Bấm <b>🔄 Làm mới</b> để xem bản mới nhất rồi làm lại.');
   if(c==='42501' || c==='perm') return tr('Your account does not have permission to do this. Ask an admin for editor access.','Tài khoản của bạn không có quyền làm việc này. Nhờ admin cấp quyền editor.');
+  if((c==='PGRST202' || c==='42883' || c==='42703' || c==='PGRST204') && /import_machines|ma_may/.test(e.message||'')) return tr('The database does not have machine codes yet. An admin needs to run <b>supabase/migrations/20261031_05_machine_code.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có Mã máy. Admin cần chạy file <b>supabase/migrations/20261031_05_machine_code.sql</b> trong Supabase > SQL Editor.');
+  if(c==='P0002' || c==='23505') return escH(e.message||'');
   if((c==='PGRST204' || c==='42703') && /tauchay_tt|capcang_tt|venm_tt/.test(e.message||'')) return tr('The database does not have the actual-date columns yet. An admin needs to run <b>supabase/migrations/20261030_04_quick_update.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có cột ngày thực tế. Admin cần chạy file <b>supabase/migrations/20261030_04_quick_update.sql</b> trong Supabase > SQL Editor.');
   if(c==='locked') return tr('This machine could not be decrypted in this tab, so it cannot be updated. Reload and unlock the data first.','Máy này chưa giải mã được trong tab này nên chưa sửa được. Tải lại trang và mở khoá dữ liệu trước.');
   if(c==='PGRST204' && /model|serial/.test(e.message||'')) return tr('The database does not have the Model / Serial number columns yet. An admin needs to run <b>supabase/04_model_serial.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có cột Model / Số serial. Admin cần chạy file <b>supabase/04_model_serial.sql</b> trong Supabase > SQL Editor.');
@@ -2529,7 +2566,7 @@ const REC_LABEL = {ten:'Tên máy', phutrach:'Người phụ trách', sl:'Số l
   sonagyctm:'Số ngày CTM', giaitrinh:'Giải trình', ctu:'TG chờ tạm ứng KH (ngày)', tamungtt:'Ngày tạm ứng TT',
   ditaukh:'TG đi tàu KH (ngày)', ditautt:'TG đi tàu TT (ngày)', lanhkh:'TG lãnh máy KH (ngày)', lanhtt:'TG lãnh máy TT (ngày)',
   xuatxuong:'Xác nhận/dự kiến xuất xưởng', workingday:'Working day',
-  tauchay_tt:'Ngày tàu chạy TT', capcang_tt:'Ngày cập cảng TT', venm_tt:'Ngày máy về NM TT'};
+  tauchay_tt:'Ngày tàu chạy TT', capcang_tt:'Ngày cập cảng TT', venm_tt:'Ngày máy về NM TT', ma_may:'Mã máy'};
 /* nhãn hiển thị khi chọn tiếng Anh; REC_LABEL ở trên giữ tiếng Việt vì là tên cột Excel */
 const REC_LABEL_EN = {ten:'Machine name', phutrach:'Person in charge', sl:'Quantity', congsuat:'Capacity', noilapdat:'Installation site',
   ncc:'Supplier', xuatxu:'Origin', model:'Model', serial:'Serial number', vnd:'Total value (VND)', usd:'Total value (USD)', duyet:'Proposal approval date',
@@ -2537,7 +2574,7 @@ const REC_LABEL_EN = {ten:'Machine name', phutrach:'Person in charge', sl:'Quant
   sonagyctm:'Manufacturing days (CTM)', giaitrinh:'Delay note', ctu:'Advance-payment wait, plan (days)', tamungtt:'Advance-payment date, actual',
   ditaukh:'Shipping time, plan (days)', ditautt:'Shipping time, actual (days)', lanhkh:'Clearance & pickup, plan (days)', lanhtt:'Clearance & pickup, actual (days)',
   xuatxuong:'Confirmed/expected ex-works', workingday:'Working day',
-  tauchay_tt:'Vessel departure, actual', capcang_tt:'Port arrival, actual', venm_tt:'Arrival at plant, actual'};
+  tauchay_tt:'Vessel departure, actual', capcang_tt:'Port arrival, actual', venm_tt:'Arrival at plant, actual', ma_may:'Machine code'};
 /* ngày thực tế nhập qua ⚡ Cập nhật nhanh (migrations/20261030_04): KHÔNG nằm trong REC_KEYS
    để form Sửa đầy đủ (toRow) không ghi đè chúng; trigger machines_actual_trg tính ditautt / lanhtt / vedukienn từ đây */
 const ACT_KEYS = ['tauchay_tt','capcang_tt','venm_tt'];
@@ -2680,7 +2717,7 @@ function quForm(list, keep){
   const batch = list.length > 1, x0 = list[0];
   const val = k => keep ? keep[k] : batch ? '' : (quCur(x0,k)||'');
   mTitle.textContent = batch ? tr(`⚡ Quick update (${list.length} machines)`,`⚡ Cập nhật nhanh (${list.length} máy)`)
-                             : tr('⚡ Quick update: ','⚡ Cập nhật nhanh: ') + unescH(x0.ten);
+                             : tr('⚡ Quick update: ','⚡ Cập nhật nhanh: ') + (x0.ma_may ? x0.ma_may + ' · ' : '') + unescH(x0.ten);
   mSub.innerHTML = batch
     ? tr('Leave a box empty to keep each machine\'s current value. You will see every change before it is saved.','Ô để trống = giữ nguyên giá trị cũ của từng máy. Bạn sẽ xem lại mọi thay đổi trước khi lưu.')
       + `<div class="qu-names">${list.slice(0,12).map(x=>`<span>${x.ten}</span>`).join('')}${list.length>12?`<span>+${list.length-12}</span>`:''}</div>`
@@ -2921,6 +2958,128 @@ async function acRun(plan){
   if(!bad) quToast(tr(`✅ Confirmed ${ok} machine(s)`,`✅ Đã xác nhận ${ok} máy`));
 }
 if(window.__role === 'admin') quEl('btnAc').hidden = false;
+/* ---- 🏷 Cấp mã máy cho máy đang có (chỉ admin; migrations/20261031_05_machine_code.sql) ----
+   Phải làm trong trình duyệt: sắp theo công ty → ngày đặt hàng → tên, và tên máy đã mã hoá.
+   Bước 1: tạo đề xuất + tải DeXuat_MaMay_YYYY-MM-DD.xlsx (chưa ghi gì). Bước 2: admin duyệt file, tích xác nhận,
+   bấm Ghi -> cắt khoảng trắng tên (mã hoá lại, kiểm tra version) rồi assign_machine_codes() ghi mã (tất cả hoặc không).
+   Gồm cả máy trong thùng rác (để chạy được migration 06 NOT NULL). */
+const MC = { rows:[], plan:[], trim:[], dl:false };
+const mcPad = n => n < 1000 ? String(n).padStart(3,'0') : String(n);
+const mcCo = x => DM.companyCode(unescH(x.noilapdat||'')) || 'KXD';
+async function mcLoad(){
+  const sb = window.__sb;
+  const { data, error } = await sb.from('machines').select('*').order('sort_order', { ascending:true });   // admin thấy cả thùng rác
+  if(error) throw error;
+  const opened = await Promise.all((data||[]).map(window.__open));
+  const cnt = await sb.rpc('machine_code_counters');
+  if(cnt.error) throw cnt.error;
+  return { rows: opened.map(r=>({ r, x: window.__cleanMachine(r), raw: String(r.ten == null ? '' : r.ten), del: !!r.deleted_at })), counters: cnt.data || [] };
+}
+function mcPlan(rows, counters){
+  const yNow = DM.todayIso().slice(0,4), next = {};
+  (counters||[]).forEach(c=>{ next[c.company+'-'+c.year] = Number(c.last_no)||0; });
+  rows.forEach(o=>{ const m = /^([A-Z]{2,4})-(\d{4})-(\d{3,})$/.exec(o.r.ma_may||''); if(!m) return;
+    const k = m[1]+'-'+m[2]; next[k] = Math.max(next[k]||0, +m[3]); });
+  const nm = o => o.raw.trim().toLocaleLowerCase('vi');
+  const dup = {}; rows.forEach(o=>{ dup[nm(o)] = (dup[nm(o)]||0) + 1; });
+  const order = [...DM.COMPANIES, 'KXD'];
+  const pend = rows.filter(o=>!o.r.ma_may).map(o=>({ o, co: mcCo(o.x), yr: o.x.dathang ? o.x.dathang.slice(0,4) : yNow }));
+  pend.sort((a,b)=> order.indexOf(a.co) - order.indexOf(b.co)
+    || (a.o.x.dathang ? 0 : 1) - (b.o.x.dathang ? 0 : 1) || String(a.o.x.dathang||'').localeCompare(String(b.o.x.dathang||''))
+    || a.o.raw.trim().localeCompare(b.o.raw.trim(), 'vi'));
+  return pend.map(p=>{
+    const k = p.co+'-'+p.yr; next[k] = (next[k]||0) + 1;
+    const notes = [];
+    if(dup[nm(p.o)] > 1) notes.push(tr(`Duplicate name (${dup[nm(p.o)]} machines)`,`Tên trùng (${dup[nm(p.o)]} máy)`));
+    if(!p.o.x.dathang) notes.push(tr(`No order date — year ${yNow} used`,`Thiếu ngày đặt hàng — dùng năm ${yNow}`));
+    if(p.co==='KXD') notes.push(tr(`Company not recognised ("${unescH(p.o.x.noilapdat)||'empty'}")`,`Không xác định công ty ("${unescH(p.o.x.noilapdat)||'trống'}")`));
+    if(p.o.raw !== p.o.raw.trim()) notes.push(tr('Extra spaces in the name — will be trimmed','Tên có khoảng trắng thừa — sẽ cắt'));
+    if(p.o.del) notes.push(tr('In the trash','Đang trong thùng rác'));
+    const f = { dup: dup[nm(p.o)] > 1, nodh: !p.o.x.dathang, kxd: p.co==='KXD', ws: p.o.raw !== p.o.raw.trim(), del: p.o.del };
+    return { o:p.o, code:`${k}-${mcPad(next[k])}`, notes, f };
+  });
+}
+function mcExport(){
+  const loc = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+  const aoa = [[tr('Proposed code','Mã đề xuất'), tr('Machine','Tên hạng mục'), tr('Installation site','Nơi lắp đặt'), tr('Supplier','NCC'), tr('Order date','Ngày đặt hàng'), tr('Notes','Ghi chú')]]
+    .concat(MC.plan.map(p=>[p.code, p.o.raw.trim(), unescH(p.o.x.noilapdat||'').trim(), unescH(p.o.x.ncc||'').trim(), p.o.x.dathang ? loc(p.o.x.dathang) : '', p.notes.join('; ')]));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:15},{wch:42},{wch:14},{wch:24},{wch:14},{wch:60}];
+  for(let r=1; r<aoa.length; r++){ const c = ws[XLSX.utils.encode_cell({r, c:4})]; if(c && c.t==='n') c.z = 'dd/mm/yyyy'; }
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'DeXuat');
+  const fn = `DeXuat_MaMay_${DM.todayIso()}.xlsx`; XLSX.writeFile(wb, fn); return fn;
+}
+window.mcOpen = async () => {
+  if(window.__role !== 'admin') return;
+  mTitle.textContent = tr('🏷 Assign machine codes','🏷 Cấp mã máy'); mSub.textContent = tr('Loading…','Đang tải…'); mBody.innerHTML = ''; openM(1);
+  try{ const L = await mcLoad(); MC.rows = L.rows; MC.plan = mcPlan(L.rows, L.counters); }
+  catch(err){ mSub.textContent = ''; mBody.innerHTML = `<div class="m-gt">${mcErr(err)}</div>`; return; }
+  MC.trim = MC.rows.filter(o=>o.raw !== o.raw.trim()); MC.dl = false;
+  const nNote = k => MC.plan.filter(p=>p.f[k]).length;
+  mSub.innerHTML = MC.plan.length
+    ? tr(`<b>${MC.plan.length}</b> machine(s) without a code (incl. ${MC.plan.filter(p=>p.o.del).length} in the trash). Format: COMPANY-YEAR-NO., e.g. DTR-2026-001. Nothing is saved until you review the file and press Save.`,
+         `<b>${MC.plan.length}</b> máy chưa có mã (gồm ${MC.plan.filter(p=>p.o.del).length} máy trong thùng rác). Định dạng: CÔNG TY-NĂM-STT, VD DTR-2026-001. Chưa ghi gì cho tới khi bạn duyệt file và bấm Ghi.`)
+      + `<div class="qu-names"><span>${tr('Duplicate names','Tên trùng')}: ${nNote('dup')}</span><span>${tr('No order date','Thiếu ngày đặt hàng')}: ${nNote('nodh')}</span>`
+      + `<span>${tr('Unknown company','Không xác định công ty')}: ${nNote('kxd')}</span><span>${tr('Names to trim','Tên cần cắt khoảng trắng')}: ${MC.trim.length}</span></div>`
+    : tr('Every machine already has a code.','Mọi máy đều đã có mã.');
+  if(!MC.plan.length && !MC.trim.length){ mBody.innerHTML = `<div class="m-ok">✅ ${tr('Nothing to do. You can now run supabase/migrations/20261031_06_machine_code_not_null.sql.','Không còn gì cần làm. Có thể chạy supabase/migrations/20261031_06_machine_code_not_null.sql.')}</div>`; return; }
+  mBody.innerHTML = `<div class="qu-tbl mc-tbl"><table><thead><tr><th>${tr('Proposed code','Mã đề xuất')}</th><th>${tr('Machine','Tên hạng mục')}</th><th>${tr('Site','Nơi lắp đặt')}</th>
+      <th>${tr('Supplier','NCC')}</th><th>${tr('Order date','Ngày đặt hàng')}</th><th>${tr('Notes','Ghi chú')}</th></tr></thead><tbody>
+      ${MC.plan.map(p=>`<tr class="${p.notes.length?'mc-note':''}"><td class="m">${p.code}</td><td>${escH(p.o.raw.trim())}</td><td>${p.o.x.noilapdat||'—'}</td><td>${p.o.x.ncc||'—'}</td>
+        <td>${fmtD(p.o.x.dathang)}</td><td class="mc-n">${p.notes.map(escH).join('<br>')}</td></tr>`).join('')}</tbody></table></div>
+    <div id="quMsg" style="min-height:1.2em;font-size:13px;margin-bottom:8px"></div>
+    <div class="add-actions">
+      <label class="mc-ok"><input type="checkbox" id="mcOk" disabled> ${tr('I have reviewed the proposal file','Tôi đã duyệt file đề xuất')}</label>
+      <button type="button" class="nbtn2 ghost" id="mcXls">⬇️ ${tr('Download proposal file','Tải file đề xuất')}</button>
+      <button type="button" class="nbtn2" id="mcSave" disabled>💾 ${tr(`Save codes (${MC.plan.length})`,`Ghi mã (${MC.plan.length} máy)`)}</button></div>`;
+  quEl('mcXls').onclick = () => { try{ quToast('⬇️ ' + escH(mcExport())); MC.dl = true; quEl('mcOk').disabled = false; }catch(e){ quToast('⚠️ ' + escH(e.message)); } };
+  quEl('mcOk').onchange = e => { quEl('mcSave').disabled = !e.target.checked; };
+  quEl('mcSave').onclick = () => confirmBox({
+    title: tr(`Save ${MC.plan.length} machine code(s)?`,`Ghi ${MC.plan.length} mã máy vào hệ thống?`),
+    sub: tr(`Codes never change afterwards (only an admin can edit one). ${MC.trim.length} machine name(s) will also be trimmed.`,
+            `Mã đã ghi sẽ cố định (chỉ admin sửa được). Đồng thời cắt khoảng trắng thừa ở ${MC.trim.length} tên máy.`),
+    ok: tr('Save','Ghi mã'), onOk: mcRun });
+};
+function mcErr(e){
+  const m = String((e && e.message) || '');
+  if((e && (e.code==='PGRST202' || e.code==='42883')) || /machine_code_counters|assign_machine_codes/.test(m) && /not find|does not exist|schema cache/i.test(m))
+    return tr('The database is not ready yet. An admin needs to run <b>supabase/migrations/20261031_05_machine_code.sql</b> in Supabase > SQL Editor.',
+              'Cơ sở dữ liệu chưa sẵn sàng. Admin cần chạy file <b>supabase/migrations/20261031_05_machine_code.sql</b> trong Supabase > SQL Editor.');
+  return dbErrText(e);
+}
+async function mcRun(){
+  const sb = window.__sb, msg = quEl('quMsg');
+  quEl('mcSave').disabled = true; window.__selfWriting = true;
+  const tFail = [];
+  // 1) cắt khoảng trắng tên: mã hoá lại cả gói sec, chỉ tên đổi; kiểm tra version
+  for(const [n,o] of MC.trim.entries()){
+    msg.style.color = 'var(--muted)'; msg.textContent = tr(`Trimming names ${n+1}/${MC.trim.length}…`,`Đang cắt khoảng trắng tên ${n+1}/${MC.trim.length}…`);
+    try{
+      const s = {}; SEC.machines.f.forEach(k=>{ s[k] = (k==='vnd'||k==='usd') ? (Number(o.r[k])||0) : (o.r[k]==null ? '' : String(o.r[k])); });
+      s.ten = o.raw.trim();
+      const sealed = await window.__seal('machines', s);
+      const upd = sealed.sec ? { sec: sealed.sec, ten: '' } : { ten: s.ten };
+      const { data, error } = await sb.from('machines').update(upd).eq('id', o.r.id).eq('version', o.r.version).select('id');
+      if(error) throw error;
+      if(!data || !data.length) throw { code:'conflict' };
+    }catch(err){ tFail.push({ o, err }); }
+  }
+  // 2) ghi mã: tất cả hoặc không
+  msg.textContent = tr('Saving codes…','Đang ghi mã…');
+  const { data: n, error } = await sb.rpc('assign_machine_codes', { p: MC.plan.map(p=>({ id: p.o.r.id, ma_may: p.code })) });
+  setTimeout(()=>{ window.__selfWriting = false; }, 1500);
+  mTitle.textContent = error ? tr('🏷 Codes NOT saved','🏷 Chưa ghi được mã') : tr(`🏷 Saved ${n} machine code(s)`,`🏷 Đã ghi ${n} mã máy`);
+  mSub.innerHTML = '';
+  mBody.innerHTML = (error ? `<div class="m-gt">${mcErr(error)}</div>` : `<div class="m-ok">✅ ${tr(`${n} machines now have a code. Next: run supabase/migrations/20261031_06_machine_code_not_null.sql.`,`${n} máy đã có mã. Bước tiếp theo: chạy supabase/migrations/20261031_06_machine_code_not_null.sql.`)}</div>`)
+    + (MC.trim.length ? `<div class="${tFail.length?'m-gt':'m-ok'}" style="margin-top:8px">${tr(`Names trimmed: ${MC.trim.length - tFail.length}/${MC.trim.length}`,`Đã cắt khoảng trắng tên: ${MC.trim.length - tFail.length}/${MC.trim.length}`)}`
+       + tFail.map(f=>`<br>❌ ${escH(f.o.raw.trim())}: ${dbErrText(f.err)}`).join('') + '</div>' : '')
+    + `<div class="add-actions" style="margin-top:12px"><button type="button" class="nbtn2" onclick="location.reload()">🔄 ${tr('Reload the page','Tải lại trang')}</button></div>`;
+}
+/* nút 🏷 chỉ hiện với admin khi còn máy chưa có mã (kể cả trong thùng rác) */
+if(window.__role === 'admin' && window.__sb){
+  window.__sb.from('machines').select('id', { count:'exact', head:true }).is('ma_may', null)
+    .then(r => { if(!r.error && r.count) quEl('btnMc').hidden = false; });
+}
 window.quickEdit = i => { const x = DATA[i]; if(x && window.__canWrite) quForm([x]); };
 /* chọn nhiều: ô chọn ở đầu dòng, ô ở tiêu đề = chọn / bỏ chọn mọi máy đang lọc (mọi trang) */
 window.quSync = rows => {
@@ -2953,7 +3112,8 @@ quEl('quAll').addEventListener('change', ()=>{
 quSync(filtered());
 
 /* ---- Xuất Excel: cùng cấu trúc sheet "📝Cập nhật" nên nạp lại được bằng 📂 Nạp Excel ---- */
-const XL_COLS = ['ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','ctu','tamungtt',
+/* Mã máy đứng đầu: là khoá khi nạp lại (giữ nguyên mã = cập nhật đúng máy; để trống = máy mới) */
+const XL_COLS = ['ma_may','ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','ctu','tamungtt',
   'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'].concat(ACT_KEYS);
 const pad2 = n=>String(n).padStart(2,'0');
 function stampNow(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes()); }
@@ -2976,32 +3136,23 @@ function exportExcel(prefix){
   return fname;
 }
 
-async function replaceAll(data){
+async function importMachines(data, known){
   const sb = window.__sb; if(!sb) throw {code:'nodb'};
   if(DATA.length){ try{ exportExcel('Backup_BeforeImport'); }catch(e){} }   // tự sao lưu dữ liệu đang có
   window.__selfWriting = true;
   btnPick.textContent = tr('⏳ Importing…','⏳ Đang nạp…');
-  /* file không có cột Model / Số serial: lấy lại giá trị của máy cùng tên đang có, để nạp Excel không xoá mất */
-  const used = new Set();
+  /* file thiếu cột Model / Số serial / ngày thực tế: lấy lại giá trị của ĐÚNG máy đó (theo Mã máy), để nạp Excel không xoá mất */
   data.forEach(m=>{
-    if(m.model!==undefined && m.serial!==undefined) return;
-    const old = DATA.find(x=>!used.has(x) && unescH(x.ten)===m.ten); if(!old) return;
-    used.add(old);
+    const old = m.ma_may && known.get(m.ma_may); if(!old) return;
     if(m.model===undefined) m.model = unescH(old.model);
     if(m.serial===undefined) m.serial = unescH(old.serial);
-  });
-  /* file chưa có cột ngày thực tế (Cập nhật nhanh): lấy lại giá trị của máy cùng tên đang có */
-  const usedA = new Set();
-  data.forEach(m=>{
-    if(ACT_KEYS.every(k=>m[k]!==undefined)) return;
-    const old = DATA.find(x=>!usedA.has(x) && unescH(x.ten)===m.ten); if(!old) return;
-    usedA.add(old);
     ACT_KEYS.forEach(k=>{ if(m[k]===undefined) m[k] = old[k]; });
   });
   const actRow = m => Object.fromEntries(ACT_KEYS.map(k=>[k, (typeof m[k]==='string' && /^\d{4}-\d{2}-\d{2}$/.test(m[k])) ? m[k] : null]));
-  const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1}))));
-  const { error } = await sb.rpc('replace_all_machines', { rows });
+  const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1, ma_may:m.ma_may||null}))));
+  const { data: res, error } = await sb.rpc('import_machines', { rows });
   if(error) throw error;
+  return res;
 }
 function confirmBox(o){
   let bg = document.getElementById('noticeBg');
@@ -3019,7 +3170,7 @@ window.editMachine = i => {
   mBg.classList.remove('show');
   resetAddForm();
   const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value = (v==null?'':v); };
-  set('f_ten', unescH(x.ten)); set('f_pt', unescH(x.phutrach)); set('f_sl', x.sl||1);
+  set('f_mamay', x.ma_may||''); set('f_ten', unescH(x.ten)); set('f_pt', unescH(x.phutrach)); set('f_sl', x.sl||1);
   set('f_cs', unescH(x.congsuat)); set('f_nld', unescH(x.noilapdat)); set('f_ncc', unescH(x.ncc)); set('f_xx', unescH(x.xuatxu));
   set('f_model', unescH(x.model)); set('f_serial', unescH(x.serial));
   set('f_vnd', fmtMoney(x.vnd)); set('f_usd', fmtMoney(x.usd));
@@ -4213,9 +4364,9 @@ const STATIC_VI = new Map([
   ['📂 Import','📂 Nạp Excel'],
   ['➕ Add','➕ Thêm'],
   ['Refresh — reload the latest data','Làm mới — tải lại dữ liệu mới nhất'],
-  ['Replace all app data with the TienDoMayVe.xlsx file','Thay toàn bộ dữ liệu trên app bằng file TienDoMayVe.xlsx'],
+  ['Import an Excel file exported from the app: rows are matched by the machine code column (empty code = new machine)','Nạp file Excel xuất từ app: khớp từng dòng theo cột Mã máy (để trống mã = máy mới)'],
   ['Add a new machine','Nhập một máy mới'],
-  ['Download the full list as an Excel file (can be re-imported with 📂 Import Excel)','Tải toàn bộ danh sách ra file Excel (nạp lại được bằng 📂 Nạp Excel)'],
+  ['Download the full list as an Excel file; first column (machine code) is the key when you import it back — do not change it','Tải toàn bộ danh sách ra file Excel; cột đầu Mã máy là khoá khi nạp lại — đừng sửa cột này'],
   ['Deleted machines — restore or delete permanently','Máy đã xoá — khôi phục hoặc xoá hẳn'],
   ['Sign out','Đăng xuất'],
   ['Change password','Đổi mật khẩu'],
@@ -4243,7 +4394,10 @@ const STATIC_VI = new Map([
   ['Supplier rating — on-time delivery','Đánh giá nhà cung cấp — giao hàng không trễ'],
   ['Person-in-charge rating — on time · volume · value','Đánh giá nhân sự phụ trách — máy không về trễ · khối lượng · giá trị'],
   ['Staff performance scorecard — weights: equipment count 50% · value 30% · on time 20%','Bảng điểm hiệu suất nhân sự — trọng số: số MMTB 50% · giá trị 30% · không trễ 20%'],
-  ['Search by machine name, supplier...','Tìm theo tên máy, nhà cung cấp...'],
+  ['Search by machine code, name, supplier...','Tìm theo mã máy, tên máy, nhà cung cấp...'],
+  ['Machine code','Mã máy'],
+  ['🏷 Assign machine codes','🏷 Cấp mã máy'],
+  ['Assigned automatically on save','Tự cấp khi lưu'],
   ['All','Tất cả'],
   ['✅ Arrived','✅ Đã về'],
   ['🚢 Arriving soon','🚢 Sắp về'],
@@ -4580,7 +4734,7 @@ window.encryptExisting = async () => {
 
 (async function(){
   const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const STR = ['ten','phutrach','congsuat','noilapdat','ncc','xuatxu','model','serial','danhgia','giaitrinh','workingday'];
+  const STR = ['ten','phutrach','congsuat','noilapdat','ncc','xuatxu','model','serial','danhgia','giaitrinh','workingday','ma_may'];
   const DATES = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt'];
   const NUMS = ['sl','vnd','usd','sonagyctm','ctu','ditaukh','ditautt','lanhkh','lanhtt'];
   const isoRe = /^\d{4}-\d{2}-\d{2}$/;
