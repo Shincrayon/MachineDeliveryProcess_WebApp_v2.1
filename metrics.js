@@ -12,6 +12,7 @@
    Sau này chuyển sang delivery_milestones thì chỉ sửa DM.milestones().
    "Đã về" CHỈ KHI có venm_tt; quá ngày dự kiến mà chưa có = 'overdue' (Quá hạn – chưa xác nhận).
    Trạng thái 1 máy: DM.arrivalStatus() — mọi nơi trong app dùng chung hàm này.
+   Sau khi về: DM.installStatus() — Đang lắp đặt / Đã nghiệm thu + cảnh báo chờ lắp đặt, trễ nghiệm thu.
    ===================================================================== */
 (function(){
   const DAY = 86400000;
@@ -19,6 +20,10 @@
   const toDate = s => new Date(s + 'T00:00:00');
 
   const DM = {};
+
+  /* cấu hình: APP_CONFIG.INSTALL_WAIT_DAYS (config.js) ghi đè số ngày "Đã về – chưa lắp đặt" */
+  const APPC = window.APP_CONFIG || {};
+  DM.CFG = { installWaitDays: +APPC.INSTALL_WAIT_DAYS > 0 ? +APPC.INSTALL_WAIT_DAYS : 30 };
 
   /* hôm nay lúc 00:00 — test có thể đặt window.DM_TODAY = 'YYYY-MM-DD' */
   DM.today = () => {
@@ -67,19 +72,45 @@
   };
   const ms = (x, name) => DM.milestones(x).find(m => m.milestone === name);
 
-  /* ---------- trạng thái vòng đời suy từ ngày ----------
-     Bảng machines chưa có ngày lắp đặt / nghiệm thu nên dừng ở 'arrived'. */
-  DM.LIFECYCLE = ['planned', 'manufacturing', 'shipping', 'arrived'];
+  /* ---------- lắp đặt – nghiệm thu (sau khi về NM; migrations/20261031_09) ----------
+     stage: 'in_operation' có nghiemthu_tt · 'installing' có lapdat_tt hoặc chaythu_tt, chưa nghiệm thu
+            'arrived' đã về, chưa có ngày lắp đặt nào · null chưa về (venm_tt trống)
+     waitInstall: đã về, chưa có ngày lắp đặt nào, quá DM.CFG.installWaitDays ngày kể từ venm_tt
+     lateAccept:  có nghiemthu_kh, hôm nay > nghiemthu_kh, chưa có nghiemthu_tt (lateDays = hôm nay − KH)
+     lost: có ngày lắp đặt / nghiệm thu nhưng mất venm_tt -> không tính giai đoạn, app cảnh báo.
+     Số ngày (null khi thiếu ngày): waitDays = lắp đặt − về NM (chưa lắp: hôm nay − về NM, open = true),
+     installDays = nghiệm thu − lắp đặt, toAcceptDays = nghiệm thu − về NM, acceptDelay = nghiệm thu TT − KH. */
+  DM.INSTALL_KEYS = ['lapdat_tt', 'chaythu_tt', 'nghiemthu_tt'];
+  DM.installStatus = x => {
+    const t = DM.todayIso(), ve = iso(x && x.venm_tt), ld = iso(x && x.lapdat_tt), ct = iso(x && x.chaythu_tt),
+          nt = iso(x && x.nghiemthu_tt), kh = iso(x && x.nghiemthu_kh);
+    const o = { stage: null, waitInstall: false, lateAccept: false, lateDays: null, lost: false,
+                waitDays: null, open: false, installDays: null, toAcceptDays: null, acceptDelay: null };
+    if (ld && nt) o.installDays = DM.days(ld, nt);
+    if (kh && nt) o.acceptDelay = DM.days(kh, nt);
+    if (!ve) { o.lost = !!(ld || ct || nt); return o; }
+    o.stage = nt ? 'in_operation' : (ld || ct) ? 'installing' : 'arrived';
+    if (ld) o.waitDays = DM.days(ve, ld);
+    else if (o.stage === 'arrived') { o.waitDays = DM.days(ve, t); o.open = true; }
+    if (nt) o.toAcceptDays = DM.days(ve, nt);
+    o.waitInstall = o.stage === 'arrived' && o.waitDays > DM.CFG.installWaitDays;
+    if (!nt && kh && kh < t) { o.lateAccept = true; o.lateDays = DM.days(kh, t); }
+    return o;
+  };
+
+  /* ---------- trạng thái vòng đời suy từ ngày ---------- */
+  DM.LIFECYCLE = ['planned', 'manufacturing', 'shipping', 'arrived', 'installing', 'in_operation'];
+  DM.AFTER_ARRIVAL = ['arrived', 'installing', 'in_operation'];
   DM.lifecycle = x => {
     const m = DM.milestones(x);
-    if (m[2].actual) return 'arrived';
+    if (m[2].actual) return DM.installStatus(x).stage;
     if (m[1].actual) return 'shipping';
     if (m[0].actual) return 'manufacturing';
     return 'planned';
   };
   /* giai đoạn để hiển thị (phễu, bộ lọc trạng thái): như lifecycle, nhưng máy quá ngày dự kiến mà chưa xác nhận
      về là 'overdue' — không để máy quá hạn 600 ngày nằm ở "đang chế tạo" / "đang vận chuyển" */
-  DM.STAGES = ['planned', 'manufacturing', 'shipping', 'overdue', 'arrived'];
+  DM.STAGES = ['planned', 'manufacturing', 'shipping', 'overdue', 'arrived', 'installing', 'in_operation'];
   DM.stage = x => DM.arrivalStatus(x).status === 'overdue' ? 'overdue' : DM.lifecycle(x);
 
   /* ---------- trễ ----------
@@ -102,25 +133,31 @@
   };
   /* màu trạng thái: đúng hạn = ok · trễ ≤ 14 ngày = warn · trễ > 14 ngày = bad · đã về = done */
   DM.severity = x => {
-    if (DM.lifecycle(x) === 'arrived') return 'done';
+    if (DM.AFTER_ARRIVAL.includes(DM.lifecycle(x))) return 'done';
     const d = DM.delay(x);
     return !d ? 'ok' : d.days <= 14 ? 'warn' : 'bad';
   };
 
   /* ---------- bộ lọc chung ----------
-     f = { co, sup, st, m, y }: mã công ty, NCC, trạng thái (giai đoạn DM.stage hoặc 'delayed'), tháng '01'..'12', năm 'YYYY'.
+     f = { co, sup, st, m, y }: mã công ty, NCC, trạng thái (giai đoạn DM.stage, 'delayed' hoặc cảnh báo lắp đặt
+     'wait_install' / 'late_accept' — DM.matchStatus), tháng '01'..'12', năm 'YYYY'.
      Tháng/năm lọc theo ngày về NM (vedukienn). */
   DM.FILTER_KEYS = ['co', 'sup', 'st', 'm', 'y'];
   DM.filter = (rows, f) => rows.filter(x => {
     const d = iso(x.vedukienn);
     if (f.co && DM.companyCode(x.noilapdat) !== f.co) return false;
     if (f.sup && (x.ncc || '') !== f.sup) return false;
-    if (f.st === 'delayed' ? !DM.delay(x) : f.st && DM.stage(x) !== f.st) return false;
+    if (f.st && !DM.matchStatus(x, f.st)) return false;
     if ((f.m || f.y) && !d) return false;
     if (f.y && d.slice(0, 4) !== f.y) return false;
     if (f.m && d.slice(5, 7) !== f.m) return false;
     return true;
   });
+  DM.ALERTS = ['wait_install', 'late_accept'];
+  DM.matchStatus = (x, st) => st === 'delayed' ? !!DM.delay(x)
+    : st === 'wait_install' ? DM.installStatus(x).waitInstall
+    : st === 'late_accept' ? DM.installStatus(x).lateAccept
+    : DM.stage(x) === st;
   /* NCC trong URL: mã băm FNV-1a của tên (tên NCC được mã hoá nên không đưa nguyên văn lên URL) */
   DM.supKey = name => {
     let h = 0x811c9dc5;
@@ -149,8 +186,8 @@
     const win = opt.ontimeWindow === undefined ? 90 : opt.ontimeWindow;
     const from = win == null ? null : DM.addDays(t, -win);
 
-    // 1. đang trong tiến trình: chưa về NM (chưa có dữ liệu nghiệm thu nên máy đã về không tính)
-    const pipe = rows.filter(x => DM.lifecycle(x) !== 'arrived');
+    // 1. đang trong tiến trình: chưa về NM (máy đã về, chờ lắp đặt / nghiệm thu tính ở 6.)
+    const pipe = rows.filter(x => !DM.AFTER_ARRIVAL.includes(DM.lifecycle(x)));
     // 2. đúng hạn: mốc arrived_site đã có thực tế (venm_tt) + có kế hoạch, thực tế ≤ kế hoạch
     const done = rows.map(x => ({ x, m: ms(x, 'arrived_site') }))
                      .filter(o => o.m.actual && o.m.planned && (!from || o.m.actual >= from));
@@ -164,6 +201,8 @@
     const soon = rows.filter(x => { const m = ms(x, 'arrived_site'); return m.forecast && m.forecast >= t && m.forecast <= to30; });
     // 5. quá ngày dự kiến mà chưa xác nhận ngày về NM TT (không vào tỷ lệ đúng hạn cho tới khi xác nhận)
     const unconf = rows.filter(x => DM.arrivalStatus(x).status === 'overdue');
+    // 6. chờ nghiệm thu: đã về NM, chưa có ngày nghiệm thu TT
+    const comm = rows.map(x => ({ x, s: DM.installStatus(x) })).filter(o => o.s.stage === 'arrived' || o.s.stage === 'installing');
 
     return {
       pipeline:  { rows: pipe, count: pipe.length, vnd: pipe.reduce((s, x) => s + (+x.vnd || 0), 0),
@@ -174,7 +213,10 @@
                    avgDays: lateFc.length ? lateFc.reduce((s, o) => s + o.d.days, 0) / lateFc.length : null },
       arriving:  { rows: soon, count: soon.length },
       unconfirmed: { rows: unconf, count: unconf.length },
-      commissioning: null   // bảng machines chưa có dữ liệu nghiệm thu
+      commissioning: { rows: comm.map(o => o.x), count: comm.length,
+                       installing: comm.filter(o => o.s.stage === 'installing').length,
+                       waitInstall: comm.filter(o => o.s.waitInstall).length,
+                       lateAccept: comm.filter(o => o.s.lateAccept).length, waitDays: DM.CFG.installWaitDays }
     };
   };
 
@@ -188,7 +230,10 @@
      Mỗi máy 1 thanh mờ (kế hoạch) + 1 thanh đậm (thực tế, hoặc dự kiến nếu chưa về), từ contract_signed tới arrived_site.
      endKind: 'actual' (có venm_tt) · 'forecast' · 'overdue' (đã qua ngày dự kiến, chưa xác nhận).
      Kế hoạch: bảng machines không có ngày ký HĐ kế hoạch nên đầu thanh kế hoạch = ngày ký HĐ thực tế.
-     opt.recentDays: ngoài máy chưa về, chỉ lấy máy đã về trong N ngày qua (null = lấy hết). Nhóm theo công ty. */
+     Đoạn lắp đặt (install, máy đã về): venm_tt → nghiemthu_tt ('actual'); chưa nghiệm thu thì → nghiemthu_kh ('plan'),
+     quá KH thì → hôm nay ('late'); không có KH mà đang lắp thì → hôm nay ('open'). Không có gì thì không vẽ.
+     opt.recentDays: ngoài máy chưa về và máy đang lắp đặt, chỉ lấy máy có mốc thực tế cuối (nghiệm thu, không có thì
+     về NM) trong N ngày qua (null = lấy hết). Nhóm theo công ty. */
   DM.gantt = (rows, opt) => {
     opt = opt || {};
     const from = opt.recentDays == null ? null : DM.addDays(DM.todayIso(), -opt.recentDays);
@@ -196,10 +241,18 @@
       const m = DM.milestones(x), c = m[0], a = m[2];
       const end = a.actual || a.forecast;
       if (!c.actual || (!end && !a.planned)) return null;
-      if (from && a.actual && a.actual < from) return null;
+      const s = DM.installStatus(x), t = DM.todayIso(), nt = iso(x.nghiemthu_tt), kh = iso(x.nghiemthu_kh);
+      if (from && a.actual && s.stage !== 'installing' && (nt || a.actual) < from) return null;
+      let inst = null;
+      if (a.actual) {
+        if (nt) inst = { end: nt, kind: 'actual' };
+        else if (kh) inst = kh < t ? { end: t, kind: 'late' } : { end: kh, kind: 'plan' };
+        else if (s.stage === 'installing') inst = { end: t, kind: 'open' };
+        if (inst) Object.assign(inst, { start: a.actual, planEnd: kh });
+      }
       return { x, group: DM.companyCode(x.noilapdat) || 'Other', start: c.actual,
-               planEnd: a.planned, end, endKind: a.actual ? 'actual' : a.forecast < DM.todayIso() ? 'overdue' : 'forecast',
-               sev: DM.severity(x), delay: DM.delay(x), milestones: m };
+               planEnd: a.planned, end, endKind: a.actual ? 'actual' : a.forecast < t ? 'overdue' : 'forecast',
+               sev: DM.severity(x), delay: DM.delay(x), milestones: m, install: inst, inst: s };
     }).filter(Boolean);
     const order = [...DM.COMPANIES, 'Other'];
     items.sort((p, q) => order.indexOf(p.group) - order.indexOf(q.group) || String(p.end || p.planEnd).localeCompare(String(q.end || q.planEnd)));
@@ -209,21 +262,43 @@
 
   /* ---------- Phễu vòng đời ----------
      Số máy (hoặc giá trị VNĐ) đang ở từng giai đoạn. Bảng machines không tách được "đã đặt hàng" và "đang chế tạo"
-     (gộp 1 bước) và chưa có dữ liệu lắp đặt / nghiệm thu (available = false). */
+     (gộp 1 bước). Đã về = chưa có ngày lắp đặt nào; Đang vận hành = mọi máy đã nghiệm thu trong bộ lọc. */
   DM.FUNNEL = [
     { key: 'planned',       states: ['planned'] },
     { key: 'manufacturing', states: ['manufacturing'] },
     { key: 'shipping',      states: ['shipping'] },
     { key: 'overdue',       states: ['overdue'] },     // quá ngày dự kiến, chưa xác nhận về
     { key: 'arrived',       states: ['arrived'] },
-    { key: 'installing',    states: [], available: false },
-    { key: 'in_operation',  states: [], available: false }   // nghiệm thu trong 12 tháng gần nhất
+    { key: 'installing',    states: ['installing'] },
+    { key: 'in_operation',  states: ['in_operation'] }
   ];
   DM.funnel = rows => DM.FUNNEL.map(st => {
     const r = rows.filter(x => st.states.includes(DM.stage(x)));
     return { key: st.key, available: st.available !== false, rows: r, count: r.length,
              vnd: r.reduce((s, x) => s + (+x.vnd || 0), 0) };
   });
+
+  /* ---------- Thời gian lắp đặt – nghiệm thu theo nhóm (công ty / NCC) ----------
+     keyOf(x) -> tên nhóm. Chỉ tính máy đã về. Mỗi nhóm: arrived số máy đã về · accepted số máy đã nghiệm thu
+       avgToAccept  trung bình (nghiệm thu TT − về NM TT) của máy đã nghiệm thu
+       avgWait      trung bình (bắt đầu lắp đặt TT − về NM TT) của máy đã có ngày lắp đặt
+       avgInstall   trung bình (nghiệm thu TT − bắt đầu lắp đặt TT)
+       installing / waitInstall / lateAccept: số máy đang lắp đặt / quá N ngày chưa lắp / trễ nghiệm thu.
+     Xếp theo số máy đã nghiệm thu, số máy đã về, rồi tên. */
+  DM.installStats = (rows, keyOf) => {
+    const avg = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : null;
+    const by = {};
+    rows.forEach(x => { const s = DM.installStatus(x); if (!s.stage) return; const k = keyOf(x) || ''; (by[k] = by[k] || []).push(s); });
+    return Object.keys(by).map(name => {
+      const g = by[name], acc = g.filter(s => s.stage === 'in_operation');
+      return { name, arrived: g.length, accepted: acc.length,
+               avgToAccept: avg(acc.map(s => s.toAcceptDays)),
+               avgWait: avg(g.filter(s => !s.open && s.waitDays != null).map(s => s.waitDays)),
+               avgInstall: avg(g.filter(s => s.installDays != null).map(s => s.installDays)),
+               installing: g.filter(s => s.stage === 'installing').length,
+               waitInstall: g.filter(s => s.waitInstall).length, lateAccept: g.filter(s => s.lateAccept).length };
+    }).sort((a, b) => (b.accepted - a.accepted) || (b.arrived - a.arrived) || a.name.localeCompare(b.name));
+  };
 
   /* ---------- Bảng điểm nhà cung cấp (thay cho view v_supplier_scorecard: tên NCC đã mã hoá) ----------
      Mỗi NCC 1 dòng, tính trên mốc arrived_site:
@@ -314,8 +389,11 @@
      Ngày đến hạn: planned_date, không có thì lấy ngày của mốc gắn kèm (ký HĐ / xuất xưởng / về NM).
      Quy VNĐ: VND giữ nguyên; USD dùng tỷ giá riêng của máy (vnd/usd của chính máy đó, coi như tỷ giá chốt),
      không có thì tỷ giá mới nhất (exchange_rates); EUR dùng tỷ giá mới nhất. Thiếu tỷ giá / ngày -> 'unscheduled'. */
+  /* lắp đặt xong ≈ ngày chạy thử TT; nghiệm thu = TT, chưa có thì KH */
   DM.msDate = (x, ms) => !x ? null : ms === 'contract_signed' ? iso(x.dathang) : ms === 'shipped' ? iso(x.xuatxuong)
-    : ms === 'arrived_site' ? (iso(x.venm_tt) || iso(x.vedukienn)) : null;
+    : ms === 'arrived_site' ? (iso(x.venm_tt) || iso(x.vedukienn))
+    : ms === 'installed' ? iso(x.chaythu_tt)
+    : ms === 'commissioned' ? (iso(x.nghiemthu_tt) || iso(x.nghiemthu_kh)) : null;
   DM.payVnd = (p, x, rates) => {
     const cur = p.currency || 'VND';
     const amt = p.amount != null && p.amount !== '' ? +p.amount

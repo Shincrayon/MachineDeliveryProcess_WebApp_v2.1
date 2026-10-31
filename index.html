@@ -146,6 +146,29 @@ tbody tr:hover{background:rgba(96,165,250,.07)}
 .b-unknown{background:rgba(148,163,184,.12);color:var(--muted)}
 .b-overdue{background:rgba(251,146,60,.15);color:var(--st-over);box-shadow:inset 0 0 0 1px rgba(251,146,60,.35)}
 .fbtn.active.o{background:var(--st-over);border-color:var(--st-over);color:#1a0f05}
+/* lắp đặt – nghiệm thu (DM.installStatus) */
+.b-installing{background:color-mix(in srgb,var(--st-inst) 14%,transparent);color:var(--st-inst)}
+.b-in_operation{background:color-mix(in srgb,var(--st-oper) 14%,transparent);color:var(--st-oper)}
+.b-wait_install{background:color-mix(in srgb,var(--st-warn) 14%,transparent);color:var(--st-warn);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--st-warn) 40%,transparent)}
+.b-late_accept{background:color-mix(in srgb,var(--st-bad) 14%,transparent);color:var(--st-bad);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--st-bad) 40%,transparent)}
+.badge.sm{font-size:10.5px;padding:1px 8px;margin-top:3px}
+.badge.sm::before{width:5px;height:5px}
+.st-cell{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.fbtn.active.ins{background:var(--st-inst);border-color:var(--st-inst);color:#1b0b24}
+.fbtn.active.op{background:var(--st-oper);border-color:var(--st-oper);color:#04201c}
+.fbtn.active.w{background:var(--st-warn);border-color:var(--st-warn);color:#1f1503}
+.qu-ld.qu-lock{opacity:.45;pointer-events:none}
+.qu-lockmsg{grid-column:1/-1;font-size:12px;color:var(--st-over);margin:-2px 0 4px}
+.qu-lockmsg[hidden]{display:none}
+.in-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media(max-width:900px){.in-wrap{grid-template-columns:1fr}}
+.in-tbl{overflow-x:auto}
+.in-tbl table{width:100%;border-collapse:collapse;font-size:12.5px}
+.in-tbl th,.in-tbl td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+.in-tbl th:first-child,.in-tbl td:first-child{text-align:left;white-space:normal}
+.in-tbl th{color:var(--muted);font-weight:700;font-size:11.5px}
+.in-tbl caption{text-align:left;font-weight:800;font-size:12px;color:var(--sky);padding:0 0 6px}
+.in-tbl .w{color:var(--st-warn);font-weight:700} .in-tbl .b{color:var(--st-bad);font-weight:700}
 .nm-kind{display:block;font-size:10.5px;font-weight:600;color:var(--muted)}
 .nm-kind.tt{color:var(--st-ok)}
 .ac-open{margin-left:0!important;border-color:var(--st-over)!important;color:var(--st-over)!important}
@@ -614,8 +637,8 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 [data-theme="light"] .app-banner,
 [data-theme="light"] .leaflet-popup-content-wrapper,[data-theme="light"] .leaflet-popup-tip{box-shadow:0 8px 24px rgba(15,23,42,.15)}
 /* ===== Dashboard Tiến độ máy về: màu trạng thái thống nhất ===== */
-:root{--st-ok:#34d399; --st-warn:#fbbf24; --st-bad:#f87171; --st-done:#94a3b8; --st-over:#fb923c}
-:root[data-theme="light"]{--st-ok:#059669; --st-warn:#b45309; --st-bad:#dc2626; --st-done:#64748b; --st-over:#c2410c}
+:root{--st-ok:#34d399; --st-warn:#fbbf24; --st-bad:#f87171; --st-done:#94a3b8; --st-over:#fb923c; --st-inst:#c084fc; --st-oper:#2dd4bf}
+:root[data-theme="light"]{--st-ok:#059669; --st-warn:#b45309; --st-bad:#dc2626; --st-done:#64748b; --st-over:#c2410c; --st-inst:#9333ea; --st-oper:#0f766e}
 .dm-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
 .dm-filters select,.dm-filters button{padding:7px 10px;font-size:13px;font-weight:600;border-radius:9px;border:1px solid var(--border);
   background:var(--field);color:var(--txt);outline:none;cursor:pointer;max-width:100%}
@@ -786,6 +809,8 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <div class="card" style="--accent:#22d3ee"><h3><span class="dot"></span>Installation site map</h3><div class="chartbox half"><div id="mapLoc"></div></div></div>
       <div class="card" style="--accent:#fbbf24"><h3><span class="dot"></span>Machines by person in charge</h3><div class="chartbox half"><canvas id="chPICtrack"></canvas></div></div>
     </div>
+    <div class="card" style="--accent:var(--st-inst);margin-top:12px"><h3><span class="dot"></span><span id="inTitle"></span><small id="inSub" style="font-weight:500;color:var(--muted);font-size:12px;margin-left:8px"></small></h3>
+      <div class="in-wrap"><div class="in-tbl" id="inByCo"></div><div class="in-tbl" id="inBySup"></div></div></div>
   </div>
 
   <!-- ============ PAGE 4: ĐÁNH GIÁ ============ -->
@@ -824,6 +849,10 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <button class="fbtn a" data-f="soon">🚢 Arriving soon</button>
       <button class="fbtn" data-f="waiting">⏳ Awaiting</button>
       <button class="fbtn o" data-f="overdue">⚠ Overdue – unconfirmed</button>
+      <button class="fbtn ins" data-f="installing">🔧 Installing</button>
+      <button class="fbtn op" data-f="in_operation">🏁 Commissioned</button>
+      <button class="fbtn w" data-f="wait_install">⏰ Arrived – not installed</button>
+      <button class="fbtn r" data-f="late_accept">⚠ Late commissioning</button>
       <button class="fbtn r" data-f="delay">⚠️ Delay notes</button>
       <select id="fLoc"><option value="">Site: All</option></select>
       <select id="fOrigin"><option value="">Origin: All</option></select>
@@ -894,6 +923,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
       <label>Clearance &amp; pickup, actual (days)<input id="f_lmtt" type="number"></label>
       <label>Confirmed/expected ex-works date<input id="f_xxg" type="date"></label>
       <label>Manufacturing days (CTM)<input id="f_ctm" type="number" value="0"></label>
+      <label>Planned commissioning date<input id="f_ntkh" type="date"></label>
       <label>Working day (count business days only?)<select id="f_wd"><option value="no">no</option><option value="yes">yes</option></select></label>
       <div class="calc-box" id="addCalc"></div>
       <label class="full">Delay note<textarea id="f_gt" rows="2"></textarea></label>
@@ -976,6 +1006,12 @@ function rowsToData(rows){
     tauchay_tt: 'Ngày tàu chạy TT' in r ? iso(r['Ngày tàu chạy TT']) : undefined,
     capcang_tt: 'Ngày cập cảng TT' in r ? iso(r['Ngày cập cảng TT']) : undefined,
     venm_tt: 'Ngày máy về NM TT' in r ? iso(r['Ngày máy về NM TT']) : undefined,
+    // lắp đặt – nghiệm thu (migrations/20261031_09): file không có cột -> undefined, giữ giá trị đang có
+    nghiemthu_kh: 'Ngày nghiệm thu KH' in r ? iso(r['Ngày nghiệm thu KH']) : undefined,
+    lapdat_tt: 'Ngày bắt đầu lắp đặt TT' in r ? iso(r['Ngày bắt đầu lắp đặt TT']) : undefined,
+    chaythu_tt: 'Ngày chạy thử TT' in r ? iso(r['Ngày chạy thử TT']) : undefined,
+    nghiemthu_tt: 'Ngày nghiệm thu TT' in r ? iso(r['Ngày nghiệm thu TT']) : undefined,
+    ghichu_ld: 'Ghi chú lắp đặt' in r ? String(r['Ghi chú lắp đặt']||'').trim() : undefined,
     ma_may: 'Mã máy' in r ? String(r['Mã máy']||'').trim().toUpperCase() : undefined,
     sysid: 'ID hệ thống' in r ? String(r['ID hệ thống']||'').trim().toLowerCase() : undefined
   }));
@@ -1087,6 +1123,11 @@ function readAll(wb){
       tauchay_tt: H['Ngày tàu chạy TT']!=null ? serialToISO(toSerial(gv(row,'Ngày tàu chạy TT'))) : undefined,
       capcang_tt: H['Ngày cập cảng TT']!=null ? serialToISO(toSerial(gv(row,'Ngày cập cảng TT'))) : undefined,
       venm_tt: H['Ngày máy về NM TT']!=null ? serialToISO(toSerial(gv(row,'Ngày máy về NM TT'))) : undefined,
+      nghiemthu_kh: H['Ngày nghiệm thu KH']!=null ? serialToISO(toSerial(gv(row,'Ngày nghiệm thu KH'))) : undefined,
+      lapdat_tt: H['Ngày bắt đầu lắp đặt TT']!=null ? serialToISO(toSerial(gv(row,'Ngày bắt đầu lắp đặt TT'))) : undefined,
+      chaythu_tt: H['Ngày chạy thử TT']!=null ? serialToISO(toSerial(gv(row,'Ngày chạy thử TT'))) : undefined,
+      nghiemthu_tt: H['Ngày nghiệm thu TT']!=null ? serialToISO(toSerial(gv(row,'Ngày nghiệm thu TT'))) : undefined,
+      ghichu_ld: H['Ghi chú lắp đặt']!=null ? String(gv(row,'Ghi chú lắp đặt')||'').trim() : undefined,
       ma_may: H['Mã máy']!=null ? String(gv(row,'Mã máy')||'').trim().toUpperCase() : undefined,
       sysid: H['ID hệ thống']!=null ? String(gv(row,'ID hệ thống')||'').trim().toLowerCase() : undefined
     });
@@ -1194,7 +1235,7 @@ window.fpickers = {};
     onChange: ()=>updCalc(),  // chọn ngày xong -> tính lại các ngày liên đới
     locale: (LANG==='vi' && window.flatpickr && flatpickr.l10ns && flatpickr.l10ns.vn) ? 'vn' : 'default'
   };
-  ['f_duyet','f_dh','f_tutt','f_xxg'].forEach(id=>{
+  ['f_duyet','f_dh','f_tutt','f_xxg','f_ntkh'].forEach(id=>{
     const el = document.getElementById(id);
     if(el && window.flatpickr) window.fpickers[id] = flatpickr(el, opts);
   });
@@ -1298,7 +1339,8 @@ async function submitAdd(){
     ctu: Math.round(ctu), tamungtt: val('f_tutt')||null,
     ditaukh: Math.round(dt), ditautt: Math.round(dtTT),
     lanhkh: Math.round(lm), lanhtt: Math.round(lmTT),
-    xuatxuong: val('f_xxg')||null, workingday: wd
+    xuatxuong: val('f_xxg')||null, workingday: wd,
+    nghiemthu_kh: val('f_ntkh')||null
   };
 
   /* lưu lên kho dữ liệu chung của app */
@@ -1351,8 +1393,8 @@ async function submitAdd(){
 }
 
 function resetAddForm(){
-  ['f_mamay','f_ten','f_pt','f_cs','f_nld','f_ncc','f_xx','f_model','f_serial','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_gt'].forEach(id=>document.getElementById(id).value='');
-  ['f_duyet','f_dh','f_tutt','f_xxg'].forEach(id=>{ if(window.fpickers && window.fpickers[id]) window.fpickers[id].clear(); });
+  ['f_mamay','f_ten','f_pt','f_cs','f_nld','f_ncc','f_xx','f_model','f_serial','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_ntkh','f_gt'].forEach(id=>document.getElementById(id).value='');
+  ['f_duyet','f_dh','f_tutt','f_xxg','f_ntkh'].forEach(id=>{ if(window.fpickers && window.fpickers[id]) window.fpickers[id].clear(); });
   ['f_ctu','f_dt','f_lm','f_ctm'].forEach(id=>document.getElementById(id).value='0');
   ['f_dttt','f_lmtt'].forEach(id=>document.getElementById(id).value='');     // trống = lấy theo KH
   document.getElementById('f_sl').value='1'; document.getElementById('f_wd').value='no';
@@ -1468,8 +1510,10 @@ const ovLabel = () => {
   if(!y) return tr(MON[+m-1]+' (all years)', 'Tháng '+(+m)+' (mọi năm)');
   return tr(MON[+m-1]+' '+y, 'Tháng '+(+m)+'/'+y);
 };
-const OV_LC = tr({planned:'Not yet ordered', manufacturing:'Manufacturing', shipping:'Shipping', arrived:'Arrived', delayed:'Delayed', overdue:'⚠ Overdue – unconfirmed'},
-              {planned:'Chưa đặt hàng', manufacturing:'Đang chế tạo', shipping:'Đang vận chuyển', arrived:'Đã về', delayed:'Đang trễ', overdue:'⚠ Quá hạn – chưa xác nhận'});
+const OV_LC = tr({planned:'Not yet ordered', manufacturing:'Manufacturing', shipping:'Shipping', arrived:'Arrived', delayed:'Delayed', overdue:'⚠ Overdue – unconfirmed',
+                  installing:'Installing', in_operation:'Commissioned / in operation', wait_install:'⏰ Arrived – not installed', late_accept:'⚠ Late commissioning'},
+              {planned:'Chưa đặt hàng', manufacturing:'Đang chế tạo', shipping:'Đang vận chuyển', arrived:'Đã về', delayed:'Đang trễ', overdue:'⚠ Quá hạn – chưa xác nhận',
+                  installing:'Đang lắp đặt', in_operation:'Đã nghiệm thu / vận hành', wait_install:'⏰ Đã về – chưa lắp đặt', late_accept:'⚠ Trễ nghiệm thu'});
 const OV_MS = tr({contract_signed:'Contract signed', shipped:'Ex-works / shipped', arrived_site:'Arrival at site'},
                {contract_signed:'Ký hợp đồng', shipped:'Xuất xưởng', arrived_site:'Về nhà máy'});
 const dmD = s => s ? s.split('-').reverse().join('/') : '—';
@@ -1484,7 +1528,7 @@ const ovEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&am
   opt(fSup, '', tr('All suppliers', 'Tất cả NCC'));
   Object.keys(SUP).sort((a, b) => SUP[a].localeCompare(SUP[b])).forEach(k => opt(fSup, k, SUP[k]));
   opt(fSt, '', tr('All statuses', 'Tất cả trạng thái'));
-  [...DM.STAGES, 'delayed'].forEach(k => opt(fSt, k, OV_LC[k]));
+  [...DM.STAGES, 'delayed', ...DM.ALERTS].forEach(k => opt(fSt, k, OV_LC[k]));
   opt(ovMonth, '', tr('Month: All', 'Tháng: Tất cả'));
   for(let i=1;i<=12;i++) opt(ovMonth, String(i).padStart(2,'0'), tr(MON[i-1],'Tháng '+i));
   opt(ovYear, '', tr('Year: All', 'Năm: Tất cả'));
@@ -1529,7 +1573,7 @@ let KP = null;
   ];
   // chỉ báo tăng/giảm so với 7 ngày trước: ẩn — chưa có dữ liệu lịch sử KPI
   dmKpis.innerHTML = CARDS.map(([k, ic, lbl]) =>
-    `<div class="kpi${k==='commissioning'?' na':''}" id="dmK_${k}"${k==='commissioning'?'':` onclick="showKPI('${k}')"`}><span class="ic">${ic}</span>` +
+    `<div class="kpi" id="dmK_${k}" onclick="showKPI('${k}')"><span class="ic">${ic}</span>` +
     `<div class="lbl">${lbl}</div><div class="val" id="dmV_${k}">—</div><div class="note" id="dmN_${k}"></div></div>`).join('');
   const set = (k, acc, val, note) => {
     document.getElementById('dmK_'+k).style.setProperty('--accent', acc);
@@ -1557,7 +1601,13 @@ let KP = null;
         dl.count ? [dlAvg, dlUnc].filter(Boolean).join(' · ') : tr('no machine behind plan', 'không có máy nào trễ'));
     set('arriving', 'var(--blue)', dmN(KP.arriving.count),
         tr('expected at site by ', 'dự kiến về nhà máy đến ') + dmD(DM.addDays(DM.todayIso(), 30)));
-    set('commissioning', 'var(--st-done)', '—', tr('no data yet — commissioning date is not tracked', 'chưa có dữ liệu — chưa theo dõi ngày nghiệm thu'));
+    // chờ nghiệm thu là tồn đọng hiện tại: tính trên mọi máy đã về theo công ty / NCC, bỏ qua tháng / năm
+    const cm = KP.commissioning = DM.kpis(ovRowsAllTime()).commissioning;
+    set('commissioning', !cm.count ? 'var(--st-ok)' : cm.lateAccept ? 'var(--st-bad)' : cm.waitInstall ? 'var(--st-warn)' : 'var(--st-inst)', dmN(cm.count),
+        [tr('arrived, not yet commissioned', 'đã về, chưa nghiệm thu') + (cm.installing ? ' · ' + dmN(cm.installing) + tr(' installing', ' đang lắp đặt') : ''),
+         cm.waitInstall ? '⏰ ' + dmN(cm.waitInstall) + tr(` not installed > ${cm.waitDays} days`, ` chưa lắp đặt quá ${cm.waitDays} ngày`) : '',
+         cm.lateAccept ? '⚠ ' + dmN(cm.lateAccept) + tr(' late commissioning', ' trễ nghiệm thu') : '',
+         tr('all periods', 'mọi kỳ')].filter(Boolean).join(' · '));
 
     const list = DM.attention(rows, 5);
     attSub.textContent = dl.count ? tr(`top ${list.length} of ${dl.count} delayed · by days late`, `${list.length} / ${dl.count} máy trễ nặng nhất · theo số ngày trễ`) : '';
@@ -1610,7 +1660,7 @@ let KP = null;
     gnAll.style.display = period ? 'none' : '';
     gnAll.textContent = showAll ? tr('Recent only', 'Chỉ gần đây') : tr('Show all arrived', 'Hiện cả máy đã về');
     gnAll.classList.toggle('on', showAll);
-    gnSub.textContent = (period ? ovLabel() : showAll ? tr('all machines', 'tất cả máy') : tr('not yet arrived + arrived in the last 120 days', 'chưa về + đã về trong 120 ngày qua'))
+    gnSub.textContent = (period ? ovLabel() : showAll ? tr('all machines', 'tất cả máy') : tr('not yet arrived + installing + arrived / commissioned in the last 120 days', 'chưa về + đang lắp đặt + đã về / nghiệm thu trong 120 ngày qua'))
                         + ' · ' + tr('grouped by company', 'nhóm theo công ty');
     gnLegend.innerHTML = [
       [rgba(cssv('--muted'), .3), tr('Plan: contract → planned arrival', 'Kế hoạch: ký HĐ → ngày về KH')],
@@ -1618,8 +1668,10 @@ let KP = null;
       [C.bad, tr('Late > 14 days', 'Trễ > 14 ngày')], [C.done, tr('Arrived (confirmed)', 'Đã về (đã xác nhận)')]
     ].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('') +
       `<span><i class="fc"></i>${tr('Forecast (not yet arrived)', 'Dự kiến (chưa về)')}</span>` +
-      `<span><i class="ov"></i>${tr('Overdue – unconfirmed', 'Quá hạn – chưa xác nhận')}</span>`;
-    const cats = [], plan = [], act = [];
+      `<span><i class="ov"></i>${tr('Overdue – unconfirmed', 'Quá hạn – chưa xác nhận')}</span>` +
+      `<span><i style="background:${cssv('--st-inst')}"></i>${tr('Installation → commissioning', 'Lắp đặt → nghiệm thu')}</span>` +
+      `<span><i class="fc" style="border-color:${cssv('--st-inst')}"></i>${tr('Not yet commissioned (to plan / today)', 'Chưa nghiệm thu (tới KH / hôm nay)')}</span>`;
+    const cats = [], plan = [], act = [], inst = [];
     GN.groups.forEach(g => {
       cats.push({ h: true, t: '▸ ' + g.group + ' (' + g.items.length + ')' });
       g.items.forEach(it => {
@@ -1627,6 +1679,9 @@ let KP = null;
         cats.push({ t: it.x.ten });
         if(it.planEnd) plan.push([y, TS(it.start), TS(it.planEnd), i]);
         if(it.end) act.push([y, TS(it.start), TS(it.end), i]);
+        // kế hoạch lắp đặt: ngày về KH → ngày nghiệm thu KH (cùng màu thanh kế hoạch)
+        if(it.planEnd && it.x.nghiemthu_kh && it.x.nghiemthu_kh > it.planEnd) plan.push([y, TS(it.planEnd), TS(it.x.nghiemthu_kh), i]);
+        if(it.install) inst.push([y, TS(it.install.start), TS(it.install.end), i]);
       });
     });
     gnEmpty.hidden = !!GN.items.length;
@@ -1648,7 +1703,12 @@ let KP = null;
       const d = it.delay;
       return `<b>${it.x.ma_may ? it.x.ma_may + ' · ' : ''}${ovEsc(it.x.ten)}</b><br><span style="color:${cssv('--muted')}">${ovEsc(it.x.ncc) || '—'} · ${it.group} · ${ovEsc(it.x.phutrach) || '—'}</span>` +
         `<table style="margin-top:6px;font-size:12px;border-collapse:collapse"><tr style="color:${cssv('--muted')}"><td></td><td>${tr('Planned','Kế hoạch')}</td><td style="padding:0 8px">${tr('Forecast','Dự kiến')}</td><td>${tr('Actual','Thực tế')}</td></tr>` +
-        it.milestones.map(m => row(OV_MS[m.milestone], m)).join('') + `</table>` +
+        it.milestones.map(m => row(OV_MS[m.milestone], m)).join('') +
+        (it.x.venm_tt || it.x.nghiemthu_kh ? row(tr('Installation start', 'Bắt đầu lắp đặt'), { actual: it.x.lapdat_tt }) +
+          row(tr('Test run', 'Chạy thử'), { actual: it.x.chaythu_tt }) +
+          row(tr('Commissioning', 'Nghiệm thu'), { planned: it.x.nghiemthu_kh, actual: it.x.nghiemthu_tt }) : '') + `</table>` +
+        (it.inst.lateAccept ? `<div style="margin-top:6px;color:${C.bad};font-weight:700">⚠ ${tr('Commissioning late','Trễ nghiệm thu')} +${it.inst.lateDays} ${tr('days','ngày')}</div>` : '') +
+        (it.inst.waitInstall ? `<div style="margin-top:6px;color:${C.warn};font-weight:700">⏰ ${tr(`Arrived ${it.inst.waitDays} days ago, not installed`,`Đã về ${it.inst.waitDays} ngày, chưa lắp đặt`)}</div>` : '') +
         (d ? `<div style="margin-top:6px;color:${d.days > 14 ? C.bad : C.warn};font-weight:700">+${d.days} ${tr('days late','ngày trễ')}</div>`
            : it.sev === 'done' ? '' : `<div style="margin-top:6px;color:${C.ok};font-weight:700">${tr('On schedule','Đúng hạn')}</div>`);
     };
@@ -1671,7 +1731,11 @@ let KP = null;
             ? { fill:rgba(cssv('--st-over'), .18), stroke:cssv('--st-over'), lineWidth:1.6, lineDash:[5, 3] }
             : it.endKind === 'forecast'
             ? { fill:rgba(C[it.sev], .55), stroke:C[it.sev], lineWidth:1.2, lineDash:[4, 3] } : { fill:C[it.sev] }),
-          encode:{ x:[1, 2], y:0 }, data:act }
+          encode:{ x:[1, 2], y:0 }, data:act },
+        // lắp đặt → nghiệm thu: đậm = đã nghiệm thu; nét đứt = chưa nghiệm thu (tới KH, quá KH / không có KH thì tới hôm nay)
+        { type:'custom', name:'install', renderItem:bar(.36, it => { const k = it.install.kind, ic = cssv('--st-inst');
+            return k === 'actual' ? { fill:ic } : { fill:rgba(ic, .22), stroke:k === 'late' ? C.bad : ic, lineWidth:1.4, lineDash:[4, 3] }; }),
+          encode:{ x:[1, 2], y:0 }, data:inst }
       ]
     }), true);
     gn.resize();
@@ -1846,7 +1910,22 @@ function initP1(){
 }
 
 /* ===== page 2 charts ===== */
+/* ===== ⏱ Về NM → nghiệm thu theo công ty / NCC (metrics.js: DM.installStats) — mọi máy đã về, không theo bộ lọc ===== */
+function drawInstallStats(){
+  const D = v => v == null ? '—' : dmN(v, 1);
+  const H = tr(['Arrived','Commissioned','Arrival → commissioning','Wait for installation','Installation → commissioning','Installing',`Not installed > ${DM.CFG.installWaitDays} d`,'Late commissioning'],
+               ['Đã về','Đã NT','Về NM → NT','Chờ lắp đặt','Lắp đặt → NT','Đang lắp',`Chưa lắp > ${DM.CFG.installWaitDays} ngày`,'Trễ NT']);
+  const tbl = (cap, first, list) => !list.length ? `<div class="dm-empty">${tr('No machine has arrived at the plant yet.','Chưa có máy nào về NM.')}</div>`
+    : `<table><caption>${cap}</caption><thead><tr><th>${first}</th>${H.map((h,i)=>`<th${i>=2 && i<=4 ? ` title="${tr('average days','trung bình số ngày')}"` : ''}>${h}</th>`).join('')}</tr></thead><tbody>${list.map(r=>
+      `<tr><td>${ovEsc(unescH(r.name)) || '—'}</td><td>${r.arrived}</td><td>${r.accepted}</td><td><b>${D(r.avgToAccept)}</b></td><td>${D(r.avgWait)}</td><td>${D(r.avgInstall)}</td>
+        <td>${r.installing || ''}</td><td class="${r.waitInstall ? 'w' : ''}">${r.waitInstall || ''}</td><td class="${r.lateAccept ? 'b' : ''}">${r.lateAccept || ''}</td></tr>`).join('')}</tbody></table>`;
+  inTitle.textContent = tr('⏱ Arrival at plant → commissioning', '⏱ Về NM → nghiệm thu');
+  inSub.textContent = tr('average days · all machines that arrived at the plant', 'trung bình số ngày · mọi máy đã về NM');
+  inByCo.innerHTML = tbl(tr('By company / site','Theo công ty / nhà máy'), tr('Company','Công ty'), DM.installStats(DATA, x => DM.companyCode(x.noilapdat) || tr('Other','Khác')));
+  inBySup.innerHTML = tbl(tr('By supplier','Theo nhà cung cấp'), tr('Supplier','NCC'), DM.installStats(DATA, x => x.ncc));
+}
 function initP2(){
+  drawInstallStats(); OV_HOOKS.push(drawInstallStats);
   new Chart(chNcc,{type:'bar',data:{labels:AGG.topncc.map(t=>t[0]),
     datasets:[{data:AGG.topncc.map(t=>+(t[1]/1e9).toFixed(1)),
       backgroundColor:['#a78bfa','#7dd3fc','#f0abfc','#34d399','#fbbf24','#60a5fa','#f87171','#22d3ee'],borderRadius:6}]},
@@ -2351,7 +2430,7 @@ fMon.title = tr('Month of arrival at plant','Tháng dự kiến về NM'); fYr.t
 
 function filtered(){
   let rows = DATA.filter(x=>
-    (filter==='all' || (filter==='delay'? x.giaitrinh : x.status===filter)) &&
+    (filter==='all' || (filter==='delay'? x.giaitrinh : INST_FILTERS.includes(filter) ? DM.matchStatus(x, filter) : x.status===filter)) &&
     (!loc || x.noilapdat===loc) && (!origin || x.xuatxu===origin) && (!pic || x.phutrach===pic) &&
     (!q || (x.ten+' '+x.ncc+' '+(x.ma_may||'')).toLowerCase().includes(q)) &&
     (!lMon || (x.vedukienn && x.vedukienn.slice(5,7)===lMon)) && (!lYr || (x.vedukienn && x.vedukienn.slice(0,4)===lYr)));
@@ -2371,6 +2450,22 @@ function filtered(){
   return rows;
 }
 
+/* ô Trạng thái: trạng thái ngày về (x.status); máy đã về đang lắp đặt / đã nghiệm thu thì hiện giai đoạn đó,
+   kèm badge nhỏ cho cảnh báo chờ lắp đặt / trễ nghiệm thu (DM.installStatus) */
+const INST_FILTERS = ['installing','in_operation'].concat(DM.ALERTS);
+const ILBL = tr({installing:'Installing', in_operation:'Commissioned', wait_install:'Arrived – not installed', late_accept:'Late commissioning'},
+                {installing:'Đang lắp đặt', in_operation:'Đã nghiệm thu', wait_install:'Đã về – chưa lắp đặt', late_accept:'Trễ nghiệm thu'});
+function stCell(x){
+  const s = DM.installStatus(x), main = s.stage==='installing' || s.stage==='in_operation'
+    ? `<span class="badge b-${s.stage}">${ILBL[s.stage]}</span>` : `<span class="badge b-${x.status}">${LBL[x.status]}</span>`;
+  const al = (s.waitInstall ? `<span class="badge sm b-wait_install" title="${tr(`Arrived ${s.waitDays} days ago, no installation date yet`,`Về ${s.waitDays} ngày, chưa có ngày lắp đặt`)}">⏰ ${ILBL.wait_install}</span>` : '')
+           + (s.lateAccept ? `<span class="badge sm b-late_accept" title="${tr(`Planned commissioning ${fmtD(x.nghiemthu_kh)}`,`Nghiệm thu KH ${fmtD(x.nghiemthu_kh)}`)}">⚠ ${ILBL.late_accept} +${s.lateDays}${tr('d',' ngày')}</span>` : '')
+           + (s.lost ? `<span class="badge sm b-overdue" title="${INST_LOST()}">⚠ ${tr('no arrival date','mất ngày về')}</span>` : '');
+  return al ? `<div class="st-cell">${main}${al}</div>` : main;
+}
+(function(){ const b = document.querySelector('#p3 .fbtn[data-f="wait_install"]'); if(b) b.title = tr(
+  `Arrived at plant more than ${DM.CFG.installWaitDays} days ago, no installation date yet`,`Về NM quá ${DM.CFG.installWaitDays} ngày, chưa có ngày bắt đầu lắp đặt`); })();
+const INST_LOST = () => tr('This machine has installation / commissioning dates but no actual arrival date at plant','Máy có ngày lắp đặt / nghiệm thu nhưng không có Ngày máy về NM TT');
 /* ô Mã máy: chưa về -> "—"; đã về mà chưa cấp (chờ 🏷) -> "chưa có mã"; có mã nhưng mất ngày về TT -> ⚠ */
 const MC_LOST = () => tr('This machine has a code but lost its actual arrival date','Máy đã có mã nhưng mất ngày về TT');
 function mcCell(x){
@@ -2392,7 +2487,7 @@ function render(){
     <td class="money">${fmtM(x.vnd)} ₫</td>
     <td class="money" style="color:var(--sky)">${fmtU(x.usd)}$</td>
     <td>${fmtD(x.dathang)}</td><td>${fmtD(x.vekh)}</td><td><b>${fmtD(x.vedukienn)}</b>${x.vedukienn ? (x.venm_tt ? `<small class="nm-kind tt">${tr('Arrived at plant','Đã về NM')}</small>` : `<small class="nm-kind">${tr('Expected at plant','Dự kiến về NM')}</small>`) : ''}</td>
-    <td><span class="badge b-${x.status}">${LBL[x.status]}</span></td>
+    <td>${stCell(x)}</td>
     <td><span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}">${dgT(x.danhgia)}${x.giaitrinh?' 📝':''}</span></td></tr>`).join('');
   const val = rows.reduce((s,x)=>s+x.vnd,0), usd = rows.reduce((s,x)=>s+x.usd,0);
   cnt.textContent = `${rows.length} ${tr('machines','thiết bị')} · ${tr('Total','Tổng')}: ${(val/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')} ≈ ${fmtU(usd)}$ · ${tr('Page','Trang')} ${pageNo}/${nPages}`;
@@ -2409,8 +2504,20 @@ function render(){
 window.goPage = p => { pageNo = p; render(); };
 window.showKPI = kind => {
   const K = KP && KP[kind]; if(!K) return;
-  const T = tr({pipeline:'Machines in pipeline', ontime:'On-time rate — arrivals counted', delayed:'Delayed machines', arriving:'Arriving in 30 days'},
-               {pipeline:'Máy đang triển khai', ontime:'Tỷ lệ đúng hạn — các lần về được tính', delayed:'Máy đang trễ', arriving:'Về trong 30 ngày'});
+  const T = tr({pipeline:'Machines in pipeline', ontime:'On-time rate — arrivals counted', delayed:'Delayed machines', arriving:'Arriving in 30 days', commissioning:'Pending commissioning'},
+               {pipeline:'Máy đang triển khai', ontime:'Tỷ lệ đúng hạn — các lần về được tính', delayed:'Máy đang trễ', arriving:'Về trong 30 ngày', commissioning:'Chờ nghiệm thu'});
+  if(kind==='commissioning'){
+    // trễ nghiệm thu trước (trễ nhiều nhất), rồi máy chờ lắp đặt lâu nhất, rồi theo ngày về NM
+    const rk = s => s.lateAccept ? 2e6 + s.lateDays : s.waitInstall ? 1e6 + s.waitDays : 0;
+    const rows = K.rows.map(x=>({ x, s:DM.installStatus(x) })).sort((a,b)=> rk(b.s) - rk(a.s) || String(a.x.venm_tt).localeCompare(String(b.x.venm_tt)));
+    mTitle.textContent = T.commissioning + ' · ' + tr('all periods','mọi kỳ');
+    mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${dmN(K.installing)} ${tr('installing','đang lắp đặt')} · ⏰ ${dmN(K.waitInstall)} ${tr(`not installed > ${K.waitDays} days`,`chưa lắp đặt quá ${K.waitDays} ngày`)} · ⚠ ${dmN(K.lateAccept)} ${tr('late commissioning','trễ nghiệm thu')}`;
+    mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(({x, s})=>`<div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
+      <span class="kn">${x.ma_may ? x.ma_may + ' · ' : ''}${ovEsc(unescH(x.ten))}<small>${ovEsc(unescH(x.phutrach))||'—'} · ${DM.companyCode(x.noilapdat)||ovEsc(unescH(x.noilapdat))} · ${ovEsc(unescH(x.ncc))||'—'}</small></span>
+      <span class="kv">${tr('At plant','Về NM')} ${dmD(x.venm_tt)} · ${tr('Commissioning plan','NT KH')} ${dmD(x.nghiemthu_kh)}<br>${stCell(x)}</span></div>`).join('')}</div>`
+      : `<div class="m-ok">${tr('No machines waiting for commissioning.','Không có máy nào chờ nghiệm thu.')}</div>`;
+    openM(); return;
+  }
   const rows = [...K.rows].sort((a,b) => ((DM.delay(b)||{days:0}).days - (DM.delay(a)||{days:0}).days) || String(a.vedukienn).localeCompare(String(b.vedukienn)));
   const vnd = rows.reduce((s,x)=>s+(+x.vnd||0),0), units = rows.reduce((s,x)=>s+x.sl,0);
   mTitle.textContent = T[kind] + ' · ' + ovLabel();
@@ -2439,9 +2546,10 @@ window.showDetail = i => {
   const it = (k,v,cls='') => `<div class="dt-i ${cls}"><span class="dt-k">${k}</span><span class="dt-v">${v}</span></div>`;
   const sec = (title,items) => `<div class="dt-sec"><h5>${title}</h5><div class="dt-grid">${items.join('')}</div></div>`;
   const ctm = x.sonagyctm ?? x.sonagytm;
+  const ins = DM.installStatus(x);
 
   mTitle.textContent = (x.ma_may ? x.ma_may + ' · ' : '') + unescH(x.ten);
-  mSub.innerHTML = `<span class="badge b-${x.status}" style="font-size:10.5px;padding:2px 8px">${LBL[x.status]||tr('Unknown','Chưa xác định')}</span>
+  mSub.innerHTML = `<span class="badge b-${ins.stage==='installing'||ins.stage==='in_operation' ? ins.stage : x.status}" style="font-size:10.5px;padding:2px 8px">${ins.stage==='installing'||ins.stage==='in_operation' ? ILBL[ins.stage] : LBL[x.status]||tr('Unknown','Chưa xác định')}</span>
     &nbsp;${tr('Rating','Đánh giá')}: <b style="color:${dgColor}">${dgT(x.danhgia)}</b>
     &nbsp;·&nbsp; ${x.daysleft==null ? tr('no arrival date yet','chưa có ngày về')
       : x.status==='arrived' ? tr(`arrived ${Math.abs(x.daysleft)} days ago`,`đã về ${Math.abs(x.daysleft)} ngày trước`)
@@ -2483,6 +2591,20 @@ window.showDetail = i => {
       it(tr('Clearance & pickup (actual)','TG lãnh máy TT'), Dy(x.lanhtt)),
       it(x.venm_tt ? tr('Arrived at plant','Đã về NM') : tr('Expected at plant','Dự kiến về NM'), `<b>${fmtD(x.vedukienn)}</b>`,'hl'),
       it(tr('Rating','Đánh giá'), `<b style="color:${dgColor}">${dgT(x.danhgia)}</b>`,'hl')])}
+    ${sec(tr('Installation – Commissioning','Lắp đặt – Nghiệm thu'),[
+      it(tr('Status','Trạng thái'), ins.stage ? stCell(x)
+        : `<span style="color:var(--muted)">${tr('— tracked after the machine arrives at the plant','— theo dõi sau khi máy về NM')}</span>` + (ins.lost ? `<br><small style="color:var(--st-over)">⚠ ${INST_LOST()}</small>` : ''), 'full'),
+      it(tr('Commissioning, plan','Ngày nghiệm thu KH'), fmtD(x.nghiemthu_kh)),
+      it(tr('Installation start (actual)','Ngày bắt đầu lắp đặt TT'), fmtD(x.lapdat_tt)),
+      it(tr('Test run (actual)','Ngày chạy thử TT'), fmtD(x.chaythu_tt)),
+      it(tr('Commissioning (actual)','Ngày nghiệm thu TT'), `<b>${fmtD(x.nghiemthu_tt)}</b>`,'hl'),
+      it(ins.open ? tr('Waiting for installation (so far)','Đã chờ lắp đặt (tới hôm nay)') : tr('Waiting for installation','Số ngày chờ lắp đặt'), Dy(ins.waitDays)),
+      it(tr('Installation → commissioning','Lắp đặt → nghiệm thu'), Dy(ins.installDays)),
+      it(tr('Arrival at plant → commissioning','Về NM → nghiệm thu'), Dy(ins.toAcceptDays),'hl'),
+      it(tr('Commissioning delay vs plan','Trễ nghiệm thu so với KH'), ins.acceptDelay != null
+        ? `<b style="color:${ins.acceptDelay > 0 ? 'var(--red)' : 'var(--green)'}">${ins.acceptDelay > 0 ? '+' : ''}${Dy(ins.acceptDelay)}</b>`
+        : ins.lateAccept ? `<b style="color:var(--red)">+${Dy(ins.lateDays)}</b> <small>${tr('(not yet commissioned)','(chưa nghiệm thu)')}</small>` : '—','hl')])}
+    ${x.ghichu_ld ? `<div class="dt-sec"><h5>${tr('Installation note','Ghi chú lắp đặt')}</h5><div class="m-gt" style="white-space:pre-wrap">${x.ghichu_ld}</div></div>` : ''}
     <div class="dt-sec"><h5>${tr(`Delay note`,`Giải trình`)}</h5>
       ${x.giaitrinh
         ? `<div class="m-gt">⚠️ ${x.giaitrinh}</div>`
@@ -2535,7 +2657,7 @@ window.__listView = () => {
   if(q) d.push(`${tr('Search','Tìm')}: "${q}"`);
   return { rows: filtered(), desc: d.join(', ') };
 };
-window.__expCtx = () => ({ labels: LANG==='vi' ? REC_LABEL : REC_LABEL_EN, LBL, dgT, ctT });
+window.__expCtx = () => ({ labels: LANG==='vi' ? REC_LABEL : REC_LABEL_EN, LBL, ILBL, dgT, ctT });
 document.getElementById('q').oninput = e=>{q=e.target.value.toLowerCase();pageNo=1;render()};
 document.querySelectorAll('thead th[data-s]').forEach(th=>th.onclick=()=>{
   const k=th.dataset.s; if(sortKey===k) sortDir*=-1; else {sortKey=k;sortDir=1;} render();});
@@ -2569,6 +2691,7 @@ function dbErrText(e){
   if(c==='42501' || c==='perm') return tr('Your account does not have permission to do this. Ask an admin for editor access.','Tài khoản của bạn không có quyền làm việc này. Nhờ admin cấp quyền editor.');
   if((c==='PGRST202' || c==='42883' || c==='42703' || c==='PGRST204') && /import_machines|ma_may/.test(e.message||'')) return tr('The database does not have machine codes yet. An admin needs to run <b>supabase/migrations/20261031_05_machine_code.sql</b> then <b>20261031_07_machine_code_on_arrival.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có Mã máy. Admin cần chạy file <b>supabase/migrations/20261031_05_machine_code.sql</b> trong Supabase > SQL Editor.');
   if(c==='P0002' || c==='23505' || c==='22P02' || c==='23514') return escH(e.message||'');
+  if((c==='PGRST204' || c==='42703') && /nghiemthu_kh|lapdat_tt|chaythu_tt|nghiemthu_tt|ghichu_ld/.test(e.message||'')) return tr('The database does not have the installation / commissioning columns yet. An admin needs to run <b>supabase/migrations/20261031_09_install_lifecycle.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có cột Lắp đặt – Nghiệm thu. Admin cần chạy file <b>supabase/migrations/20261031_09_install_lifecycle.sql</b> trong Supabase > SQL Editor.');
   if((c==='PGRST204' || c==='42703') && /tauchay_tt|capcang_tt|venm_tt/.test(e.message||'')) return tr('The database does not have the actual-date columns yet. An admin needs to run <b>supabase/migrations/20261030_04_quick_update.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có cột ngày thực tế. Admin cần chạy file <b>supabase/migrations/20261030_04_quick_update.sql</b> trong Supabase > SQL Editor.');
   if(c==='locked') return tr('This machine could not be decrypted in this tab, so it cannot be updated. Reload and unlock the data first.','Máy này chưa giải mã được trong tab này nên chưa sửa được. Tải lại trang và mở khoá dữ liệu trước.');
   if(c==='PGRST204' && /model|serial/.test(e.message||'')) return tr('The database does not have the Model / Serial number columns yet. An admin needs to run <b>supabase/04_model_serial.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có cột Model / Số serial. Admin cần chạy file <b>supabase/04_model_serial.sql</b> trong Supabase > SQL Editor.');
@@ -2584,7 +2707,9 @@ const REC_LABEL = {ten:'Tên máy', phutrach:'Người phụ trách', sl:'Số l
   sonagyctm:'Số ngày CTM', giaitrinh:'Giải trình', ctu:'TG chờ tạm ứng KH (ngày)', tamungtt:'Ngày tạm ứng TT',
   ditaukh:'TG đi tàu KH (ngày)', ditautt:'TG đi tàu TT (ngày)', lanhkh:'TG lãnh máy KH (ngày)', lanhtt:'TG lãnh máy TT (ngày)',
   xuatxuong:'Xác nhận/dự kiến xuất xưởng', workingday:'Working day',
-  tauchay_tt:'Ngày tàu chạy TT', capcang_tt:'Ngày cập cảng TT', venm_tt:'Ngày máy về NM TT', ma_may:'Mã máy', sysid:'ID hệ thống'};
+  tauchay_tt:'Ngày tàu chạy TT', capcang_tt:'Ngày cập cảng TT', venm_tt:'Ngày máy về NM TT',
+  nghiemthu_kh:'Ngày nghiệm thu KH', lapdat_tt:'Ngày bắt đầu lắp đặt TT', chaythu_tt:'Ngày chạy thử TT', nghiemthu_tt:'Ngày nghiệm thu TT',
+  ghichu_ld:'Ghi chú lắp đặt', ma_may:'Mã máy', sysid:'ID hệ thống'};
 /* nhãn hiển thị khi chọn tiếng Anh; REC_LABEL ở trên giữ tiếng Việt vì là tên cột Excel */
 const REC_LABEL_EN = {ten:'Machine name', phutrach:'Person in charge', sl:'Quantity', congsuat:'Capacity', noilapdat:'Installation site',
   ncc:'Supplier', xuatxu:'Origin', model:'Model', serial:'Serial number', vnd:'Total value (VND)', usd:'Total value (USD)', duyet:'Proposal approval date',
@@ -2592,11 +2717,17 @@ const REC_LABEL_EN = {ten:'Machine name', phutrach:'Person in charge', sl:'Quant
   sonagyctm:'Manufacturing days (CTM)', giaitrinh:'Delay note', ctu:'Advance-payment wait, plan (days)', tamungtt:'Advance-payment date, actual',
   ditaukh:'Shipping time, plan (days)', ditautt:'Shipping time, actual (days)', lanhkh:'Clearance & pickup, plan (days)', lanhtt:'Clearance & pickup, actual (days)',
   xuatxuong:'Confirmed/expected ex-works', workingday:'Working day',
-  tauchay_tt:'Vessel departure, actual', capcang_tt:'Port arrival, actual', venm_tt:'Arrival at plant, actual', ma_may:'Machine code', sysid:'System ID'};
+  tauchay_tt:'Vessel departure, actual', capcang_tt:'Port arrival, actual', venm_tt:'Arrival at plant, actual',
+  nghiemthu_kh:'Commissioning, plan', lapdat_tt:'Installation start, actual', chaythu_tt:'Test run, actual', nghiemthu_tt:'Commissioning, actual',
+  ghichu_ld:'Installation note', ma_may:'Machine code', sysid:'System ID'};
 /* ngày thực tế nhập qua ⚡ Cập nhật nhanh (migrations/20261030_04): KHÔNG nằm trong REC_KEYS
    để form Sửa đầy đủ (toRow) không ghi đè chúng; trigger machines_actual_trg tính ditautt / lanhtt / vedukienn từ đây */
 const ACT_KEYS = ['tauchay_tt','capcang_tt','venm_tt'];
-const DATE_KEYS = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong'].concat(ACT_KEYS);
+/* lắp đặt – nghiệm thu (migrations/20261031_09): cũng KHÔNG nằm trong REC_KEYS. Ngày TT + ghi chú: ⚡ Cập nhật nhanh;
+   Ngày nghiệm thu KH: form Sửa đầy đủ (saveMachine gửi riêng). ghichu_ld mã hoá trong sec cùng giải trình. */
+const INST_KEYS = DM.INSTALL_KEYS;                       // lapdat_tt, chaythu_tt, nghiemthu_tt
+const LD_KEYS = ['nghiemthu_kh'].concat(INST_KEYS, ['ghichu_ld']);
+const DATE_KEYS = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong'].concat(ACT_KEYS, ['nghiemthu_kh'], INST_KEYS);
 const INT_KEYS = ['sl','sonagyctm','ctu','ditaukh','ditautt','lanhkh','lanhtt'];
 function toRow(m){
   const o = {};
@@ -2615,9 +2746,15 @@ function toRow(m){
 async function saveMachine(m, editId){
   const sb = window.__sb; if(!sb) throw {code:'nodb'};
   window.__selfWriting = true;
-  const row = await window.__seal('machines', toRow(m));     // mã hoá trường nhạy cảm (nếu đã bật)
+  const cur = editId ? DATA.find(x=>x._id===editId) : null;
+  const r0 = toRow(m);
+  // cột của migration 09 chỉ gửi khi có giá trị (cơ sở dữ liệu chưa chạy 09 vẫn lưu được máy).
+  // ghichu_ld: giữ ghi chú đang có — sec được mã hoá lại cả gói, thiếu trường là mất ghi chú
+  const ntkh = /^\d{4}-\d{2}-\d{2}$/.test(m.nghiemthu_kh||'') ? m.nghiemthu_kh : null;
+  if(ntkh || (cur && cur.nghiemthu_kh)) r0.nghiemthu_kh = ntkh;
+  if(cur && cur.ghichu_ld) r0.ghichu_ld = unescH(cur.ghichu_ld);
+  const row = await window.__seal('machines', r0);     // mã hoá trường nhạy cảm (nếu đã bật)
   if(editId){
-    const cur = DATA.find(x=>x._id===editId);
     const { data, error } = await sb.from('machines').update(row)
       .eq('id', editId).eq('version', cur ? cur._ver : -1).is('deleted_at', null).select('id');
     if(error) throw error;
@@ -2635,11 +2772,15 @@ async function saveMachine(m, editId){
    (migrations/20261030_04_quick_update.sql); quDerive() bên dưới tính giống hệt để xem trước. */
 const quEl = id => document.getElementById(id);
 /* thứ tự = trình tự thời gian = thứ tự ô trong popup và thứ tự phím Tab */
-const QU_KEYS = ['dathang','tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt','giaitrinh'];
-const QU_DATES = QU_KEYS.filter(k=>k!=='giaitrinh');
-const QU_FUT = ['tamungtt','tauchay_tt','capcang_tt','venm_tt'];      // ngày thực tế: không nên nằm ở tương lai
+const QU_KEYS = ['dathang','tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt','giaitrinh'].concat(INST_KEYS, ['ghichu_ld']);
+const QU_TEXT = ['giaitrinh','ghichu_ld'];                                 // chữ, mã hoá trong sec
+const QU_DATES = QU_KEYS.filter(k=>!QU_TEXT.includes(k));                  // đặt hàng → … → về NM → lắp đặt → chạy thử → nghiệm thu
+const QU_LD = INST_KEYS.concat(['ghichu_ld']);                             // nhóm Lắp đặt – Nghiệm thu: chỉ mở khi máy đã về NM
+const QU_FUT = ['tamungtt','tauchay_tt','capcang_tt','venm_tt'].concat(INST_KEYS);      // ngày thực tế: không nên nằm ở tương lai
 const quLbl = k => k==='dathang' ? tr('Contract signed / order date','Ngày ký HĐ/đặt hàng') : (LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k];
-const quCur = (x,k) => k==='giaitrinh' ? unescH(x.giaitrinh||'') : (x[k]||null);
+const quCur = (x,k) => QU_TEXT.includes(k) ? unescH(x[k]||'') : (x[k]||null);
+/* máy đã về sau khi sửa (ch có venm_tt = giá trị mới, kể cả xoá) */
+const quArrived = (x,ch) => !!('venm_tt' in ch ? ch.venm_tt : x.venm_tt);
 const quStatus = setArrival;
 /* giống trigger machines_actual_sync: m = giá trị sau khi sửa */
 function quDerive(m){
@@ -2681,32 +2822,38 @@ function quWarn(x,ch){
   Object.entries(bad).forEach(([k,p])=>{ if(!(k in ch) && !(p in ch)) return;
     w.push(tr(`${quLbl(k)} (${fmtD(m[k])}) is earlier than ${quLbl(p)} (${fmtD(m[p])}).`,`${quLbl(k)} (${fmtD(m[k])}) sớm hơn ${quLbl(p)} (${fmtD(m[p])}).`)); });
   QU_FUT.forEach(k=>{ if(ch[k] && ch[k] > t) w.push(tr(`${quLbl(k)} (${fmtD(ch[k])}) is in the future.`,`${quLbl(k)} (${fmtD(ch[k])}) nằm ở tương lai.`)); });
+  if(!quArrived(x,ch) && INST_KEYS.some(k=>m[k]))
+    w.push(tr('This machine has installation / commissioning dates but no actual arrival date at plant.','Máy có ngày lắp đặt / nghiệm thu nhưng không có Ngày máy về NM TT.'));
   return w;
 }
 const QU_DH_MSG = () => tr('The order date is the starting point for the planned arrival date (KH). Changing it will also change KH and the rating. Continue?',
                            'Ngày đặt hàng là mốc tính Ngày dự kiến máy về (KH). Thay đổi sẽ làm KH và Đánh giá thay đổi theo. Tiếp tục?');
-/* ô trống: 1 máy = xoá giá trị; nhiều máy = giữ nguyên */
+/* ô trống: 1 máy = xoá giá trị; nhiều máy = giữ nguyên.
+   Nhóm Lắp đặt – Nghiệm thu chỉ ghi cho máy đã về NM (sau khi sửa): máy chưa về thì bỏ các ô đó (quLdSkip báo lại) */
 function quDiff(x,f,batch){
   const ch = {};
   QU_KEYS.forEach(k=>{
     const v = f[k], cur = quCur(x,k);
     if(batch){ if(v!=='' && v!==(cur||'')) ch[k] = v; }
-    else if(v!==(cur||'')) ch[k] = k==='giaitrinh' ? v : (v||null);
+    else if(v!==(cur||'')) ch[k] = QU_TEXT.includes(k) ? v : (v||null);
   });
+  if(!quArrived(x,ch)) QU_LD.forEach(k=>{ delete ch[k]; });
   return ch;
 }
+const quLdSkip = (x,f,batch) => batch && !quArrived(x, quDiff(x,f,true)) && QU_LD.some(k=>f[k]!=='');
 async function quSaveOne(x,ch){
   const sb = window.__sb; if(!sb) throw {code:'nodb'};
   const upd = {};
-  Object.keys(ch).forEach(k=>{ if(k!=='giaitrinh') upd[k] = ch[k]; });
+  Object.keys(ch).forEach(k=>{ if(!QU_TEXT.includes(k)) upd[k] = ch[k]; });
   Object.assign(upd, quPlan(x, ch));          // đổi ngày đặt hàng -> vekh + danhgia (trigger vẫn tính phần ngày thực tế)
-  if('giaitrinh' in ch){
-    // giải trình nằm trong sec cùng các trường nhạy cảm khác: mã hoá lại cả gói, chỉ giải trình đổi
+  const txt = QU_TEXT.filter(k=>k in ch);
+  if(txt.length){
+    // giải trình / ghi chú lắp đặt nằm trong sec cùng các trường nhạy cảm khác: mã hoá lại cả gói, chỉ trường vừa sửa đổi
     if(CRYPTO.on && x.ten==='🔒') throw {code:'locked'};
     const s = {}; SEC.machines.f.forEach(k=>{ s[k] = (k==='vnd'||k==='usd') ? (Number(x[k])||0) : unescH(x[k]||''); });
-    s.giaitrinh = ch.giaitrinh;
+    txt.forEach(k=>{ s[k] = ch[k]; });
     const sealed = await window.__seal('machines', s);
-    if(sealed.sec){ upd.sec = sealed.sec; upd.giaitrinh = null; } else upd.giaitrinh = ch.giaitrinh;
+    if(sealed.sec){ upd.sec = sealed.sec; txt.forEach(k=>{ upd[k] = null; }); } else txt.forEach(k=>{ upd[k] = ch[k]; });
   }
   const { data, error } = await sb.from('machines').update(upd)
     .eq('id', x._id).eq('version', x._ver).is('deleted_at', null).select('*');
@@ -2744,12 +2891,16 @@ function quForm(list, keep){
       + `<div class="qu-names">${list.slice(0,12).map(x=>`<span>${x.ten}</span>`).join('')}${list.length>12?`<span>+${list.length-12}</span>`:''}</div>`
     : tr('Only the boxes you change are saved. Empty a date box (×) to clear it.','Chỉ lưu các ô bạn đổi. Bấm × để xoá một ngày.');
   // nút × không nằm trong thứ tự Tab (Tab đi lần lượt từng ngày); xoá bằng bàn phím: Delete / Backspace
-  const dIn = k => `<label><span class="qu-cap">${quLbl(k)}</span><span class="qu-f" id="quf_${k}"><input id="qu_${k}" value="${escH(val(k))}" placeholder="${batch ? tr('keep','giữ nguyên') : '—'}"><button type="button" class="qu-clr" data-clr="${k}" tabindex="-1" title="${tr('Clear','Xoá')}">×</button></span><small class="qu-note" id="qun_${k}"></small>${k==='venm_tt' && !batch ? `<button type="button" class="qu-use" id="quUseFc" hidden>${tr('Use expected date','Dùng ngày dự kiến')} (${fmtD(x0.vedukienn)})</button>` : ''}</label>`;
+  const dIn = k => `<label${QU_LD.includes(k) ? ' class="qu-ld"' : ''}><span class="qu-cap">${quLbl(k)}</span><span class="qu-f" id="quf_${k}"><input id="qu_${k}" value="${escH(val(k))}" placeholder="${batch ? tr('keep','giữ nguyên') : '—'}"><button type="button" class="qu-clr" data-clr="${k}" tabindex="-1" title="${tr('Clear','Xoá')}">×</button></span><small class="qu-note" id="qun_${k}"></small>${k==='venm_tt' && !batch ? `<button type="button" class="qu-use" id="quUseFc" hidden>${tr('Use expected date','Dùng ngày dự kiến')} (${fmtD(x0.vedukienn)})</button>` : ''}</label>`;
   const grp = t => `<div class="qu-grp">${t}</div>`;
   mBody.innerHTML = `<form id="quForm" novalidate><div class="add-grid qu-grid">
       ${grp(tr('Purchasing','Mua hàng'))}${QU_DATES.slice(0,3).map(dIn).join('')}
-      ${grp(tr('Shipping','Vận chuyển'))}${QU_DATES.slice(3).map(dIn).join('')}
+      ${grp(tr('Shipping','Vận chuyển'))}${QU_DATES.slice(3,6).map(dIn).join('')}
       <label class="full">${quLbl('giaitrinh')}<textarea id="qu_giaitrinh" rows="2" maxlength="1000" placeholder="${batch ? tr('keep','giữ nguyên') : ''}">${escH(val('giaitrinh'))}</textarea></label>
+      ${grp(tr('Installation – Commissioning','Lắp đặt – Nghiệm thu'))}
+      <div class="qu-lockmsg" id="quLdMsg"${batch ? '' : ' hidden'}>${batch ? tr('Applies only to machines that already have an actual arrival date at plant.','Chỉ áp dụng cho máy đã có Ngày máy về NM TT.') : tr('Enter the actual arrival date at plant first.','Nhập ngày máy về NM TT trước.')}</div>
+      ${INST_KEYS.map(dIn).join('')}
+      <label class="full qu-ld">${quLbl('ghichu_ld')}<textarea id="qu_ghichu_ld" rows="2" maxlength="1000" placeholder="${batch ? tr('keep','giữ nguyên') : ''}">${escH(val('ghichu_ld'))}</textarea></label>
     </div>
     <div id="quWarnBox"></div>
     <div id="quMsg" style="min-height:1.2em;font-size:13px;margin-bottom:8px"></div>
@@ -2769,6 +2920,11 @@ function quForm(list, keep){
     }
     const ch = quDiff(x0,f,false), m = quMerge(x0,ch), bad = quSeq(m);
     quEl('quUseFc').hidden = !!f.venm_tt || !x0.vedukienn;     // chỉ hiện khi ô trống và máy có ngày dự kiến
+    // nhóm Lắp đặt – Nghiệm thu: mờ + khoá khi ô Ngày máy về NM TT trống (nhập ngày về ngay trong popup là mở)
+    const lock = !f.venm_tt;
+    quEl('quLdMsg').hidden = !lock;
+    mBody.querySelectorAll('.qu-ld').forEach(el=>{ el.classList.toggle('qu-lock', lock); el.setAttribute('aria-disabled', lock); });
+    QU_LD.forEach(k=>{ const el = (fp[k] && fp[k].altInput) || quEl('qu_'+k); if(el) el.disabled = lock; });
     // viền cam + dòng nhắc dưới ô sớm hơn ngày đứng trước nó
     QU_DATES.forEach(k=>{ const p = bad[k];
       quEl('quf_'+k).classList.toggle('seq', !!p);
@@ -2783,7 +2939,7 @@ function quForm(list, keep){
     if(fp[k]) fp[k].clear(); else document.getElementById('qu_'+k).value = ''; upd(); });
   QU_DATES.forEach(k=>{ const el = fp[k] && fp[k].altInput; if(el) el.addEventListener('keydown', e=>{
     if(e.key==='Delete' || e.key==='Backspace'){ e.preventDefault(); fp[k].clear(); fp[k].close(); upd(); } }); });
-  quEl('qu_giaitrinh').oninput = upd;
+  QU_TEXT.forEach(k=>{ quEl('qu_'+k).oninput = upd; });
   if(!batch) quEl('quUseFc').onclick = () => {                 // điền ngày dự kiến vào ô — vẫn phải bấm Lưu
     if(fp.venm_tt) fp.venm_tt.setDate(x0.vedukienn, true); else { quEl('qu_venm_tt').value = x0.vedukienn; upd(); } };
   quEl('quCancel').onclick = () => mBg.classList.remove('show');
@@ -2819,9 +2975,11 @@ function quForm(list, keep){
 }
 /* bảng xác nhận: Máy – Trường – Cũ → Mới (kèm các giá trị trigger sẽ tự tính) */
 function quReview(list, f, plan){
-  const sv = (k,v) => k==='giaitrinh' ? (v ? escH(v) : '—') : k==='danhgia' ? dgT(v) : fmtD(v);
+  const sv = (k,v) => QU_TEXT.includes(k) ? (v ? escH(v) : '—') : k==='danhgia' ? dgT(v) : fmtD(v);
+  const LD_SKIP = () => tr('Installation – commissioning boxes skipped: not yet arrived at plant','Bỏ qua nhóm Lắp đặt – Nghiệm thu: máy chưa về NM');
   const rows = plan.map(p=>{
     const m = quMerge(p.x, p.ch), d = quDerive(m), w = quWarn(p.x, p.ch);
+    if(quLdSkip(p.x, f, true)) w.push(LD_SKIP());
     const lines = Object.keys(p.ch).map(k=>[k, quCur(p.x,k), p.ch[k], false]), pl = quPlan(p.x, p.ch);
     if('vekh' in pl && (pl.vekh||null) !== (p.x.vekh||null)) lines.push(['vekh', p.x.vekh, pl.vekh, true]);
     if('danhgia' in pl && pl.danhgia !== (p.x.danhgia||'')) lines.push(['danhgia', p.x.danhgia, pl.danhgia, true]);
@@ -2832,10 +2990,11 @@ function quReview(list, f, plan){
     return lines.map(([k,o,n,calc],j)=>`<tr class="${calc?'calc':''}">${j===0 ? `<td class="m" rowspan="${lines.length}">${p.x.ten}${w.map(t=>`<small>⚠ ${t}</small>`).join('')}</td>` : ''}
       <td>${quLbl(k)}${calc ? tr(' (auto)',' (tự tính)') : ''}</td><td><s>${fmtV(k,o)}</s> → <ins>${fmtV(k,n)}</ins></td></tr>`).join('');
   }).join('');
-  const skip = list.length - plan.length;
+  const skip = list.length - plan.length, nLd = list.filter(x=>quLdSkip(x, f, true)).length;
   mTitle.textContent = tr(`⚡ Review: ${plan.length} machine(s)`,`⚡ Xác nhận: ${plan.length} máy`);
   mSub.innerHTML = tr('Check old → new values. Rows in italics are calculated automatically from the dates.','Kiểm tra giá trị cũ → mới. Dòng in nghiêng được tính tự động từ các ngày.')
-    + (skip ? ' ' + tr(`${skip} selected machine(s) have no changes and are skipped.`,`${skip} máy đã chọn không có thay đổi, sẽ bỏ qua.`) : '');
+    + (skip ? ' ' + tr(`${skip} selected machine(s) have no changes and are skipped.`,`${skip} máy đã chọn không có thay đổi, sẽ bỏ qua.`) : '')
+    + (nLd ? `<br><span style="color:var(--st-over)">⚠ ${tr(`${nLd} machine(s) have not arrived at plant yet — their installation – commissioning boxes are not saved.`,`${nLd} máy chưa về NM — không lưu nhóm Lắp đặt – Nghiệm thu cho các máy này.`)}</span>` : '');
   mBody.innerHTML = `<div class="qu-tbl"><table><thead><tr><th>${tr('Machine','Máy')}</th><th>${tr('Field','Trường')}</th><th>${tr('Old → New','Cũ → Mới')}</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div id="quMsg" style="min-height:1.2em;font-size:13px;margin-bottom:8px"></div>
     <div class="add-actions"><button type="button" class="nbtn2 ghost" id="quBack">${tr('← Back to edit','← Quay lại sửa')}</button>
@@ -3147,7 +3306,7 @@ quSync(filtered());
 /* ---- Xuất Excel: cùng cấu trúc sheet "📝Cập nhật" nên nạp lại được bằng 📂 Nạp Excel ---- */
 /* Mã máy đứng đầu: là khoá khi nạp lại (giữ nguyên mã = cập nhật đúng máy; để trống = máy mới) */
 const XL_COLS = ['ma_may','ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','ctu','tamungtt',
-  'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'].concat(ACT_KEYS, ['sysid']);
+  'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'].concat(ACT_KEYS, LD_KEYS, ['sysid']);
 const pad2 = n=>String(n).padStart(2,'0');
 function stampNow(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes()); }
 function exportExcel(prefix){
@@ -3161,7 +3320,7 @@ function exportExcel(prefix){
     }));
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = XL_COLS.map(k=> ({wch: k==='ten'||k==='giaitrinh' ? 36 : k==='sysid' ? 38 : 16}));
+  ws['!cols'] = XL_COLS.map(k=> ({wch: k==='ten'||k==='giaitrinh'||k==='ghichu_ld' ? 36 : k==='sysid' ? 38 : 16}));
   // ghi chú trên tiêu đề: Mã máy chỉ đọc, ID hệ thống là khoá khớp dòng khi nạp lại
   const note = (k, t) => { const c = ws[XLSX.utils.encode_cell({r:0, c:XL_COLS.indexOf(k)})]; if(c){ c.c = [{a:'TienDoMayVe', t}]; c.c.hidden = true; } };
   note('ma_may', 'Chỉ đọc — mã do hệ thống cấp khi máy về NM. Sửa ở đây sẽ bị bỏ qua khi nạp lại.');
@@ -3183,9 +3342,10 @@ async function importMachines(data, known){
     const old = m.sysid && known.get(m.sysid); if(!old) return;
     if(m.model===undefined) m.model = unescH(old.model);
     if(m.serial===undefined) m.serial = unescH(old.serial);
-    ACT_KEYS.forEach(k=>{ if(m[k]===undefined) m[k] = old[k]; });
+    ACT_KEYS.concat(LD_KEYS).forEach(k=>{ if(m[k]===undefined) m[k] = k==='ghichu_ld' ? unescH(old[k]||'') : old[k]; });
   });
-  const actRow = m => Object.fromEntries(ACT_KEYS.map(k=>[k, (typeof m[k]==='string' && /^\d{4}-\d{2}-\d{2}$/.test(m[k])) ? m[k] : null]));
+  const actRow = m => Object.fromEntries(ACT_KEYS.concat(LD_KEYS).map(k=>[k, k==='ghichu_ld' ? (m[k] ? String(m[k]) : null)
+    : (typeof m[k]==='string' && /^\d{4}-\d{2}-\d{2}$/.test(m[k])) ? m[k] : null]));
   const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1, id:m.sysid||null}))));     // không gửi Mã máy: chỉ hệ thống cấp
   const { data: res, error } = await sb.rpc('import_machines_by_id', { rows });
   if(error) throw error;
@@ -3214,7 +3374,7 @@ window.editMachine = i => {
   set('f_ctu', x.ctu||0); set('f_dt', x.ditaukh||0); set('f_dttt', x.ditautt||0);
   set('f_lm', x.lanhkh||0); set('f_lmtt', x.lanhtt||0); set('f_ctm', x.sonagyctm||0);
   set('f_wd', (x.workingday||'no').toLowerCase()==='yes'?'yes':'no'); set('f_gt', unescH(x.giaitrinh));
-  const dates = {f_duyet:x.duyet, f_dh:x.dathang, f_tutt:x.tamungtt, f_xxg:x.xuatxuong};
+  const dates = {f_duyet:x.duyet, f_dh:x.dathang, f_tutt:x.tamungtt, f_xxg:x.xuatxuong, f_ntkh:x.nghiemthu_kh};
   Object.entries(dates).forEach(([id,v])=>{
     const fp = window.fpickers && window.fpickers[id];
     if(fp){ v ? fp.setDate(v, false, 'Y-m-d') : fp.clear(); } else set(id, v||'');
@@ -3268,7 +3428,7 @@ window.showHistory = async i => {
       else if(n.deleted_at && !o.deleted_at){ act=tr('Moved to trash','Chuyển vào thùng rác'); col='var(--red)'; }
       else if(o.deleted_at && !n.deleted_at){ act=tr('Restored','Khôi phục'); col='var(--green)'; }
       else {
-        const ch = REC_KEYS.concat(ACT_KEYS).filter(k=> JSON.stringify(o[k]??null) !== JSON.stringify(n[k]??null));
+        const ch = REC_KEYS.concat(ACT_KEYS, LD_KEYS).filter(k=> JSON.stringify(o[k]??null) !== JSON.stringify(n[k]??null));
         body = ch.length ? ch.map(k=>`<div>${(LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k]}: <s>${escH(showVal(k,o[k]))}</s> → <ins>${escH(showVal(k,n[k]))}</ins></div>`).join('')
                          : '<div style="color:var(--muted)">'+tr('No content changes','Không đổi nội dung')+'</div>';
       }
@@ -4440,6 +4600,11 @@ const STATIC_VI = new Map([
   ['🚢 Arriving soon','🚢 Sắp về'],
   ['⏳ Awaiting','⏳ Chờ về'],
   ['⚠ Overdue – unconfirmed','⚠ Quá hạn – chưa xác nhận'],
+  ['🔧 Installing','🔧 Đang lắp đặt'],
+  ['🏁 Commissioned','🏁 Đã nghiệm thu'],
+  ['⏰ Arrived – not installed','⏰ Đã về – chưa lắp đặt'],
+  ['⚠ Late commissioning','⚠ Trễ nghiệm thu'],
+  ['Planned commissioning date','Ngày nghiệm thu KH'],
   ['✅ Confirm arrivals','✅ Xác nhận về'],
   ['⚠️ Delay notes','⚠️ Giải trình'],
   ['Site: All','Nơi lắp đặt: Tất cả'],
@@ -4597,8 +4762,8 @@ const CRYPTO = (()=>{
 })();
 /* trường nhạy cảm của từng bảng + giá trị để trống trong cột gốc */
 const SEC = {
-  machines:        { f:['ten','phutrach','congsuat','ncc','model','serial','vnd','usd','giaitrinh'],
-                     blank:{ ten:'', phutrach:null, congsuat:null, ncc:null, model:null, serial:null, vnd:0, usd:0, giaitrinh:null } },
+  machines:        { f:['ten','phutrach','congsuat','ncc','model','serial','vnd','usd','giaitrinh','ghichu_ld'],
+                     blank:{ ten:'', phutrach:null, congsuat:null, ncc:null, model:null, serial:null, vnd:0, usd:0, giaitrinh:null, ghichu_ld:null } },
   mmtb_machines:   { f:['name','model','manufacturer','serial_number','capacity_value','capacity_unit','contract_amount','locked_rate','notes','engineer','manager','asset_code'],
                      blank:{ name:'', model:null, manufacturer:null, serial_number:null, capacity_value:null, capacity_unit:null,
                              contract_amount:null, locked_rate:null, notes:null, engineer:null, manager:null, asset_code:null } },
@@ -4753,7 +4918,7 @@ window.encryptExisting = async () => {
     let done = 0, total = Object.values(all).reduce((s,r)=>s+r.length, 0);
     for(const [t, rows] of Object.entries(all)){
       for(const r of rows){
-        const d = SEC[t], plain = {}; d.f.forEach(k=>{ plain[k] = r[k]; });
+        const d = SEC[t], plain = {}; d.f.forEach(k=>{ if(k in r) plain[k] = r[k]; });   // cột chưa có (chưa chạy migration) thì bỏ qua
         if(t==='suppliers') plain.id = r.id;
         const sealed = await window.__seal(t, plain); delete sealed.id;
         const { error } = await sb.from(t).update(sealed).eq('id', r.id);
@@ -4771,8 +4936,9 @@ window.encryptExisting = async () => {
 
 (async function(){
   const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const STR = ['ten','phutrach','congsuat','noilapdat','ncc','xuatxu','model','serial','danhgia','giaitrinh','workingday','ma_may'];
-  const DATES = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt'];
+  const STR = ['ten','phutrach','congsuat','noilapdat','ncc','xuatxu','model','serial','danhgia','giaitrinh','workingday','ma_may','ghichu_ld'];
+  const DATES = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt',
+                 'nghiemthu_kh','lapdat_tt','chaythu_tt','nghiemthu_tt'];
   const NUMS = ['sl','vnd','usd','sonagyctm','ctu','ditaukh','ditautt','lanhkh','lanhtt'];
   const isoRe = /^\d{4}-\d{2}-\d{2}$/;
   function clean(d){

@@ -21,7 +21,11 @@ const DEF = [
   ['company','s',0], ['daysleft','n',0], ['congsuat','s',0], ['model','s',0], ['serial','s',0], ['duyet','d',0],
   ['ctu','n',0], ['tamungtt','d',0], ['tamung_days','n',0], ['ditaukh','n',0], ['ditautt','n',0], ['lanhkh','n',0], ['lanhtt','n',0],
   ['sonagyctm','n',0], ['workingday','s',0], ['xuatxuong','d',0], ['tauchay_tt','d',0], ['capcang_tt','d',0],
-  ['venm_tt','d',0], ['giaitrinh','s',0], ['sysid','s',0]     // ID hệ thống (uuid): khoá khớp dòng khi nạp Excel
+  ['venm_tt','d',0], ['giaitrinh','s',0],
+  // lắp đặt – nghiệm thu (migrations/20261031_09); số ngày tính lúc xuất, thiếu ngày -> ô trống
+  ['install_status','s',0], ['nghiemthu_kh','d',0], ['lapdat_tt','d',0], ['chaythu_tt','d',0], ['nghiemthu_tt','d',0], ['ghichu_ld','s',0],
+  ['wait_install_days','n',0], ['install_accept_days','n',0], ['accept_delay_days','n',0],
+  ['sysid','s',0]     // ID hệ thống (uuid): khoá khớp dòng khi nạp Excel
 ];
 /* nhãn / bảng dịch giá trị do index.html (mainSrc) đưa ra qua window.__expCtx() */
 const CTX = () => (window.__expCtx && window.__expCtx()) || { labels:{}, LBL:{}, dgT:v=>v, ctT:v=>v };
@@ -29,7 +33,11 @@ const TYPE = Object.fromEntries(DEF.map(([k,t])=>[k,t]));
 function label(k){
   const L = CTX().labels;
   const extra = { status: tr('Status','Trạng thái'), company: tr('Company','Công ty'), daysleft: tr('Days to arrival','Số ngày còn lại'),
-                  tamung_days: tr('Advance-payment days','Số ngày tạm ứng'), arrival_kind: tr('Arrival date type','Trạng thái ngày về') };
+                  tamung_days: tr('Advance-payment days','Số ngày tạm ứng'), arrival_kind: tr('Arrival date type','Trạng thái ngày về'),
+                  install_status: tr('Installation status','Trạng thái lắp đặt'),
+                  wait_install_days: tr('Days waiting for installation','Số ngày chờ lắp đặt'),
+                  install_accept_days: tr('Days from installation to commissioning','Số ngày lắp đặt đến nghiệm thu'),
+                  accept_delay_days: tr('Commissioning delay (days)','Trễ nghiệm thu (ngày)') };
   return extra[k] || (L && L[k]) || k;
 }
 /* giá trị 1 ô: null = để trống; ngày giữ dạng ISO 'YYYY-MM-DD' để định dạng sau */
@@ -38,6 +46,17 @@ function cell(x, k){
   if(k === 'status') return (x.status && x.status !== 'unknown' && CTX().LBL[x.status]) || null;   // trạng thái mới: DM.arrivalStatus (index.html)
   if(k === 'arrival_kind') return x.venm_tt ? tr('Actual','Thực tế') : x.vedukienn ? tr('Expected','Dự kiến') : null;
   if(k === 'tamung_days') return calcAdvanceDays(x);
+  // Số ngày chờ lắp đặt = Bắt đầu lắp đặt TT − Về NM TT · lắp đặt đến nghiệm thu = Nghiệm thu TT − Bắt đầu lắp đặt TT
+  // Trễ nghiệm thu = Nghiệm thu TT − Nghiệm thu KH (âm = sớm)
+  if(k === 'wait_install_days') return dayDiff(x.venm_tt, x.lapdat_tt);
+  if(k === 'install_accept_days') return dayDiff(x.lapdat_tt, x.nghiemthu_tt);
+  if(k === 'accept_delay_days') return dayDiff(x.nghiemthu_kh, x.nghiemthu_tt);
+  if(k === 'install_status'){
+    const s = window.DM && DM.installStatus(x), I = CTX().ILBL || {};
+    if(!s || !s.stage) return null;
+    const main = s.stage === 'arrived' ? tr('Arrived – not installed yet','Đã về – chưa lắp đặt') : I[s.stage] || s.stage;
+    return [main, s.waitInstall ? I.wait_install : '', s.lateAccept ? I.late_accept : ''].filter(Boolean).join(' · ');
+  }
   if(k === 'sysid') return x._id || null;
   if(k === 'company') return (window.DM && DM.companyCode(plain(x.noilapdat))) || null;
   if(k === 'danhgia'){ const v = plain(x.danhgia); return v ? CTX().dgT(v) : '?'; }   // thiếu ngày -> "?" như file Excel gốc
@@ -52,6 +71,7 @@ const dmy = iso => iso.slice(8,10) + '/' + iso.slice(5,7) + '/' + iso.slice(0,4)
    Chỉ tính lúc xuất, không sửa DATA. Ngày là chuỗi 'YYYY-MM-DD' -> đưa về 00:00 UTC rồi trừ (không lệch do múi giờ).
    Thiếu 1 trong 2 ngày -> null (ô trống). Âm -> vẫn trả số âm + cảnh báo console 1 lần cho mỗi máy / cặp ngày. */
 const utcDay = iso => isoOk(iso) ? Date.UTC(+iso.slice(0,4), +iso.slice(5,7) - 1, +iso.slice(8,10)) : null;
+const dayDiff = (a, b) => { const p = utcDay(a), q = utcDay(b); return p == null || q == null ? null : Math.round((q - p) / 86400000); };
 const warnedAdv = new Set();
 function calcAdvanceDays(row){
   const a = utcDay(row && row.dathang), b = utcDay(row && row.tamungtt);
@@ -283,5 +303,5 @@ window.expOpen = () => {
   bg.classList.add('show');
 };
 /* cho test: các hàm chuyển đổi không phụ thuộc giao diện */
-window.__exp = { cell, toTSV, label, defaults, normalize, calcAdvanceDays };
+window.__exp = { cell, toTSV, label, defaults, normalize, calcAdvanceDays, dayDiff };
 })();

@@ -25,6 +25,25 @@ Nạp Excel (`import_machines_by_id`): có ID → cập nhật đúng máy; khô
 ID không có / lặp → dừng, không ghi gì; cột Mã máy trong file bị bỏ qua (khác DB thì cảnh báo);
 file không có cột "ID hệ thống" khi app đã có dữ liệu → chặn. Máy không có trong file giữ nguyên.
 
+## Lắp đặt – Nghiệm thu (sau khi máy về; migration 09)
+| Cột | Nhãn | Sửa ở |
+|---|---|---|
+| `nghiemthu_kh` | Ngày nghiệm thu KH | form Sửa đầy đủ / Thêm máy |
+| `lapdat_tt`, `chaythu_tt`, `nghiemthu_tt` | Bắt đầu lắp đặt / Chạy thử / Nghiệm thu TT | ⚡ Cập nhật nhanh (nhóm 3, khoá khi chưa có `venm_tt`) |
+| `ghichu_ld` | Ghi chú lắp đặt | ⚡ Cập nhật nhanh — **mã hoá trong `sec`** cùng giải trình |
+
+- Trạng thái + cảnh báo chỉ tính ở `DM.installStatus` (metrics.js); `x.status` vẫn là trạng thái ngày về (`DM.arrivalStatus`), không đổi.
+  `installing` = đã về + có ngày lắp đặt hoặc chạy thử, chưa nghiệm thu · `in_operation` = đã về + có ngày nghiệm thu TT.
+  Cảnh báo: `wait_install` (về > `APP_CONFIG.INSTALL_WAIT_DAYS` ngày — mặc định 30 trong config.js — chưa có ngày lắp đặt nào),
+  `late_accept` (quá Ngày nghiệm thu KH, chưa nghiệm thu). Có ngày lắp đặt mà mất `venm_tt` → không tính giai đoạn, cảnh báo ⚠.
+- Không nằm trong `REC_KEYS` (form Sửa không ghi đè). `ghichu_ld` nằm trong `SEC.machines.f`: mọi chỗ mã hoá lại `sec`
+  (saveMachine, nạp Excel, Cập nhật nhanh, cắt tên) phải đưa ghi chú đang có vào gói, nếu không sẽ mất ghi chú.
+- Cột mới chỉ gửi khi có giá trị → app chạy được trên DB chưa có 09 (lưu ngày lắp đặt thì báo "cần chạy 09").
+- Thẻ KPI "Chờ nghiệm thu" và bảng Phân tích "Về NM → nghiệm thu" tính trên mọi kỳ (không theo tháng / năm).
+
+Triển khai: Supabase > SQL Editor chạy `20261031_09_install_lifecycle.sql` (sau 07; chạy lại an toàn; câu kiểm tra cuối ra `so_cot = 5`).
+File Excel xuất trước bản này vẫn nạp lại được — dữ liệu lắp đặt của máy giữ nguyên.
+
 ## Quy ước làm việc
 - Migration mới = file mới trong `supabase/migrations/` (không sửa file đã có). Thư mục `supabase/` không nằm trong git.
 - Người dùng tự chạy migration trên Supabase và tự commit / push; hỏi trước khi làm gì trên Supabase thật.

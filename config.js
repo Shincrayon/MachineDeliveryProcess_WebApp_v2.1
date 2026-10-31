@@ -3,5 +3,7 @@
 // TUYỆT ĐỐI không dán "service_role key" vào đây.
 window.APP_CONFIG = {
   SUPABASE_URL: 'https://jpuwhrvijokgrfwzmitg.supabase.co/',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwdXdocnZpam9rZ3Jmd3ptaXRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5OTM2NjQsImV4cCI6MjEwODU2OTY2NH0.DFoqQ7fWm9GUi6Md3ckRtbeiHrFGyUmNOgdu7pD505s'
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwdXdocnZpam9rZ3Jmd3ptaXRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5OTM2NjQsImV4cCI6MjEwODU2OTY2NH0.DFoqQ7fWm9GUi6Md3ckRtbeiHrFGyUmNOgdu7pD505s',
+  // máy đã về NM quá bấy nhiêu ngày mà chưa có Ngày bắt đầu lắp đặt TT -> cảnh báo "Đã về – chưa lắp đặt"
+  INSTALL_WAIT_DAYS: 30
 };
