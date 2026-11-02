@@ -1,6 +1,6 @@
 # TienDoMayVe WebApp v2.1 — ghi chú cho người phát triển
 
-App 1 file `index.html` (GitHub Pages) + `metrics.js` + `export.js` + `catalog_sync.js`, dữ liệu trên Supabase.
+App 1 file `index.html` (GitHub Pages) + `metrics.js` + `export.js` + `catalog_sync.js` + `name_std.js`, dữ liệu trên Supabase.
 Dữ liệu máy được mã hoá trong trình duyệt (cột `sec`); không gửi bản rõ lên Supabase, không đưa tên NCC vào URL.
 
 ## Hai loại định danh của máy (bảng `machines`)
@@ -65,6 +65,22 @@ File Excel xuất trước bản này vẫn nạp lại được — dữ liệu
 
 Triển khai: chạy `20261101_10_link_tracking_catalog.sql` (sau 09; câu kiểm tra cuối ra `so_cot = 3`) → admin 🔗 → Ghép cặp → duyệt → Ghi liên kết
 → Đồng bộ lại → xử lý Lệch. File GhepCap chứa dữ liệu đã giải mã — không đưa vào git.
+
+## Tên tài sản chuẩn — Danh mục MMTB (migration 11, `name_std.js`)
+- Mẫu: `<Loại thiết bị> <Vật liệu> <Đặc điểm> <Công suất + đơn vị>`, VD `Máy băm PET 3 t/h`; nhiều vật liệu `PET/HDPE`.
+  Đơn vị viết tắt quốc tế: `kg/h · t/h · m³/h · l/h · kW · mm` (`NS.normUnit`). Trùng tên cùng nhà máy → thêm ` – <Chuyền>` / ` – <Khu vực>` / ` #2` ở cuối.
+- Kiểm tra (`NS.issues`) chỉ CẢNH BÁO, không chặn lưu: chưa bắt đầu bằng Loại trong danh sách · đơn vị chưa chuẩn · có tên NCC / model
+  trong tên · trùng tên cùng nhà máy · khoảng trắng / chữ đầu.
+- Loại thiết bị: bảng `mmtb_equipment_types` (📚 Thư viện › Loại thiết bị, chỉ admin sửa; đổi tên loại → đổi theo trên các máy).
+  `equipment_type` của máy chọn từ danh sách này.
+- `alias_names` ("Tên gọi khác / tên cũ") mã hoá trong `sec` (nằm trong `SEC.mmtb_machines.f`): mọi chỗ mã hoá lại hồ sơ Danh mục phải
+  giữ trường này (form Danh mục gửi `m_alias`; `catalog_sync.js` / `NS.rename` chỉ đưa trường có trên dòng). Đổi sang tên chuẩn → tên cũ tự vào đây.
+- Tên chỉ đổi trong Danh mục; tên mua hàng bên Tiến độ (`machines.ten`) không bao giờ đổi.
+- Công cụ admin 📚 Thư viện › ✏️ Chuẩn hoá tên: đề xuất (sửa được), gợi ý "loại thường gặp" để thêm nhanh vào danh sách,
+  tải `ChuanHoaTen_YYYY-MM-DD.xlsx` → duyệt (cột "Duyệt" ghi x) → nạp lại → Ghi (chỉ dòng đã tick). App biết đã chạy 11 qua `MM.hasTypes`.
+
+Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm tra cuối ra `co_cot_ten_khac = 1`) → admin bổ sung Loại thiết bị
+(dùng nút "loại thường gặp") → ✏️ Chuẩn hoá tên → tải file duyệt → nạp lại → Ghi. File ChuanHoaTen chứa tên đã giải mã — không đưa vào git.
 
 ## Quy ước làm việc
 - Migration mới = file mới trong `supabase/migrations/` (không sửa file đã có). Thư mục `supabase/` không nằm trong git.

@@ -18,6 +18,7 @@
 <script src="metrics.js"></script>
 <script src="export.js"></script>
 <script src="catalog_sync.js"></script>
+<script src="name_std.js"></script>
 <style>
 :root{color-scheme:dark;
   --bg:#0b1220; --panel:#121c31; --panel2:#17233d; --border:rgba(148,163,184,.14);
@@ -176,6 +177,15 @@ tbody tr:hover{background:rgba(96,165,250,.07)}
 .cs-link{cursor:pointer;color:var(--sky);text-decoration:underline dotted}
 .cs-info{font-size:13.5px;line-height:1.7}
 .tag-need{background:color-mix(in srgb,var(--st-inst) 16%,transparent);color:var(--st-inst)}
+/* ✏️ tên chuẩn (name_std.js) */
+.nm-hint{font-size:12px;font-weight:400;color:var(--st-over);margin-top:4px;line-height:1.6}
+.nm-hint .ok{color:var(--st-ok)} .nm-hint .mute{color:var(--muted)}
+.nm-hint .nbtn2{padding:2px 10px;font-size:11.5px;margin-left:6px}
+.nm-common{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;margin:0 0 10px}
+.nm-common .nbtn2{padding:3px 10px;font-size:12px} .nm-common small{color:var(--muted)}
+.nm-tbl input[type=text]{width:100%;min-width:220px;padding:5px 8px;border-radius:8px;background:var(--panel);color:var(--txt);border:1px solid var(--border);font-size:12.5px}
+.nm-tbl .nm-iss{font-size:11.5px;color:var(--st-over);min-width:180px}
+.tag-name{background:color-mix(in srgb,var(--st-over) 15%,transparent);color:var(--st-over)}
 .m-need{display:flex;align-items:center;gap:8px;font-weight:400}
 .m-need input{width:auto}
 .in-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
@@ -3774,8 +3784,13 @@ function index(){
   // mã Tiến độ (ma_may) của máy đã liên kết — tra qua tracking_machine_id, không lưu lại bên Danh mục (migrations/20261101_10)
   const trk = new Map((window.__trackRows ? window.__trackRows() : []).map(t=>[t._id, t]));
   MM.machines.forEach(x=>{ const t = x.tracking_machine_id && trk.get(x.tracking_machine_id); x.tracking_code = t ? (t.ma_may || '') : null; });
+  if(window.NS) NSC = NS.ctx(MM);
 }
 const hasLink = () => MM.machines.length ? 'needs_info' in MM.machines[0] : false;
+const hasAlias = () => !!MM.hasTypes;     // migrations/20261102_11 tạo cùng lúc bảng loại thiết bị và cột alias_names
+const NAME_BAD = () => `<span class="tag-temp tag-name" title="${tr('Name does not follow the standard pattern','Tên chưa theo mẫu tên chuẩn')}">${tr('name not standard','tên chưa chuẩn')}</span>`;
+let NSC = null;      // ngữ cảnh name_std.js, tính lại ở index()
+const nameIss = x => (window.NS && NSC && MM.hasTypes) ? NS.issues(x, NSC) : [];
 const NEEDS = () => `<span class="tag-temp tag-need" title="${tr('Created from delivery tracking — add area, line, role, materials and a standard name','Tạo từ Tiến độ máy về — cần bổ sung khu vực, chuyền, vai trò, vật liệu, tên chuẩn')}">${tr('needs info','cần bổ sung')}</span>`;
 index();
 const coName = c => { const x = MM.companies.find(o=>o.code===c); return x ? x.name : c; };
@@ -3970,7 +3985,7 @@ function drawList(){
         <select id="mmFArea"></select><select id="mmFLine" style="max-width:240px"></select>
         <select id="mmFGrp"><option value="">${tr('Group: All','Nhóm: Tất cả')}</option>${opts(groups.map(g=>[g,g]), F.grp)}</select>
         <select id="mmFSt"><option value="">${tr('Status: All','Trạng thái: Tất cả')}</option>
-          <option value="__prog">${tr('Being invested','Đang đầu tư')}</option>${hasLink() ? `<option value="__info">⚑ ${tr('Needs info','Cần bổ sung')}</option>` : ''}${opts(LC.map(s=>[s, LCL[s]]), F.st)}</select>
+          <option value="__prog">${tr('Being invested','Đang đầu tư')}</option>${hasLink() ? `<option value="__info">⚑ ${tr('Needs info','Cần bổ sung')}</option>` : ''}${MM.hasTypes ? `<option value="__name">✏️ ${tr('Name not standard','Tên chưa chuẩn')}</option>` : ''}${opts(LC.map(s=>[s, LCL[s]]), F.st)}</select>
         <button class="pbtn" id="mmFReset" title="${tr('Clear filters','Xoá bộ lọc')}">✕</button>
       </div>
       <div class="tablewrap"><table><thead><tr>${COLS.map(([k,l])=>`<th data-ms="${k}">${l}</th>`).join('')}</tr></thead><tbody id="mmTb"></tbody></table></div>
@@ -3993,8 +4008,9 @@ function filtered(){
   return MM.machines.filter(x=>
     (!F.co || x.company_code===F.co) && (!F.area || x.area_code===F.area) && (!F.line || x.line_id===F.line) &&
     (!F.grp || x.group_name===F.grp) &&
-    (!F.st || (F.st==='__prog' ? LC.indexOf(x.lifecycle_status) < LC.indexOf('in_operation') : F.st==='__info' ? !!x.needs_info : x.lifecycle_status===F.st)) &&
-    (!F.q || [x.machine_code, x.legacy_code, x.tracking_code, x.name, x.model, x.serial_number, x.supplier_name, x.manufacturer, x.line_name, x.notes]
+    (!F.st || (F.st==='__prog' ? LC.indexOf(x.lifecycle_status) < LC.indexOf('in_operation') : F.st==='__info' ? !!x.needs_info
+              : F.st==='__name' ? nameIss(x).length > 0 : x.lifecycle_status===F.st)) &&
+    (!F.q || [x.machine_code, x.legacy_code, x.tracking_code, x.name, x.alias_names, x.model, x.serial_number, x.supplier_name, x.manufacturer, x.line_name, x.notes]
               .some(v=>v && String(v).toLowerCase().includes(F.q))));
 }
 function renderList(){
@@ -4011,7 +4027,7 @@ function renderList(){
     const dep = sortK==='__tree' ? treeIdx.get(x.id)[1] : 0;
     return `<tr class="slide-in${dep?' child':''}" style="--i:${i};cursor:pointer" onclick="mmShow('${x.id}')">
       <td style="white-space:nowrap;color:var(--muted);font-size:12px">${E(x.machine_code)}</td>
-      <td class="name" style="padding-left:${10 + dep*18}px">${dep?'<span class="ind">↳</span>':''}${E(x.name)}${x.needs_info ? NEEDS() : ''}${x.model || x.tracking_code ? `<small>${E(x.model || '')}${x.model && x.tracking_code ? ' · ' : ''}${x.tracking_code ? '🔗 ' + E(x.tracking_code) : ''}</small>` : ''}</td>
+      <td class="name" style="padding-left:${10 + dep*18}px">${dep?'<span class="ind">↳</span>':''}${E(x.name)}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${x.model || x.tracking_code ? `<small>${E(x.model || '')}${x.model && x.tracking_code ? ' · ' : ''}${x.tracking_code ? '🔗 ' + E(x.tracking_code) : ''}</small>` : ''}</td>
       <td>${E(x.company_code)}</td><td>${T(x.area_name)}</td><td>${T(x.line_name)}</td><td>${T(x.group_name)}</td>
       <td>${T(x.supplier_name)}</td><td>${T(x.manufacturer)}</td><td>${N(x.quantity || 1)}</td>
       <td class="money">${money(x)}</td><td>${badge(x.lifecycle_status)}</td></tr>`; }).join('')
@@ -4044,7 +4060,8 @@ window.mmShow = id => {
     : `<span style="color:var(--muted)">${tr('not linked','chưa liên kết')}</span>`;
   mBody.innerHTML = `<div class="dt-wrap">
     ${sec(tr('General','Thông tin chung'), [
-      it(tr('Machine name','Tên máy'), T(x.name), 'full'),
+      it(tr('Machine name','Tên máy'), T(x.name) + (nameIss(x).length ? `<div class="nm-hint">${nameIss(x).map(k=>`<div>⚠ ${E(NS.ISSUE()[k])}</div>`).join('')}</div>` : ''), 'full'),
+      ...(x.alias_names ? [it(tr('Other names / old names','Tên gọi khác / tên cũ'), T(x.alias_names), 'full')] : []),
       ...(hasLink() ? [it(tr('Delivery tracking code','Mã Tiến độ'), trk, 'full')] : []),
       it(tr('Code','Mã máy'), T(x.machine_code) + (x.code_temp ? `<span class="tag-temp">${tr('temporary','tạm')}</span>` : '') +
         (x.legacy_code ? `<div class="mm-sub">${tr('old code','mã cũ')}: ${E(x.legacy_code)}</div>` : '')), it('Model', T(x.model)),
@@ -4082,6 +4099,24 @@ window.mmShow = id => {
 
 /* ===================== THÊM / SỬA / XOÁ ===================== */
 let editId = null, fps = {};
+/* ✏️ tên chuẩn (name_std.js): cảnh báo + gợi ý dưới ô Tên máy — chỉ nhắc, không chặn lưu */
+function nameHint(){
+  const el = document.getElementById('m_nameHint'); if(!el || !window.NS) return;
+  const C = NS.ctx(MM), sup = MM.suppliers.find(s=>s.id===m_sup.value);
+  const fx = { name: m_name.value, equipment_type: m_type.value, model: m_model.value.trim(), supplier_name: sup ? sup.name : null,
+               company_id: m_co.value, capacity_value: m_capv.value === '' ? null : +m_capv.value, capacity_unit: m_capu.value.trim(),
+               materials: [...document.querySelectorAll('.m_mat:checked')].map(c=>c.value) };
+  if(!fx.name.trim()){ el.innerHTML = ''; return; }
+  const others = MM.machines.some(m=>m.id!==editId && m.company_id===fx.company_id && NS.fold(m.name)===NS.fold(fx.name));
+  C.dup = new Map([[fx.company_id + '|' + NS.fold(fx.name), others ? 2 : 1]]);
+  const iss = NS.issues(fx, C), sg = NS.suggest(fx, C), I = NS.ISSUE();
+  el.innerHTML = (iss.length ? iss.map(k=>`<div>⚠ ${E(I[k])}</div>`).join('') : `<div class="ok">✓ ${tr('Standard name','Tên đúng mẫu')}</div>`)
+    + (sg && sg !== fx.name.trim() ? `<div>${tr('Suggested','Gợi ý')}: <b>${E(sg)}</b> <button type="button" class="nbtn2 ghost" id="m_useName">${tr('Use this name','Dùng tên này')}</button></div>` : '')
+    + (!sg && iss.includes('no_type') ? `<div class="mute">${tr('Pick an equipment type to get a suggestion.','Chọn Loại thiết bị để có gợi ý tên.')}</div>` : '');
+  const b = document.getElementById('m_useName');
+  if(b) b.onclick = ()=>{ if(window.m_alias && editId){ const cur = byId.get(editId); if(cur) m_alias.value = NS.addAlias(m_alias.value, cur.name) || ''; }
+                         m_name.value = sg; nameHint(); };
+}
 function buildForm(){
   if(document.getElementById('mmBg')) return;
   const L = (lbl, inner, full) => `<label${full?' class="full"':''}>${lbl}${inner}</label>`;
@@ -4093,7 +4128,8 @@ function buildForm(){
     <div class="add-grid" id="mmGrid">
       ${L(tr('Plant *','Nhà máy *'), `<select id="m_co" class="req">${MM.companies.map(c=>`<option value="${E(c.id)}">${E(c.code)} — ${E(c.name)}</option>`).join('')}</select>`)}
       ${L(tr('Code *','Mã máy *'), `<input id="m_code" class="req" type="text" placeholder="DTR-104600041"${window.__role==='admin' ? '' : ' readonly'}>`)}
-      ${L(tr('Machine name *','Tên máy *'), `<input id="m_name" class="req" type="text">`, 1)}
+      ${L(tr('Machine name *','Tên máy *'), `<input id="m_name" class="req" type="text"><div class="nm-hint" id="m_nameHint"></div>`, 1)}
+      ${hasAlias() ? L(tr('Other names / old names','Tên gọi khác / tên cũ'), `<input id="m_alias" type="text" placeholder="${tr('separate with ;','cách nhau bằng dấu ;')}">`, 1) : ''}
       ${L('Model', `<input id="m_model" type="text">`)}
       ${L(tr('Brand / manufacturer','Thương hiệu / hãng'), `<input id="m_brand" type="text">`)}
       ${L(tr('Serial number','Số serial'), `<input id="m_serial" type="text">`)}
@@ -4105,7 +4141,7 @@ function buildForm(){
       ${L(tr('Capacity','Công suất'), `<div style="display:flex;gap:6px"><input id="m_capv" type="number" step="any" style="flex:1;min-width:0" placeholder="3000"><input id="m_capu" type="text" style="width:96px" placeholder="kg/h"></div>`)}
       ${L(tr('Materials','Vật liệu'), `<div class="mm-mat">${['PET','HDPE','PP'].map(m=>`<label><input type="checkbox" value="${m}" class="m_mat"> ${m}</label>`).join('')}</div>`)}
       ${L(tr('Group','Nhóm'), `<select id="m_group"></select>`)}
-      ${L(tr('Equipment type','Loại thiết bị'), `<input id="m_type" type="text">`)}
+      ${L(tr('Equipment type','Loại thiết bị'), `<select id="m_type"></select>`)}
       ${L(tr('Origin','Xuất xứ'), `<input id="m_origin" type="text">`)}
       ${L(tr('Supplier','Nhà cung cấp'), `<select id="m_sup"></select>`)}
       ${L(tr('Currency','Tiền tệ'), `<select id="m_cur"><option>VND</option><option>USD</option><option>EUR</option></select>`)}
@@ -4130,8 +4166,12 @@ function buildForm(){
                 locale:(LANG==='vi' && flatpickr.l10ns && flatpickr.l10ns.vn) ? 'vn' : 'default' };
     ['m_appr','m_comm', ...FORM_MS.map(k=>'m_ms_'+k)].forEach(id=>{ fps[id] = flatpickr(document.getElementById(id), o); });
   }
-  m_co.onchange = ()=>{ fillFormDeps(); suggestCode(); };
+  m_co.onchange = ()=>{ fillFormDeps(); suggestCode(); nameHint(); };
   m_parent.onchange = syncRole;
+  // ✏️ tên chuẩn: gợi ý + cảnh báo khi đổi tên / loại / vật liệu / công suất / model / NCC
+  ['m_name','m_capv','m_capu','m_model'].forEach(id=>{ document.getElementById(id).addEventListener('input', nameHint); });
+  ['m_type','m_sup'].forEach(id=>{ document.getElementById(id).addEventListener('change', nameHint); });
+  document.querySelectorAll('.m_mat').forEach(c=>c.addEventListener('change', nameHint));
   m_code.oninput = ()=>{ m_code.dataset.touched = '1'; };
   mmSave.onclick = save;
 }
@@ -4180,6 +4220,10 @@ function openForm(x){
   if(x && x.group_name && !gNames.includes(x.group_name)) gNames.push(x.group_name);
   m_group.innerHTML = `<option value="">—</option>` + gNames.map(g=>`<option value="${E(g)}">${E(g)}</option>`).join('');
   m_sup.innerHTML = `<option value="">—</option>` + MM.suppliers.map(s=>`<option value="${E(s.id)}">${E(s.name)}</option>`).join('');
+  // loại thiết bị: chọn từ thư viện; loại cũ của máy (không còn trong thư viện) vẫn giữ để không mất
+  const tNames = (MM.types || []).map(t=>t.name);
+  if(x && x.equipment_type && !tNames.includes(x.equipment_type)) tNames.push(x.equipment_type);
+  m_type.innerHTML = `<option value="">—</option>` + tNames.map(t=>`<option value="${E(t)}">${E(t)}</option>`).join('');
   const v = x || {};
   const defCo = (MM.companies.find(c=>c.code===(F.co || ovCo)) || MM.companies[0] || {}).id;
   m_co.value = v.company_id || defCo || '';
@@ -4192,6 +4236,8 @@ function openForm(x){
   set('m_ctm', v.manufacturing_days); set('m_st', v.lifecycle_status || 'planned'); set('m_eng', v.engineer); set('m_mgr', v.manager); set('m_notes', v.notes);
   if(v.role && v.role!=='sub_unit') m_role.value = v.role;
   if(window.m_needs) m_needs.checked = !!v.needs_info;
+  if(window.m_alias) m_alias.value = v.alias_names || '';
+  nameHint();
   document.querySelectorAll('.m_mat').forEach(c=>c.checked = (v.materials || []).includes(c.value));
   setDate('m_appr', v.approved_date); setDate('m_comm', v.commissioned_date);
   const ms = (x && msBy.get(x.id)) || {};
@@ -4236,6 +4282,7 @@ async function save(){
     group_name: val('m_group') || null, equipment_type: val('m_type') || null, origin: val('m_origin') || null,
     engineer: val('m_eng') || null, manager: val('m_mgr') || null, notes: val('m_notes') || null };
   if(window.m_needs) row.needs_info = m_needs.checked;      // cột của migration 10: chỉ gửi khi form có ô này
+  if(window.m_alias) row.alias_names = val('m_alias') || null;   // migration 11; nằm trong sec — luôn gửi để không mất khi mã hoá lại
   if(MM.hasGroups){   // có cột code_temp (07_library.sql): mã tự cấp = tạm; admin gõ mã khác = mã kế toán
     const cur = editId ? byId.get(editId) : null;
     if(!cur) row.code_temp = !m_code.dataset.touched;
@@ -4338,7 +4385,14 @@ const LIB = {
   groups:    { icon:'🗂', title:tr('Equipment groups','Nhóm thiết bị'), table:'mmtb_groups', rows:()=>MM.groups || [],
     fields:[ {k:'name', l:tr('Group name','Tên nhóm'), req:1, full:1}, {k:'sort_order', l:tr('Display order','Thứ tự hiển thị'), type:'number'} ],
     cols:['name','sort_order'], uniq:['name'], used: r=>cnt(MM.machines, x=>x.group_name===r.name),
-    sort:(a,b)=>(+a.sort_order || 0) - (+b.sort_order || 0) || String(a.name).localeCompare(b.name), needs07:true }
+    sort:(a,b)=>(+a.sort_order || 0) - (+b.sort_order || 0) || String(a.name).localeCompare(b.name), needs07:true },
+  types:     { icon:'🔧', title:tr('Equipment types','Loại thiết bị'), table:'mmtb_equipment_types', rows:()=>(MM.types || []).filter(t=>!t.virtual),
+    fields:[ {k:'name', l:tr('Type name (e.g. Máy băm, Băng tải)','Tên loại (VD Máy băm, Băng tải)'), req:1, full:1},
+             {k:'default_unit', l:tr('Usual capacity unit (kg/h, t/h, m³/h, kW, mm)','Đơn vị công suất thường dùng (kg/h, t/h, m³/h, kW, mm)')},
+             {k:'sort_order', l:tr('Display order','Thứ tự hiển thị'), type:'number'} ],
+    cols:['name','default_unit','sort_order'], uniq:['name'], used: r=>cnt(MM.machines, x=>x.equipment_type===r.name),
+    sort:(a,b)=>(+a.sort_order || 0) - (+b.sort_order || 0) || String(a.name).localeCompare(b.name), needs11:true },
+  names:     { icon:'✏️', title:tr('Standard names','Chuẩn hoá tên'), count:()=>MM.machines.filter(x=>nameIss(x).length).length }
 };
 const LABEL = (d, k) => { const f = d.fields.find(o=>o.k===k); return f ? f.l.replace(/ \(.*\)$/, '') : k; };
 function cell(k, v){
@@ -4356,14 +4410,17 @@ function drawLibrary(){
       `<button class="lib-tab${k===libKey?' active':''}" onclick="libGo('${k}')">${d.icon} ${d.title}<small>${d.count ? d.count() : d.rows().length}</small></button>`).join('')}</div>
     ${isAdmin ? '' : `<div class="lib-note">🔒 ${tr('Only an admin can change the library. You can view it and pick from it when adding machines.','Chỉ admin được sửa thư viện. Bạn xem được và chọn từ thư viện khi thêm máy.')}</div>`}
     <div id="libBody"></div>`;
-  libKey==='codes' ? drawCodes() : drawLib(libKey);
+  libKey==='codes' ? drawCodes() : libKey==='names' ? drawNames() : drawLib(libKey);
 }
 window.libGo = k => { libKey = k; libQ = ''; drawLibrary(); };
 const need07 = () => `<div class="mm-empty">${tr('This library needs <code>supabase/07_library.sql</code> — ask an admin to run it in Supabase › SQL Editor.',
   'Thư viện này cần chạy <code>supabase/07_library.sql</code> trong Supabase › SQL Editor (admin).')}</div>`;
+const need11 = () => `<div class="mm-empty">${tr('This needs <code>supabase/migrations/20261102_11_standard_name.sql</code> — ask an admin to run it in Supabase › SQL Editor.',
+  'Phần này cần chạy <code>supabase/migrations/20261102_11_standard_name.sql</code> trong Supabase › SQL Editor (admin).')}</div>`;
 function drawLib(k){
   const d = LIB[k];
   if(d.needs07 && !MM.hasGroups){ libBody.innerHTML = need07(); return; }
+  if(d.needs11 && !MM.hasTypes){ libBody.innerHTML = need11(); return; }
   libBody.innerHTML = `<div class="toolbar">
       <div class="search"><input id="libQ" type="text" placeholder="${tr('Search…','Tìm…')}" value="${E(libQ)}"></div>
       ${isAdmin ? `<button class="nbtn2" onclick="libEdit('${k}')">${tr('➕ Add','➕ Thêm')}</button>` : ''}</div>
@@ -4424,6 +4481,7 @@ window.libEdit = (k, id) => {
     e.preventDefault();
     const err = t => { lfErr.textContent = t; }, obj = {};
     d.fields.forEach(f=>{ if(!(f.lockEdit && cur)) obj[f.k] = libRead(f); });
+    if(k==='types' && obj.default_unit && window.NS) obj.default_unit = NS.normUnit(obj.default_unit) || obj.default_unit;   // đơn vị chuẩn
     const miss = d.fields.find(f=>f.req && !(f.lockEdit && cur) && (obj[f.k]==null || obj[f.k]===''));
     if(miss) return err(tr('Please fill in: ','Hãy nhập: ') + miss.l);
     const mine = d.uniq.map(u=>String((u in obj ? obj[u] : v[u]) ?? '').toLowerCase()).join('|');
@@ -4437,6 +4495,9 @@ window.libEdit = (k, id) => {
         const { error } = await sb.from(d.table).update(sealed).eq('id', id); if(error) throw error;
         if(k==='groups' && obj.name !== cur.name){       // đổi tên nhóm -> đổi theo trên các máy
           const { error: e2 } = await sb.from('mmtb_machines').update({ group_name: obj.name }).eq('group_name', cur.name); if(e2) throw e2;
+        }
+        if(k==='types' && obj.name !== cur.name){        // đổi tên loại -> đổi theo trên các máy (equipment_type không mã hoá)
+          const { error: e2 } = await sb.from('mmtb_machines').update({ equipment_type: obj.name }).eq('equipment_type', cur.name); if(e2) throw e2;
         }
       } else {
         const row = (k==='suppliers' || k==='lines') ? Object.assign({ id: crypto.randomUUID() }, obj) : obj;
@@ -4463,6 +4524,107 @@ window.libDel = (k, id) => {
       finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
     } });
 };
+
+/* ----- ✏️ Chuẩn hoá tên (name_std.js): đề xuất tên chuẩn cho máy có tên chưa đúng mẫu, duyệt rồi mới ghi -----
+   Đề xuất sửa được; tải Excel để duyệt ngoài app (cột "Duyệt" ghi x) rồi nạp lại. Ghi: chỉ dòng đã tick, tên cũ -> "Tên gọi khác". */
+const NM = { sel: new Map(), ok: new Set(), q: '' };
+function nameRows(){
+  const C = NSC || NS.ctx(MM);
+  // đề xuất cho mọi máy có vấn đề; xét trùng trên danh sách tên cuối cùng (đề xuất hoặc tên hiện tại) của cả nhà máy
+  const items = MM.machines.map(x=>{ const iss = nameIss(x); const sg = iss.length ? NS.suggest(x, C) : null; return { x, iss, name: sg || x.name, sg: !!sg }; });
+  NS.dedupe(items.filter(o=>o.sg).concat(items.filter(o=>!o.sg)));
+  return items.filter(o=>o.iss.length).map(o=>({ x:o.x, iss:o.iss, prop: o.sg && o.name !== o.x.name ? o.name : '' }));
+}
+function drawNames(){
+  if(!window.NS || !MM.hasTypes || !hasAlias()){ libBody.innerHTML = need11(); return; }
+  const C = NSC || NS.ctx(MM), common = NS.commonTypes(MM.machines, C).slice(0, 12);
+  libBody.innerHTML = `<div class="lib-note">${tr('Standard name: <b>&lt;Equipment type&gt; &lt;Material&gt; &lt;Feature&gt; &lt;Capacity + unit&gt;</b>, e.g. <b>Máy băm PET 3 t/h</b>. Units: kg/h · t/h · m³/h · kW · mm. Supplier and model have their own columns. Renaming keeps the old name in "Other names" so it can still be searched. Delivery tracking names are not changed.',
+      'Tên chuẩn: <b>&lt;Loại thiết bị&gt; &lt;Vật liệu&gt; &lt;Đặc điểm&gt; &lt;Công suất + đơn vị&gt;</b>, VD <b>Máy băm PET 3 t/h</b>. Đơn vị: kg/h · t/h · m³/h · kW · mm. NCC và model đã có cột riêng. Đổi tên thì tên cũ được giữ ở "Tên gọi khác" để vẫn tìm được. Tên bên Tiến độ máy về không đổi.')}</div>
+    ${isAdmin && common.length ? `<div class="nm-common"><b>${tr('Frequent types in names, not yet in the list','Loại thường gặp trong tên, chưa có trong danh sách')}:</b>
+      ${common.map(o=>`<button type="button" class="nbtn2 ghost" data-type="${E(o.name)}">＋ ${E(o.name)} <small>(${o.n})</small></button>`).join('')}</div>` : ''}
+    <div class="toolbar">
+      <div class="search"><input id="libQ" type="text" placeholder="${tr('Search code, name…','Tìm mã, tên…')}" value="${E(NM.q)}"></div>
+      ${isAdmin ? `<button class="nbtn2 ghost" id="nmTick">${tr('✔ Tick all with a suggestion','✔ Tick tất cả dòng có đề xuất')}</button>
+        <button class="nbtn2 ghost" id="nmXlsx">${tr('⬇️ Download for review (.xlsx)','⬇️ Tải file duyệt (.xlsx)')}</button>
+        <button class="nbtn2 ghost" id="nmLoad">${tr('📂 Load reviewed file','📂 Nạp file đã duyệt')}</button>
+        <button class="nbtn2" id="nmSave"></button>` : ''}</div>
+    <div class="tablewrap"><table class="nm-tbl"><thead><tr>${isAdmin ? `<th>${tr('OK','Duyệt')}</th>` : ''}<th>${tr('Code','Mã máy')}</th><th>${tr('Plant','Nhà máy')}</th>
+      <th>${tr('Current name','Tên hiện tại')}</th><th>${tr('Suggested name','Tên đề xuất')}</th><th>${tr('Issues','Vấn đề')}</th></tr></thead><tbody id="libTb"></tbody></table></div>
+    <div class="pagerow"><div class="count-info" id="codeCnt"></div></div>`;
+  libQ_el().oninput = e=>{ NM.q = e.target.value.trim().toLowerCase(); nameTable(); };
+  libBody.querySelectorAll('[data-type]').forEach(b=>b.onclick = async ()=>{
+    b.disabled = true; window.__selfWritingM = true;
+    try{ const { error } = await window.__sb.from('mmtb_equipment_types').insert({ name: b.dataset.type }); if(error) throw error;
+         await reload(); libKey = 'names'; drawLibrary(); toast('✅ ' + tr('Type added','Đã thêm loại') + ': <b>' + E(b.dataset.type) + '</b>'); }
+    catch(ex){ b.disabled = false; showNotice({ type:'error', title:tr('Could not add','Chưa thêm được'), sub:errText(ex) }); }
+    finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+  });
+  if(isAdmin){
+    nmTick.onclick = ()=>{ nameRows().forEach(r=>{ const p = NM.sel.has(r.x.id) ? NM.sel.get(r.x.id) : r.prop; if(p && p !== r.x.name) NM.ok.add(r.x.id); }); nameTable(); };
+    nmXlsx.onclick = nameXlsx; nmLoad.onclick = nameLoad; nmSave.onclick = nameSave;
+  }
+  nameTable();
+}
+function nameTable(){
+  const I = NS.ISSUE(), rows = nameRows().filter(r=>!NM.q || [r.x.machine_code, r.x.name, r.prop].some(s=>s && String(s).toLowerCase().includes(NM.q)));
+  const val = r => NM.sel.has(r.x.id) ? NM.sel.get(r.x.id) : r.prop;
+  libTb.innerHTML = rows.slice(0, 500).map(r=>`<tr>${isAdmin ? `<td><input type="checkbox" data-ok="${r.x.id}"${NM.ok.has(r.x.id) ? ' checked' : ''}${val(r) ? '' : ' disabled'}></td>` : ''}
+      <td style="white-space:nowrap">${E(r.x.machine_code)}</td><td>${E(r.x.company_code)}</td><td class="name" style="cursor:pointer" onclick="mmShow('${r.x.id}')">${E(r.x.name)}</td>
+      <td>${isAdmin ? `<input type="text" data-p="${r.x.id}" value="${E(val(r))}" placeholder="${E(tr('type the new name','gõ tên mới'))}">` : E(val(r) || '—')}</td>
+      <td class="nm-iss">${r.iss.map(k=>E(I[k])).join('<br>')}</td></tr>`).join('')
+    || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">✅ ${tr('All names follow the standard.','Mọi tên đã đúng mẫu.')}</td></tr>`;
+  libTb.querySelectorAll('input[data-p]').forEach(i=>i.oninput = ()=>{ NM.sel.set(i.dataset.p, i.value.trim());
+    const c = libTb.querySelector(`input[data-ok="${i.dataset.p}"]`); if(c){ c.disabled = !i.value.trim(); if(!i.value.trim()){ c.checked = false; NM.ok.delete(i.dataset.p); } } nameCnt(rows); });
+  libTb.querySelectorAll('input[data-ok]').forEach(c=>c.onchange = ()=>{ c.checked ? NM.ok.add(c.dataset.ok) : NM.ok.delete(c.dataset.ok); nameCnt(rows); });
+  nameCnt(rows);
+}
+const namePlan = () => nameRows().map(r=>({ x:r.x, name: NM.sel.has(r.x.id) ? NM.sel.get(r.x.id) : r.prop }))
+  .filter(o=>NM.ok.has(o.x.id) && o.name && o.name !== o.x.name);
+function nameCnt(rows){
+  codeCnt.textContent = `${N(rows.length)} ${tr('machines with a non-standard name','máy có tên chưa chuẩn')}` + (rows.length > 500 ? tr(' · showing first 500',' · đang hiện 500 dòng đầu') : '');
+  if(window.nmSave){ const n = namePlan().length; nmSave.textContent = tr(`💾 Save ${n} name(s)`,`💾 Ghi ${n} tên`); nmSave.disabled = !n; }
+}
+function nameXlsx(){
+  const I = NS.ISSUE(), rows = nameRows();
+  const aoa = [['Mã máy','Nhà máy','Tên hiện tại','Tên đề xuất','Vấn đề','Duyệt (ghi x)']].concat(rows.map(r=>[r.x.machine_code, r.x.company_code, r.x.name,
+    NM.sel.has(r.x.id) ? NM.sel.get(r.x.id) : r.prop, r.iss.map(k=>I[k]).join('; '), NM.ok.has(r.x.id) ? 'x' : '']));
+  const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = [16, 8, 40, 40, 50, 12].map(w=>({ wch:w }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Chuẩn hoá tên');
+  XLSX.writeFile(wb, 'ChuanHoaTen_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+function nameLoad(){
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.xlsx,.xls'; inp.id = 'nmFile'; inp.hidden = true; document.body.appendChild(inp);
+  inp.onchange = async ()=>{
+    const f = inp.files[0]; inp.remove(); if(!f) return;
+    try{
+      const wb = XLSX.read(await f.arrayBuffer(), { type:'array' }), rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:'' });
+      const byCode = new Map(MM.machines.map(x=>[x.machine_code, x])); let n = 0, miss = 0;
+      rows.forEach(r=>{ const x = byCode.get(String(r['Mã máy']).trim()); if(!x){ miss++; return; }
+        const p = String(r['Tên đề xuất'] || '').trim(), ok = String(r['Duyệt (ghi x)'] || '').trim();
+        if(p) NM.sel.set(x.id, p);
+        if(ok && p && p !== x.name){ NM.ok.add(x.id); n++; } else NM.ok.delete(x.id); });
+      nameTable();
+      toast('📂 ' + tr(`${n} approved name(s) loaded`,`Đã nạp ${n} tên đã duyệt`) + (miss ? ' · ' + tr(`${miss} unknown code(s) skipped`,`bỏ qua ${miss} mã không có`) : ''));
+    }catch(ex){ showNotice({ type:'error', title:tr('Could not read the file','Không đọc được file'), sub:E(ex.message || ex) }); }
+  };
+  inp.click();
+}
+function nameSave(){
+  const plan = namePlan(); if(!plan.length) return;
+  confirmBox({ title:tr(`Rename ${plan.length} machine(s)?`,`Đổi tên ${plan.length} máy?`),
+    sub:tr('Each old name is kept in "Other names / old names". Delivery tracking names are not changed.','Tên cũ của từng máy được giữ ở "Tên gọi khác / tên cũ". Tên bên Tiến độ máy về không đổi.'),
+    ok:tr('💾 Rename','💾 Đổi tên'), onOk: async ()=>{
+      window.__selfWritingM = true; nmSave.disabled = true; const bad = [];
+      for(const [i, o] of plan.entries()){
+        codeCnt.textContent = tr(`Saving ${i+1}/${plan.length}…`,`Đang ghi ${i+1}/${plan.length}…`);
+        try{ await NS.rename(o.x, o.name); NM.ok.delete(o.x.id); NM.sel.delete(o.x.id); }catch(ex){ bad.push([o.x, ex]); }
+      }
+      await reload(); libKey = 'names'; drawLibrary(); setTimeout(()=>{ window.__selfWritingM = false; }, 1500);
+      if(bad.length) showNotice({ type:'error', title:tr(`${bad.length} name(s) not saved`,`${bad.length} tên chưa ghi được`),
+        sub:bad.map(([x, e])=>E(x.machine_code) + ' — ' + errText(e)).join('<br>') });
+      else toast('✅ ' + tr(`Renamed ${plan.length} machine(s)`,`Đã đổi tên ${plan.length} máy`));
+    } });
+}
 
 /* ----- Mã máy: mã nhà máy + dãy số kế toán; chưa có số thì mã tạm 9 số ngẫu nhiên ----- */
 let codeCo = '', codeTemp = false;
@@ -4845,8 +5007,8 @@ const CRYPTO = (()=>{
 const SEC = {
   machines:        { f:['ten','phutrach','congsuat','ncc','model','serial','vnd','usd','giaitrinh','ghichu_ld'],
                      blank:{ ten:'', phutrach:null, congsuat:null, ncc:null, model:null, serial:null, vnd:0, usd:0, giaitrinh:null, ghichu_ld:null } },
-  mmtb_machines:   { f:['name','model','manufacturer','serial_number','capacity_value','capacity_unit','contract_amount','locked_rate','notes','engineer','manager','asset_code'],
-                     blank:{ name:'', model:null, manufacturer:null, serial_number:null, capacity_value:null, capacity_unit:null,
+  mmtb_machines:   { f:['name','model','manufacturer','serial_number','capacity_value','capacity_unit','contract_amount','locked_rate','notes','engineer','manager','asset_code','alias_names'],
+                     blank:{ name:'', model:null, manufacturer:null, serial_number:null, capacity_value:null, capacity_unit:null, alias_names:null,
                              contract_amount:null, locked_rate:null, notes:null, engineer:null, manager:null, asset_code:null } },
   suppliers:       { f:['name','contact','notes'], blank:{ contact:null, notes:null } },   // name -> id (cột name là unique)
   production_lines:{ f:['name'], blank:{ name:'' } },
@@ -5062,7 +5224,10 @@ window.encryptExisting = async () => {
       // nhóm thiết bị (07_library.sql); chưa có bảng thì lấy theo nhóm đang dùng trong máy
       const gr = await sb.from('mmtb_groups').select('*').order('sort_order').order('name');
       const groups = gr.error ? [...new Set(m.map(x=>x.group_name).filter(Boolean))].sort().map(name=>({ name, virtual:true })) : (gr.data || []);
-      return deriveMmtb({ machines:m, companies:co, areas:ar, lines:ln, suppliers:sp, milestones:ms, rates, groups, hasGroups: !gr.error });
+      // loại thiết bị (migrations/20261102_11); chưa có bảng thì lấy theo loại đang dùng trong máy
+      const ty = await sb.from('mmtb_equipment_types').select('*').order('sort_order').order('name');
+      const types = ty.error ? [...new Set(m.map(x=>x.equipment_type).filter(Boolean))].sort().map(name=>({ name, virtual:true })) : (ty.data || []);
+      return deriveMmtb({ machines:m, companies:co, areas:ar, lines:ln, suppliers:sp, milestones:ms, rates, groups, hasGroups: !gr.error, types, hasTypes: !ty.error });
     }catch(e){ return Object.assign(empty, { err: String(e.message || e) }); }
   }
   window.__loadMmtb = () => loadMmtb(window.__sb);

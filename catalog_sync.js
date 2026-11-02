@@ -188,7 +188,8 @@ async function apply(p, C){
   const cat = p.cat, upd = Object.assign({}, p.set, { tracking_synced_at: now });
   const F = SECF();
   if(F.some(k => k in p.set)){            // trường nhạy cảm nằm trong sec: mã hoá lại cả gói, chỉ các trường vừa đổi
-    const s = {}; F.forEach(k => { s[k] = k in p.set ? p.set[k] : (cat[k] === undefined ? null : cat[k]); });
+    // chỉ các trường có trên dòng (cột của migration chưa chạy thì bỏ qua — VD alias_names của migration 11)
+    const s = {}; F.forEach(k => { if(k in p.set || k in cat) s[k] = k in p.set ? p.set[k] : (cat[k] === undefined ? null : cat[k]); });
     Object.assign(upd, await window.__seal('mmtb_machines', s));
   }
   if(Object.keys(p.set).length){
