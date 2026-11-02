@@ -188,8 +188,6 @@ tbody tr:hover{background:rgba(96,165,250,.07)}
 .tag-name{background:color-mix(in srgb,var(--st-over) 15%,transparent);color:var(--st-over)}
 .m-need{display:flex;align-items:center;gap:8px;font-weight:400}
 .m-need input{width:auto}
-.in-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-@media(max-width:900px){.in-wrap{grid-template-columns:1fr}}
 .in-tbl{overflow-x:auto}
 .in-tbl table{width:100%;border-collapse:collapse;font-size:12.5px}
 .in-tbl th,.in-tbl td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
@@ -277,9 +275,8 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 .gt{max-width:230px;font-size:12px;color:var(--amber);line-height:1.4}
 
 /* ===== Bảng điểm nhà cung cấp ===== */
-.sc-wrap{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:14px;align-items:start}
-.sc-tbl{max-height:calc(52vh - 90px);min-height:180px;overflow:auto}
-.sc-tbl table{width:100%;min-width:640px;border-collapse:collapse;font-size:12.5px}
+.sc-tbl{max-height:70vh;overflow:auto}
+.sc-tbl table{width:100%;min-width:720px;border-collapse:collapse;font-size:12.5px}
 .sc-tbl th{position:sticky;top:0;z-index:1;background:var(--panel2);text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.5px;
   color:var(--muted);font-weight:700;padding:7px 8px;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
 .sc-tbl th:first-child,.sc-tbl td:first-child{text-align:left}
@@ -292,7 +289,91 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 .sc-tbl td.na{font-style:italic;text-align:center}
 .sc-tbl tbody tr:hover{background:rgba(96,165,250,.07)}
 .sc-sep td{padding:10px 8px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border);text-align:left!important}
-#scChart{height:320px}
+.sc-tbl td.c,.sc-tbl th.c{text-align:center}
+.sc-tbl td.nm,.sc-tbl th.l{text-align:left}
+.gr{display:inline-block;min-width:24px;padding:2px 0;border-radius:6px;font-weight:800;font-size:12px;text-align:center}
+.gr-A{background:color-mix(in srgb,var(--st-ok) 18%,transparent);color:var(--st-ok)}
+.gr-B{background:color-mix(in srgb,var(--st-warn) 18%,transparent);color:var(--st-warn)}
+.gr-C{background:color-mix(in srgb,var(--st-bad) 18%,transparent);color:var(--st-bad)}
+.mini{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end;width:100%}
+.mini .tr{position:relative;flex:0 0 70px;height:7px;border-radius:4px;background:rgba(148,163,184,.15);overflow:hidden;display:flex}
+.mini .tr i{display:block;height:100%}
+.lt{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.lt .bar{position:relative;flex:0 0 140px;height:14px;border-radius:3px;background:rgba(148,163,184,.1)}
+.lt .bar .a{position:absolute;left:0;top:4px;height:6px;border-radius:3px}
+.lt .bar .c{position:absolute;top:0;width:2px;height:14px;margin-left:-1px;background:var(--strong);border-radius:1px}
+.lt .t{min-width:96px;text-align:right}
+.sc-note{font-size:12px;color:var(--muted);margin-top:8px;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
+.pic-tbl tbody tr{cursor:pointer}
+.pic-tbl .pic-chip{cursor:pointer}
+/* ===== tab Phân tích: thanh xếp hạng ===== */
+.an-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+.an-kpis .kpi .note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.an-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:12px}
+.an-geo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.an-cap{font-size:11.5px;font-weight:800;color:var(--sky);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.an-maps{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.an-maps[hidden]{display:none}
+.an-grid>.card{align-self:start}
+.an-map{position:relative;height:340px}
+.hb-row{display:grid;grid-template-columns:minmax(80px,150px) minmax(0,1fr) auto;align-items:center;gap:10px;padding:5px 6px;border-radius:7px;font-size:12.5px}
+.hb-row.pick{cursor:pointer}
+.hb-row.pick:hover{background:rgba(96,165,250,.09)}
+.hb-l{font-weight:600;color:var(--strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-t{display:flex;height:10px;border-radius:5px;background:rgba(148,163,184,.1);overflow:hidden}
+.hb-t i{display:block;height:100%;background:var(--accent,#60a5fa)}
+.hb-v{text-align:right;white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums;min-width:84px}
+.hb-v small{font-weight:500;color:var(--muted);font-size:11px;margin-left:6px}
+.an-geo[hidden]{display:none}
+.an-inst{margin-top:12px}
+.an-inst h3 small{font-weight:500;color:var(--muted);font-size:12px;margin-left:8px}
+.ev-per{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--muted);flex-wrap:wrap}
+#p4 .card h3 small{font-weight:500;color:var(--muted);font-size:12px;margin-left:8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-per select{padding:4px 8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--field);color:var(--txt)}
+.in-flow{display:flex;flex-direction:column;gap:6px;margin:0 0 14px}
+.in-flow .bar{display:flex;height:22px;border-radius:7px;overflow:hidden;background:rgba(148,163,184,.1)}
+.in-flow .bar i{display:flex;align-items:center;justify-content:center;font-style:normal;font-size:11.5px;font-weight:800;color:#0b1220;white-space:nowrap;overflow:hidden;cursor:pointer}
+.in-flow .bar i:hover{filter:brightness(1.12)}
+@media(max-width:1100px){.an-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.an-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.an-kpis{grid-template-columns:1fr 1fr}.an-geo,.an-maps{grid-template-columns:1fr}.lt .bar{flex-basis:90px}#p4 .card h3,#p2 .card h3{flex-wrap:wrap}}
+/* máy tính: Phân tích / Đánh giá gói trong 1 màn hình (như Tổng quan) — phần dài cuộn trong thẻ, tiêu đề cột đứng yên */
+@media(min-width:1100px) and (min-height:640px){
+  #p2.active,#p4.active{display:flex;flex-direction:column;padding-top:12px;padding-bottom:12px;gap:10px}
+  #p2 .an-kpis{flex:0 0 auto;margin:0;gap:10px}
+  #p2 .an-kpis .kpi{padding:9px 14px}
+  #p2 .an-kpis .kpi .val{font-size:24px;margin-top:1px}
+  #p2 .an-kpis .kpi .note{margin-top:1px}
+  #p2 .an-grid{flex:1.15 1 0;min-height:0;gap:10px}
+  #p2 .an-grid>.card{align-self:stretch}
+  #p2 .an-inst{flex:1 1 0;margin:0}
+  #p2 .card,#p4 .card{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding:11px 14px;margin:0}
+  #p2 .card h3,#p4 .card h3{margin-bottom:6px;flex:0 0 auto;white-space:nowrap}
+  #p2 .hb,#p2 .an-geo>div{min-height:0;overflow:auto}
+  #p2 .an-geo{flex:1 1 auto;min-height:0}
+  #p2 .an-geo>div{display:flex;flex-direction:column}
+  #p2 .an-maps{flex:1 1 auto;min-height:0;margin:0}
+  #p2 .an-map{height:auto;min-height:0}
+  #p2 .hb-row{padding:3px 6px}
+  #p2 .in-flow{flex:0 0 auto;margin-bottom:8px}
+  #p2 .in-tbl{flex:1 1 auto;min-height:0;overflow:auto}
+  #p2 .in-tbl th{position:sticky;top:0;background:var(--panel2)}
+  #p4 .sc-card{flex:1.5 1 0}
+  #p4 .pic-card{flex:1 1 0}
+  #p4 .sc-tbl{flex:1 1 auto;min-height:0;max-height:none}
+  #p4 .sc-tbl td{padding:5px 8px}
+  #p4 .sc-note,#p4 #picNote{flex:0 0 auto;margin-top:6px}
+  /* Danh mục › Tổng quan: 4 biểu đồ co giãn lấp phần còn lại của màn hình */
+  #c1.active{display:flex;flex-direction:column;padding-top:12px;padding-bottom:12px;gap:10px}
+  #c1>.toolbar{margin:0!important;flex:0 0 auto}
+  #c1 .kpis{flex:0 0 auto;margin:0;gap:10px}
+  #c1 .kpi{padding:9px 14px}
+  #c1 .kpi .val{font-size:24px;margin-top:1px}
+  #c1 .kpi .note{margin-top:1px}
+  #c1 .grid4{flex:1 1 0;min-height:0;grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  #c1 .grid4>.card{display:flex;flex-direction:column;min-height:0;padding:11px 14px}
+  #c1 .grid4 .card h3{margin-bottom:6px;flex:0 0 auto}
+  #c1 .chartbox.half{flex:1 1 auto;height:auto;min-height:0}
+}
 /* ===== tab Kế hoạch ===== */
 #p5 .pl-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:12px}
 #p5 .card{position:relative;min-width:0}
@@ -423,28 +504,9 @@ td.qu-c input,th.qu-h input{width:16px;height:16px;vertical-align:middle;accent-
 .qu-tbl td.ok{color:var(--st-ok);font-weight:700} .qu-tbl td.bad{color:var(--st-bad);font-weight:700}
 @media(max-width:600px){.add-grid.qu-grid{grid-template-columns:1fr}.qu-cap{min-height:0}}
 @media(max-width:760px){.add-grid.pay-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:1100px){.sc-wrap{grid-template-columns:1fr}}
 @media(max-width:640px){#scSub{flex-basis:100%;margin:2px 0 0 16px!important}#p4 .card h3{flex-wrap:wrap}}
 
-/* ===== PIC evaluation board ===== */
-.pic-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
-.pic-card{position:relative;background:rgba(14,23,48,.55);border:1px solid var(--border);border-radius:13px;
-  padding:14px 12px 12px;text-align:center;transition:.25s}
-.pic-card:hover{transform:translateY(-4px);box-shadow:0 12px 26px rgba(0,0,0,.4);border-color:rgba(45,212,191,.4)}
-.pic-medal{position:absolute;top:8px;left:10px;font-size:16px}
-.pic-name{font-size:13px;font-weight:800;margin-bottom:10px}
-.pic-ring{position:relative;width:96px;height:96px;margin:0 auto 10px}
-.pic-ring svg{transform:rotate(-90deg)}
-.pic-ring .bg{fill:none;stroke:rgba(148,163,184,.15);stroke-width:9}
-.pic-ring .fg{fill:none;stroke-width:9;stroke-linecap:round;stroke-dasharray:264;stroke-dashoffset:264;
-  transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1)}
-.pic-ring .pv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.pic-ring .pv b{font-size:19px}
-.pic-ring .pv small{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.pic-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:5px}
 .pic-chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;background:rgba(148,163,184,.1);color:var(--muted);white-space:nowrap}
-.pic-card{cursor:pointer;transition:transform .18s,box-shadow .18s}
-.pic-card:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(0,0,0,.4)}
 .pic-chip[data-kind]:hover{filter:brightness(1.35);outline:1px solid rgba(148,163,184,.35)}
 .pic-chip.warn{background:rgba(248,113,113,.13);color:var(--red)}
 .pic-chip.good{background:rgba(45,212,191,.12);color:#2dd4bf}
@@ -654,9 +716,8 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 }
 [data-theme="light"] .brand h1{background-image:linear-gradient(90deg,#0369a1,#7c3aed 55%,#c026d3)}
 [data-theme="light"] .calm-msg{color:#047857}
-[data-theme="light"] .kpi:hover,[data-theme="light"] .pic-card:hover{box-shadow:0 12px 28px rgba(15,23,42,.12)}
+[data-theme="light"] .kpi:hover{box-shadow:0 12px 28px rgba(15,23,42,.12)}
 [data-theme="light"] .kpi::after{background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%), rgba(37,99,235,.08), transparent 60%)}
-[data-theme="light"] .pic-card{background:var(--panel2)}
 [data-theme="light"] .pic-chip.good{color:#0f766e}
 [data-theme="light"] .fbtn.active,[data-theme="light"] .pbtn.cur{color:#fff}
 [data-theme="light"] .notice{background:linear-gradient(165deg,#ffffff,#f1f5fb);box-shadow:0 30px 70px rgba(15,23,42,.25)}
@@ -831,28 +892,30 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 
   <!-- ============ PAGE 2: PHÂN TÍCH ============ -->
   <div class="page" id="p2">
-    <div class="grid4">
-      <div class="card" style="--accent:#a78bfa"><h3><span class="dot"></span>Value by supplier (B ₫)</h3><div class="chartbox half"><canvas id="chNcc"></canvas></div></div>
-      <div class="card" style="--accent:#f87171"><h3><span class="dot"></span>Equipment origin map</h3><div class="chartbox half"><div id="mapOrigin"></div></div></div>
-      <div class="card" style="--accent:#22d3ee"><h3><span class="dot"></span>Installation site map</h3><div class="chartbox half"><div id="mapLoc"></div></div></div>
-      <div class="card" style="--accent:#fbbf24"><h3><span class="dot"></span>Machines by person in charge</h3><div class="chartbox half"><canvas id="chPICtrack"></canvas></div></div>
+    <div class="kpis an-kpis" id="anKpis"></div>
+    <div class="an-grid">
+      <div class="card" style="--accent:#a78bfa"><h3><span class="dot"></span><span id="anNccT"></span><span class="sel"><span class="gv-btn on" id="anNccV"></span><span class="gv-btn" id="anNccN"></span></span></h3>
+        <div class="hb" id="anNcc"></div></div>
+      <div class="card" style="--accent:#22d3ee"><h3><span class="dot"></span><span id="anGeoT"></span><span class="sel"><span class="gv-btn on" id="anListBtn"></span><span class="gv-btn" id="anMapBtn"></span></span></h3>
+        <div class="an-geo" id="anGeo"><div><div class="an-cap" id="anOrgT"></div><div class="hb" id="anOrigin"></div></div>
+          <div><div class="an-cap" id="anSiteT"></div><div class="hb" id="anSite"></div><div class="dm-legend" id="anSiteL"></div></div></div>
+        <div class="an-maps" id="anMaps" hidden><div class="an-map"><div id="mapOrigin"></div></div><div class="an-map"><div id="mapLoc"></div></div></div></div>
     </div>
-    <div class="card" style="--accent:var(--st-inst);margin-top:12px"><h3><span class="dot"></span><span id="inTitle"></span><small id="inSub" style="font-weight:500;color:var(--muted);font-size:12px;margin-left:8px"></small></h3>
-      <div class="in-wrap"><div class="in-tbl" id="inByCo"></div><div class="in-tbl" id="inBySup"></div></div></div>
+    <div class="card an-inst" style="--accent:var(--st-inst)"><h3><span class="dot"></span><span id="inTitle"></span><small id="inSub"></small><span class="sel"><span class="gv-btn on" id="inCoBtn"></span><span class="gv-btn" id="inSupBtn"></span></span></h3>
+      <div class="in-flow" id="inFlow"></div>
+      <div class="in-tbl" id="inByCo"></div><div class="in-tbl" id="inBySup" hidden></div></div>
   </div>
 
   <!-- ============ PAGE 4: ĐÁNH GIÁ ============ -->
   <div class="page" id="p4">
-    <div class="toolbar" style="margin-bottom:12px">
-      <span style="font-size:13px;color:var(--muted);font-weight:700">Evaluation period:</span>
-      <select id="evMonth"><option value="">Month: All</option></select>
-      <select id="evYear"><option value="">Year: All</option></select>
-      <span style="font-size:12px;color:var(--muted)" id="evInfo"></span>
-    </div>
-    <div class="card" style="--accent:#f0abfc"><h3><span class="dot"></span><span id="scTitle"></span><small id="scSub" style="font-weight:500;color:var(--muted);font-size:12px;margin-left:8px"></small></h3>
-      <div class="sc-wrap"><div class="sc-tbl" id="scTable"></div><div><div class="dm-legend" id="scLegend"></div><div id="scChart"></div><div id="scChartEmpty" class="dm-hint" hidden></div></div></div></div>
-    <div class="card" style="--accent:#2dd4bf;margin-top:12px"><h3><span class="dot"></span>Person-in-charge rating — on time · volume · value</h3><div class="pic-board" id="picBoard"></div></div>
-    <div class="card" style="--accent:#fbbf24;margin-top:12px"><h3><span class="dot"></span>Staff performance scorecard — weights: equipment count 50% · value 30% · on time 20%</h3><div style="position:relative;height:230px"><canvas id="chPICscore"></canvas></div></div>
+    <div class="card sc-card" style="--accent:#f0abfc"><h3><span class="dot"></span><span id="scTitle"></span><small id="scSub"></small>
+      <span class="sel ev-per"><span>Evaluation period:</span>
+        <select id="evMonth"><option value="">Month: All</option></select>
+        <select id="evYear"><option value="">Year: All</option></select>
+        <span id="evInfo"></span></span></h3>
+      <div class="sc-tbl" id="scTable"></div><div class="sc-note" id="scNote"></div></div>
+    <div class="card pic-card" style="--accent:#2dd4bf;margin-top:12px"><h3><span class="dot"></span><span id="picTitle"></span><small id="picSub" style="font-weight:500;color:var(--muted);font-size:12px;margin-left:8px"></small></h3>
+      <div class="sc-tbl pic-tbl" id="picTable"></div><div class="dm-legend" id="picNote" style="margin:8px 0 0"></div></div>
   </div>
 
   <!-- ============ PAGE 5: KẾ HOẠCH (MTA · dòng tiền · lookahead 90 ngày) ============ -->
@@ -1939,33 +2002,115 @@ function initP1(){
   });
 }
 
-/* ===== page 2 charts ===== */
+/* ===== page 2: phân tích — dòng chỉ số · thanh xếp hạng NCC / xuất xứ / nơi lắp đặt · bản đồ chỉ vẽ khi bấm 🗺 ===== */
+const sumV = rows => rows.reduce((s,x)=>s+(x.vnd||0),0);
+const tyT = v => (v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})+tr(' B',' tỷ');
+const pctT = (a,b) => b ? Math.round(a/b*100)+'%' : '—';
+const groupRows = (rows, key) => { const o = new Map(); rows.forEach(x=>{ const k = x[key] || ''; if(!o.has(k)) o.set(k, []); o.get(k).push(x); });
+  return [...o].map(([k, r]) => ({ k, rows:r, n:r.length, v:sumV(r) })); };
+/* danh sách máy trong cửa sổ (dùng chung: thanh xếp hạng, thẻ chỉ số, nhân sự) */
+function showMachines(title, rows){
+  rows = [...rows].sort((a,b)=>{ const d=(PRIO[a.status]??9)-(PRIO[b.status]??9); if(d) return d; return (a.vedukienn??'')>(b.vedukienn??'')?1:-1; });
+  const units = rows.reduce((s,x)=>s+x.sl,0), tre = rows.filter(x=>x.danhgia==='Trễ').length;
+  mTitle.textContent = title;
+  mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')} · ${(sumV(rows)/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')} · ${tre} ${tr('late','trễ')}`;
+  mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(x=>`
+    <div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
+      <span class="kn">${x.ma_may ? `<small style="display:inline;color:var(--sky)">${x.ma_may}</small> ` : ''}${x.ten}${x.sl>=2?` <b style="color:var(--sky)">(x${x.sl})</b>`:''}<small>${x.noilapdat} · ${x.ncc} · ${fmtM(x.vnd)} ₫</small></span>
+      <span class="kv">${fmtD(x.vedukienn)}<br>
+        <span class="badge b-${x.status}" style="font-size:10.5px;padding:2px 8px">${LBL[x.status]||'—'}</span>
+        <span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}" style="font-size:10.5px;padding:2px 8px">${dgT(x.danhgia)}</span></span>
+    </div>`).join('')}</div>`
+    : `<div class="m-ok">${tr(`No machines in this group.`,`Không có thiết bị nào trong nhóm này.`)}</div>`;
+  openM();
+}
+/* thanh ngang xếp hạng: items [{label, val, txt, sub, rows, segs?:[[giá trị, màu]]}] — bấm 1 dòng -> danh sách máy */
+function hbars(el, items, icon){
+  const max = Math.max(0, ...items.map(i=>i.val)) || 1;
+  el.innerHTML = items.length ? items.map((it,i)=>`<div class="hb-row pick" data-i="${i}" title="${tr('Click to see the machines','Bấm để xem danh sách máy')}">
+      <span class="hb-l" title="${ovEsc(it.label)}">${ovEsc(it.label)}</span>
+      <span class="hb-t">${(it.segs || [[it.val]]).filter(s=>s[0]).map(([v,c])=>`<i style="width:${v/max*100}%${c?';background:'+c:''}"></i>`).join('')}</span>
+      <span class="hb-v">${it.txt}${it.sub?`<small>${it.sub}</small>`:''}</span></div>`).join('')
+    : `<div class="dm-hint">${tr('No data yet.','Chưa có dữ liệu.')}</div>`;
+  el.querySelectorAll('.hb-row').forEach(r => r.onclick = () => { const it = items[+r.dataset.i]; showMachines(icon+' '+it.label, it.rows); });
+}
+function drawAnKpis(){
+  const tot = sumV(DATA), sup = groupRows(DATA,'ncc').filter(g=>g.k).sort((a,b)=>b.v-a.v);
+  const org = groupRows(DATA,'xuatxu').filter(g=>g.k).sort((a,b)=>b.n-a.n);
+  const st = DATA.map(x=>({ x, s:DM.installStatus(x) }));
+  const arrived = st.filter(o=>o.s.stage), wait = st.filter(o=>o.s.stage==='arrived'), oper = st.filter(o=>o.s.stage==='in_operation');
+  const wl = st.filter(o=>o.s.waitInstall).length, N = DM.CFG.installWaitDays;
+  const K = [
+    ['#a78bfa','💰',tr('Total value','Tổng giá trị'), tyT(tot), `${DATA.length} ${tr('machines','thiết bị')} · ${sup.length} ${tr('suppliers','NCC')}`, null],
+    ['#f0abfc','🏭',tr('Top 3 suppliers','Top 3 NCC chiếm'), pctT(sup.slice(0,3).reduce((s,g)=>s+g.v,0), tot), sup.slice(0,3).map(g=>unescH(g.k)).join(' · '), null],
+    ['#22d3ee','🌍',tr('Countries of origin','Nước xuất xứ'), org.length, org[0] ? `${ctT(unescH(org[0].k))} ${tr('leads','nhiều nhất')} · ${org[0].n} ${tr('machines','TB')}` : '', null],
+    ['#7dd3fc','🔧',tr('Arrived – awaiting install','Đã về – chờ lắp'), wait.length, wl ? `⚠ ${wl} ${tr(`over ${N} days`,`quá ${N} ngày`)}` : tr(`none over ${N} days`,`không máy nào quá ${N} ngày`), ['🔧 '+tr('Arrived – awaiting installation','Đã về – chờ lắp đặt'), wait.map(o=>o.x)]],
+    ['#2dd4bf','✅',tr('Commissioned','Đã nghiệm thu'), oper.length, `${pctT(oper.length, arrived.length)} ${tr('of arrived machines','số máy đã về')}`, ['✅ '+tr('Commissioned','Đã nghiệm thu'), oper.map(o=>o.x)]]];
+  anKpis.innerHTML = K.map(([c,ic,l,v,n,go],i)=>`<div class="kpi" data-i="${i}" style="--accent:${c};${go?'':'cursor:default'}"><span class="ic">${ic}</span><div class="lbl">${l}</div><div class="val">${v}</div><div class="note" title="${ovEsc(n)}">${ovEsc(n)}</div></div>`).join('');
+  anKpis.querySelectorAll('.kpi').forEach(k => { const go = K[+k.dataset.i][5]; if(go) k.onclick = () => showMachines(go[0], go[1]); });
+}
+let anNccMode = 'v';
+function drawAnNcc(){
+  const byV = anNccMode === 'v', g = groupRows(DATA,'ncc').sort((a,b)=> byV ? (b.v-a.v || b.n-a.n) : (b.n-a.n || b.v-a.v));
+  const top = g.slice(0,8), rest = g.slice(8), tot = byV ? sumV(DATA) : DATA.length;
+  if(rest.length){ const r = rest.flatMap(o=>o.rows); top.push({ other:true, k:tr(`Other (${rest.length} suppliers)`,`Khác (${rest.length} NCC)`), rows:r, n:r.length, v:sumV(r) }); }
+  hbars(anNcc, top.map(o=>({ label: o.other ? o.k : (unescH(o.k) || tr('(no supplier)','(chưa có NCC)')), rows:o.rows,
+    val: byV ? o.v : o.n, txt: byV ? tyT(o.v) : o.n+' '+tr('mach.','TB'),
+    sub: pctT(byV ? o.v : o.n, tot)+' · '+(byV ? o.n+' '+tr('mach.','TB') : tyT(o.v)) })), '🏭');
+  anNccV.classList.toggle('on', byV); anNccN.classList.toggle('on', !byV);
+}
+function drawAnGeo(){
+  hbars(anOrigin, groupRows(DATA,'xuatxu').sort((a,b)=>b.n-a.n || b.v-a.v).map(o=>({ label: ctT(unescH(o.k)) || tr('(unknown)','(chưa rõ)'),
+    rows:o.rows, val:o.n, txt:o.n+' '+tr('mach.','TB'), sub:tyT(o.v) })), '🌍');
+  const ST = [['arrived',C.arrived],['overdue',C.overdue],['soon',C.soon],['waiting',C.waiting],['unknown',cssv('--st-done')]];
+  hbars(anSite, groupRows(DATA,'noilapdat').sort((a,b)=>b.n-a.n || b.v-a.v).map(o=>({ label: unescH(o.k) || tr('(unknown)','(chưa rõ)'),
+    rows:o.rows, val:o.n, txt:o.n+' '+tr('mach.','TB'), sub:tyT(o.v),
+    segs: ST.map(([s,c])=>[o.rows.filter(x=>(x.status||'unknown')===s).length, c]) })), '📍');
+  anSiteL.innerHTML = ST.filter(([s])=>DATA.some(x=>(x.status||'unknown')===s)).map(([s,c])=>`<span><i style="background:${c}"></i>${LBL[s]}</span>`).join('');
+}
+function drawAnalytics(){ drawAnKpis(); drawAnNcc(); drawAnGeo(); drawInstallStats(); }
+
 /* ===== ⏱ Về NM → nghiệm thu theo công ty / NCC (metrics.js: DM.installStats) — mọi máy đã về, không theo bộ lọc ===== */
 function drawInstallStats(){
   const D = v => v == null ? '—' : dmN(v, 1);
   const H = tr(['Arrived','Commissioned','Arrival → commissioning','Wait for installation','Installation → commissioning','Installing',`Not installed > ${DM.CFG.installWaitDays} d`,'Late commissioning'],
                ['Đã về','Đã NT','Về NM → NT','Chờ lắp đặt','Lắp đặt → NT','Đang lắp',`Chưa lắp > ${DM.CFG.installWaitDays} ngày`,'Trễ NT']);
-  const tbl = (cap, first, list) => !list.length ? `<div class="dm-empty">${tr('No machine has arrived at the plant yet.','Chưa có máy nào về NM.')}</div>`
-    : `<table><caption>${cap}</caption><thead><tr><th>${first}</th>${H.map((h,i)=>`<th${i>=2 && i<=4 ? ` title="${tr('average days','trung bình số ngày')}"` : ''}>${h}</th>`).join('')}</tr></thead><tbody>${list.map(r=>
+  const tbl = (first, list) => !list.length ? `<div class="dm-empty">${tr('No machine has arrived at the plant yet.','Chưa có máy nào về NM.')}</div>`
+    : `<table><thead><tr><th>${first}</th>${H.map((h,i)=>`<th${i>=2 && i<=4 ? ` title="${tr('average days','trung bình số ngày')}"` : ''}>${h}</th>`).join('')}</tr></thead><tbody>${list.map(r=>
       `<tr><td>${ovEsc(unescH(r.name)) || '—'}</td><td>${r.arrived}</td><td>${r.accepted}</td><td><b>${D(r.avgToAccept)}</b></td><td>${D(r.avgWait)}</td><td>${D(r.avgInstall)}</td>
         <td>${r.installing || ''}</td><td class="${r.waitInstall ? 'w' : ''}">${r.waitInstall || ''}</td><td class="${r.lateAccept ? 'b' : ''}">${r.lateAccept || ''}</td></tr>`).join('')}</tbody></table>`;
   inTitle.textContent = tr('⏱ Arrival at plant → commissioning', '⏱ Về NM → nghiệm thu');
   inSub.textContent = tr('average days · all machines that arrived at the plant', 'trung bình số ngày · mọi máy đã về NM');
-  inByCo.innerHTML = tbl(tr('By company / site','Theo công ty / nhà máy'), tr('Company','Công ty'), DM.installStats(DATA, x => DM.companyCode(x.noilapdat) || tr('Other','Khác')));
-  inBySup.innerHTML = tbl(tr('By supplier','Theo nhà cung cấp'), tr('Supplier','NCC'), DM.installStats(DATA, x => x.ncc));
+  // thanh giai đoạn: máy đã về chia theo chờ lắp / đang lắp / đã nghiệm thu
+  const st = DATA.map(x=>({ x, s:DM.installStatus(x) })).filter(o=>o.s.stage);
+  const G = [['arrived','#7dd3fc',tr('Awaiting installation','Chờ lắp đặt')],['installing',cssv('--st-inst'),tr('Installing','Đang lắp đặt')],['in_operation',cssv('--st-oper'),tr('Commissioned','Đã nghiệm thu')]]
+    .map(([k,c,l])=>({ c, l, rows:st.filter(o=>o.s.stage===k).map(o=>o.x) }));
+  inFlow.innerHTML = st.length ? `<div class="bar">${G.map((g,i)=>g.rows.length ? `<i data-i="${i}" style="flex:${g.rows.length};background:${g.c}" title="${g.l}: ${g.rows.length}">${g.rows.length}</i>` : '').join('')}</div>
+    <div class="dm-legend" style="margin:0">${G.map(g=>`<span><i style="background:${g.c}"></i>${g.l} · <b>${g.rows.length}</b> (${pctT(g.rows.length, st.length)})</span>`).join('')}</div>` : '';
+  inFlow.querySelectorAll('.bar i').forEach(b => b.onclick = () => { const g = G[+b.dataset.i]; showMachines('⏱ '+g.l, g.rows); });
+  inByCo.innerHTML = tbl(tr('Company','Công ty'), DM.installStats(DATA, x => DM.companyCode(x.noilapdat) || tr('Other','Khác')));
+  inBySup.innerHTML = tbl(tr('Supplier','NCC'), DM.installStats(DATA, x => x.ncc));
 }
 function initP2(){
-  drawInstallStats(); OV_HOOKS.push(drawInstallStats);
-  new Chart(chNcc,{type:'bar',data:{labels:AGG.topncc.map(t=>t[0]),
-    datasets:[{data:AGG.topncc.map(t=>+(t[1]/1e9).toFixed(1)),
-      backgroundColor:['#a78bfa','#7dd3fc','#f0abfc','#34d399','#fbbf24','#60a5fa','#f87171','#22d3ee'],borderRadius:6}]},
-    options:{indexAxis:'y',plugins:{legend:{display:false},
-      tooltip:{callbacks:{label:c=>c.parsed.x.toLocaleString(NUMLOC)+tr(' B ₫',' tỷ ₫')}}},
-      scales:{x:{grid:{color:'rgba(148,163,184,.08)'}},y:{grid:{display:false}}}}});
-
-  const pie = (el,items,colors)=> new Chart(el,{type:'doughnut',
-    data:{labels:items.map(t=>t[0]),datasets:[{data:items.map(t=>t[1]),backgroundColor:colors,borderColor:()=>cssv('--panel'),borderWidth:2,hoverOffset:8}]},
-    options:{cutout:'55%',plugins:{legend:{position:'right',labels:{usePointStyle:true,padding:10,font:{size:12}}}}}});
+  anNccT.textContent = tr('Value by supplier','Giá trị theo nhà cung cấp');
+  anNccV.textContent = tr('Value','Giá trị'); anNccN.textContent = tr('Count','Số máy');
+  anNccV.onclick = () => { anNccMode = 'v'; drawAnNcc(); }; anNccN.onclick = () => { anNccMode = 'n'; drawAnNcc(); };
+  anGeoT.textContent = tr('Origin & installation site','Xuất xứ & nơi lắp đặt');
+  anOrgT.textContent = tr('Country of origin','Nước xuất xứ'); anSiteT.textContent = tr('Installation site · by status','Nơi lắp đặt · theo trạng thái');
+  // Danh sách | 🗺 Bản đồ: bản đồ thay chỗ danh sách trong cùng thẻ; chỉ vẽ lần đầu bấm
+  let mapsOn = false;
+  anListBtn.textContent = tr('List','Danh sách'); anMapBtn.textContent = tr('🗺 Map','🗺 Bản đồ');
+  const geoView = map => { anMaps.hidden = !map; anGeo.hidden = map; anMapBtn.classList.toggle('on', map); anListBtn.classList.toggle('on', !map);
+    if(map && !mapsOn){ mapsOn = true; initMaps(); } };
+  anListBtn.onclick = () => geoView(false); anMapBtn.onclick = () => geoView(true);
+  // ⏱ 1 bảng: Theo công ty | Theo NCC
+  inCoBtn.textContent = tr('By company','Theo công ty'); inSupBtn.textContent = tr('By supplier','Theo NCC');
+  const inView = sup => { inBySup.hidden = !sup; inByCo.hidden = sup; inSupBtn.classList.toggle('on', sup); inCoBtn.classList.toggle('on', !sup); };
+  inCoBtn.onclick = () => inView(false); inSupBtn.onclick = () => inView(true);
+  drawAnalytics(); OV_HOOKS.push(drawAnalytics);
+}
+/* bản đồ xuất xứ + nơi lắp đặt (Leaflet) — chỉ vẽ lần đầu bấm "🗺 Xem bản đồ" vì khung phải hiện ra thì mới đo được kích thước */
+function initMaps(){
   // ===== map xuất xứ =====
   const ORIGINS = {
     'Trung Quốc':{c:[32.5,112.5],col:'#f87171'},
@@ -2032,23 +2177,8 @@ function initP2(){
       {maxWidth:290});
     pts.push(coord);
   });
-  map.fitBounds(L.latLngBounds(pts).pad(0.25));
+  if(pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.25)); else map.setView(DEST, 8);
   setTimeout(()=>map.invalidateSize(),150);
-
-
-  const pics = AGG.pic.map(t=>t[0]);
-  const byStatus = s => pics.map(p => DATA.filter(x=>x.phutrach===p && x.status===s).length);
-  new Chart(chPICtrack,{type:'bar',data:{labels:pics,datasets:[
-    {label:LBL.arrived,data:byStatus('arrived'),backgroundColor:C.arrived,borderRadius:5,stack:'s'},
-    {label:LBL.overdue,data:byStatus('overdue'),backgroundColor:C.overdue,borderRadius:5,stack:'s'},
-    {label:LBL.soon,data:byStatus('soon'),backgroundColor:C.soon,borderRadius:5,stack:'s'},
-    {label:LBL.waiting,data:byStatus('waiting'),backgroundColor:C.waiting,borderRadius:5,stack:'s'}]},
-    options:{indexAxis:'y',plugins:{legend:{position:'bottom',labels:{usePointStyle:true}},
-      tooltip:{callbacks:{afterBody:items=>{
-        const p=items[0].label, rows=DATA.filter(x=>x.phutrach===p);
-        const v=rows.reduce((s,x)=>s+x.vnd,0);
-        return tr('Total: ','Tổng: ')+rows.length+tr(' machines · ',' thiết bị · ')+(v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})+tr(' B ₫',' tỷ ₫');}}}},
-      scales:{x:{stacked:true,ticks:{stepSize:2},grid:{color:'rgba(148,163,184,.08)'}},y:{stacked:true,grid:{display:false}}}}});
 }
 
 /* ===== page 4: đánh giá ===== */
@@ -2056,138 +2186,95 @@ function buildEval(){
   const mo = evMonth.value, yr = evYear.value;
   const rowsAll = DATA.filter(x => x.vedukienn &&
     (!yr || x.vedukienn.slice(0,4)===yr) && (!mo || x.vedukienn.slice(5,7)===mo));
-  evInfo.textContent = rowsAll.length + tr(' machines in period (by expected arrival at plant)',' thiết bị trong kỳ (theo ngày dự kiến về NM)');
+  evInfo.textContent = rowsAll.length + tr(' machines',' thiết bị');
+  evInfo.title = tr('machines in period (by expected arrival at plant)','thiết bị trong kỳ (theo ngày dự kiến về NM)');
 
-  // ----- bảng điểm nhà cung cấp (metrics.js: DM.supplierScorecard) -----
+  // ----- bảng điểm nhà cung cấp (metrics.js: DM.supplierScorecard + DM.supplierGrade) -----
   drawScorecard(rowsAll);
 
-  // ----- thẻ điểm nhân sự -----
+  // ----- xếp hạng nhân sự phụ trách: điểm = không trễ 50% · số thiết bị 30% · giá trị 20% -----
+  const W = {ontime:50, may:30, val:20};
+  picTitle.textContent = tr('Person-in-charge ranking','Xếp hạng nhân sự phụ trách');
+  picSub.textContent = tr(`score = on time ${W.ontime}% · equipment count ${W.may}% · value ${W.val}% · click a row for the machine list`,
+                          `điểm = không trễ ${W.ontime}% · số thiết bị ${W.may}% · giá trị ${W.val}% · bấm 1 dòng để xem danh sách máy`);
   const picStats = [...new Set(rowsAll.map(x=>x.phutrach).filter(Boolean))].map(n=>{
     const rows = rowsAll.filter(x=>x.phutrach===n);
     const tre = rows.filter(x=>x.danhgia==='Trễ').length;
     const pend = rows.filter(x=>x.status!=='arrived').length;
-    return {n, total:rows.length, units:rows.reduce((s,x)=>s+x.sl,0),
-      vnd:rows.reduce((s,x)=>s+x.vnd,0), tre, pend, ontime:(rows.length-tre)/rows.length};
-  }).sort((a,b)=> b.ontime-a.ontime || b.total-a.total);
-  picBoard.innerHTML = picStats.length ? picStats.map((s,i)=>{
-    const p = Math.round(s.ontime*100);
-    const col = p===100 ? '#2dd4bf' : p>=80 ? '#7dd3fc' : p>=50 ? '#fbbf24' : '#f87171';
-    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
-    return `<div class="pic-card" data-pic="${s.n}" title="${tr('Click to see the machines this person handles','Bấm để xem danh sách máy phụ trách')}">
-      ${medal?`<span class="pic-medal">${medal}</span>`:''}
-      <div class="pic-name">${s.n}</div>
-      <div class="pic-ring">
-        <svg width="96" height="96"><circle class="bg" cx="48" cy="48" r="42"/>
-        <circle class="fg" cx="48" cy="48" r="42" stroke="${col}" data-off="${264-264*p/100}"/></svg>
-        <div class="pv"><b style="color:${col}">${p}%</b><small>${tr('on time','không trễ')}</small></div>
-      </div>
-      <div class="pic-stats">
-        <span class="pic-chip" data-kind="all">⚙️ ${s.total} ${tr('items','TB')} · ${s.units} ${tr('units','máy')}</span>
-        <span class="pic-chip" data-kind="all">💰 ${(s.vnd/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B','tỷ')}</span>
-        ${s.tre? `<span class="pic-chip warn" data-kind="tre">🔴 ${s.tre} ${tr('late','trễ')}</span>` : '<span class="pic-chip good" data-kind="all">✓ '+tr('none late','không trễ')+'</span>'}
-        <span class="pic-chip" data-kind="pend">⏳ ${s.pend} ${tr('pending','chưa về')}</span>
-      </div>
-    </div>`;
-  }).join('') : '<div style="color:var(--muted);font-size:13px;padding:10px">'+tr('No data for this period.','Không có dữ liệu trong kỳ này.')+'</div>';
-  setTimeout(()=>picBoard.querySelectorAll('.fg').forEach(c=>c.style.strokeDashoffset=c.dataset.off),100);
-
-  // ----- bấm thẻ nhân sự -> chi tiết máy phụ trách -----
-  function showPICList(name, kind){
-    const T = tr({all:'all machines', tre:'machines rated Late', pend:'machines not yet arrived'},
-      {all:'tất cả thiết bị', tre:'thiết bị đánh giá Trễ', pend:'thiết bị chưa về'});
-    let rows = rowsAll.filter(x=>x.phutrach===name);
-    if(kind==='tre')  rows = rows.filter(x=>x.danhgia==='Trễ');
-    if(kind==='pend') rows = rows.filter(x=>x.status!=='arrived');
-    rows = [...rows].sort((a,b)=>{
-      const d=(PRIO[a.status]??9)-(PRIO[b.status]??9); if(d) return d;
-      return (a.vedukienn??'')>(b.vedukienn??'')?1:-1;});
-    const vnd=rows.reduce((s,x)=>s+x.vnd,0), units=rows.reduce((s,x)=>s+x.sl,0);
-    const tre=rows.filter(x=>x.danhgia==='Trễ').length;
-    mTitle.textContent = `👤 ${name} — ${T[kind]}`;
-    mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')} · ${(vnd/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')} · ${tre} ${tr('late','trễ')}`;
-    mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(x=>`
-      <div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
-        <span class="kn">${x.ten}${x.sl>=2?` <b style="color:var(--sky)">(x${x.sl})</b>`:''}<small>${x.noilapdat} · ${x.ncc} · ${fmtM(x.vnd)} ₫</small></span>
-        <span class="kv">${fmtD(x.vedukienn)}<br>
-          <span class="badge b-${x.status}" style="font-size:10.5px;padding:2px 8px">${LBL[x.status]||'—'}</span>
-          <span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}" style="font-size:10.5px;padding:2px 8px">${dgT(x.danhgia)}</span></span>
-      </div>`).join('')}</div>`
-      : `<div class="m-ok">${tr(`No machines in this group.`,`Không có thiết bị nào trong nhóm này.`)}</div>`;
-    openM();
-  }
-  picBoard.querySelectorAll('.pic-card').forEach(c=>{
-    const name=c.dataset.pic;
-    c.onclick=()=>showPICList(name,'all');
-    c.querySelectorAll('.pic-chip[data-kind]').forEach(ch=>ch.onclick=ev=>{ev.stopPropagation();showPICList(name,ch.dataset.kind);});
+    return {n, rows, total:rows.length, units:rows.reduce((s,x)=>s+x.sl,0),
+      vnd:sumV(rows), tre, pend, ontime:(rows.length-tre)/rows.length};
   });
-
-  // ----- bảng điểm hiệu suất (50/30/20) -----
-  const oldCh = Chart.getChart(chPICscore); if(oldCh) oldCh.destroy();
-  if(!picStats.length) return;
-  const W = {may:50, val:30, ontime:20};
-  const maxT = Math.max(...picStats.map(s=>s.total));
-  const maxV = Math.max(...picStats.map(s=>s.vnd)) || 1;
+  if(!picStats.length){ picTable.innerHTML = '<div class="dm-hint">'+tr('No data for this period.','Không có dữ liệu trong kỳ này.')+'</div>'; return; }
+  const maxT = Math.max(...picStats.map(s=>s.total)), maxV = Math.max(...picStats.map(s=>s.vnd)) || 1;
   const scored = picStats.map(s=>{
-    const pMay = s.total/maxT*W.may;
-    const pVal = s.vnd/maxV*W.val;
-    const pOn  = s.ontime*W.ontime;
-    return {...s, pMay, pVal, pOn, score: pMay+pVal+pOn};
-  }).sort((a,b)=>b.score-a.score);
-  const scLbl = scored.map((s,i)=>`${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.'} ${s.n} — ${s.score.toFixed(0)}${tr(' pts','đ')}`);
-  new Chart(chPICscore,{type:'bar',data:{labels:scLbl,datasets:[
-    {label:tr('Equipment count (50%)','Số MMTB (50%)'),data:scored.map(s=>+s.pMay.toFixed(1)),backgroundColor:'#7dd3fc',borderRadius:4,stack:'sc'},
-    {label:tr('Value (30%)','Giá trị (30%)'),data:scored.map(s=>+s.pVal.toFixed(1)),backgroundColor:'#a78bfa',borderRadius:4,stack:'sc'},
-    {label:tr('On time (20%)','Không trễ (20%)'),data:scored.map(s=>+s.pOn.toFixed(1)),backgroundColor:'#2dd4bf',borderRadius:4,stack:'sc'}]},
-    options:{indexAxis:'y',plugins:{legend:{position:'bottom',labels:{usePointStyle:true}},
-      tooltip:{callbacks:{
-        label: ctx => ctx.dataset.label+': '+ctx.parsed.x+tr(' pts',' điểm'),
-        afterBody: items => {
-          const s = scored[items[0].dataIndex];
-          return tr('Total score: ','Tổng điểm: ')+s.score.toFixed(1)+'/100\n'+s.total+tr(' machines · ',' thiết bị · ')
-            +(s.vnd/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})+tr(' B ₫ · on time ',' tỷ ₫ · không trễ ')
-            +Math.round(s.ontime*100)+'%';
-        }}}},
-      scales:{x:{stacked:true,max:100,grid:{color:'rgba(148,163,184,.08)'}},
-        y:{stacked:true,grid:{display:false},ticks:{font:{size:12,weight:'700'},autoSkip:false}}}}});
+    const pOn = s.ontime*W.ontime, pMay = s.total/maxT*W.may, pVal = s.vnd/maxV*W.val;
+    return {...s, pOn, pMay, pVal, score: pOn+pMay+pVal};
+  }).sort((a,b)=>b.score-a.score || b.ontime-a.ontime);
+  const SEG = [['pOn','#2dd4bf',tr('On time','Không trễ'),W.ontime],['pMay','#7dd3fc',tr('Equipment count','Số thiết bị'),W.may],['pVal','#a78bfa',tr('Value','Giá trị'),W.val]];
+  const okCol = p => p >= 1 ? 'var(--st-ok)' : p >= .8 ? 'var(--sky)' : p >= .5 ? 'var(--st-warn)' : 'var(--st-bad)';
+  picTable.innerHTML = `<table><thead><tr><th class="c">#</th><th class="l">${tr('Person in charge','Người phụ trách')}</th><th>${tr('Equipment','Thiết bị')}</th><th>${tr('Value','Giá trị')}</th>
+      <th>${tr('On time','Không trễ')}</th><th>${tr('Late · pending','Trễ · chờ về')}</th><th>${tr('Score','Điểm')}</th></tr></thead><tbody>${scored.map((s,i)=>`
+    <tr><td class="c">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</td><td class="nm">${s.n}</td>
+      <td>${s.total} ${tr('items','TB')} · ${s.units} ${tr('units','máy')}</td><td>${tyT(s.vnd)}</td>
+      <td><span class="mini"><b style="color:${okCol(s.ontime)}">${Math.round(s.ontime*100)}%</b><span class="tr"><i style="width:${s.ontime*100}%;background:${okCol(s.ontime)}"></i></span></span></td>
+      <td>${s.tre ? `<span class="pic-chip warn" data-kind="tre">🔴 ${s.tre}</span>` : `<span class="pic-chip good">✓ 0</span>`} <span class="pic-chip" data-kind="pend">⏳ ${s.pend}</span></td>
+      <td><span class="mini" title="${SEG.map(([k,,l])=>l+': '+s[k].toFixed(1)).join(' · ')}"><b>${s.score.toFixed(0)}</b><span class="tr" style="flex-basis:110px">${SEG.map(([k,c])=>`<i style="width:${s[k]}%;background:${c}"></i>`).join('')}</span></span></td></tr>`).join('')}</tbody></table>`;
+  picNote.innerHTML = SEG.map(([,c,l,w])=>`<span><i style="background:${c}"></i>${l} (${w}%)</span>`).join('');
+  const T = tr({all:'all machines', tre:'machines rated Late', pend:'machines not yet arrived'}, {all:'tất cả thiết bị', tre:'thiết bị đánh giá Trễ', pend:'thiết bị chưa về'});
+  const showPIC = (s, kind) => showMachines(`👤 ${s.n} — ${T[kind]}`,
+    kind==='tre' ? s.rows.filter(x=>x.danhgia==='Trễ') : kind==='pend' ? s.rows.filter(x=>x.status!=='arrived') : s.rows);
+  picTable.querySelectorAll('tbody tr').forEach((row, i)=>{
+    row.onclick = () => showPIC(scored[i], 'all');
+    row.querySelectorAll('.pic-chip[data-kind]').forEach(ch=>ch.onclick=ev=>{ ev.stopPropagation(); showPIC(scored[i], ch.dataset.kind); });
+  });
 }
-/* bảng điểm NCC: bảng sắp xếp được + biểu đồ lead time cam kết / thực tế */
+/* bảng điểm NCC: 1 bảng sắp xếp được — hạng A/B/C, đúng hạn, lead time cam kết → thực tế vẽ ngay trong dòng.
+   Mặc định NCC kém nhất lên đầu (C → B → A). */
 let SC = [], scSort = null;
+const GR_RANK = { C:0, B:1, A:2 };
 const SC_COLS = () => [
-  ['name',        tr('Supplier','Nhà cung cấp')],
+  ['grade',       tr('Grade','Hạng'), 'c'],
+  ['name',        tr('Supplier','Nhà cung cấp'), 'l'],
   ['delivered',   tr('Delivered','Đã giao')],
-  ['onTimePct',   tr('On-time %','Đúng hạn %')],
+  ['onTimePct',   tr('On-time %','Đúng hạn')],
   ['avgLateDays', tr('Avg days late','TB ngày trễ')],
-  ['committedLT', tr('Committed LT','LT cam kết')],
-  ['actualLT',    tr('Actual LT','LT thực tế')],
-  ['gapDays',     tr('Gap','Chênh lệch')],
+  ['gapDays',     tr('Lead time committed → actual (days)','Lead time cam kết → thực tế (ngày)')],
   ['inProgress',  tr('In progress','Đang chờ')]
 ];
 function drawScorecard(rows){
   scTitle.textContent = tr('Supplier scorecard — on-time delivery & lead time', 'Bảng điểm nhà cung cấp — đúng hạn & lead time');
-  SC = DM.supplierScorecard(rows, { minDelivered: 2 });
-  const ok = SC.filter(r => r.sufficient);
-  scSub.textContent = SC.length ? tr(`${ok.length} of ${SC.length} suppliers rated · min. 2 deliveries · LT = contract → arrival at site (days)`,
-                                     `${ok.length} / ${SC.length} NCC được chấm · tối thiểu 2 lần giao · LT = ký HĐ → về NM (ngày)`) : '';
-  renderScTable(); renderScChart();
+  SC = DM.supplierScorecard(rows, { minDelivered: 2 }).map(r => Object.assign(r, { grade: DM.supplierGrade(r) }));
+  const ok = SC.filter(r => r.sufficient), cnt = g => ok.filter(r => r.grade === g).length;
+  scSub.textContent = SC.length ? tr(`${ok.length} of ${SC.length} suppliers rated · min. 2 deliveries · worst first`, `${ok.length} / ${SC.length} NCC được chấm · tối thiểu 2 lần giao · kém nhất xếp đầu`) : '';
+  scNote.innerHTML = SC.length ? ['A','B','C'].map(g => `<span><span class="gr gr-${g}">${g}</span> × <b>${cnt(g)}</b></span>`).join('') +
+    `<span>${tr('A: on time ≥ 80% and avg. lateness ≤ 7 days · C: on time < 50% or avg. lateness > 14 days · B: the rest · LT = contract signed → arrival at plant',
+                'A: đúng hạn ≥ 80% và trễ TB ≤ 7 ngày · C: đúng hạn < 50% hoặc trễ TB > 14 ngày · B: còn lại · LT = ký HĐ → về NM')}</span>` : '';
+  renderScTable();
 }
 function renderScTable(){
   if(!SC.length){ scTable.innerHTML = `<div class="dm-hint">${tr('No supplier data for this period.', 'Không có dữ liệu NCC trong kỳ này.')}</div>`; return; }
   const cols = SC_COLS(), d = v => v == null ? '—' : dmN(v, 0);
-  const cmp = (a, b) => { if(!scSort) return 0; const k = scSort.k, x = a[k], y = b[k];
+  const val = (r, k) => k === 'grade' ? (r.grade ? GR_RANK[r.grade] : null) : r[k];
+  const worst = (a, b) => ((val(a,'grade') ?? 9) - (val(b,'grade') ?? 9)) || ((a.onTimePct ?? 2) - (b.onTimePct ?? 2)) ||
+                          ((b.avgLateDays ?? 0) - (a.avgLateDays ?? 0)) || (b.delivered - a.delivered) || a.name.localeCompare(b.name);
+  const cmp = (a, b) => { if(!scSort) return worst(a, b); const k = scSort.k, x = val(a, k), y = val(b, k);
     if(k === 'name') return scSort.dir * String(x).localeCompare(String(y));
     return scSort.dir * (((x ?? -Infinity)) - ((y ?? -Infinity))); };
   const ok = SC.filter(r => r.sufficient).slice().sort(cmp), few = SC.filter(r => !r.sufficient).slice().sort(cmp);
-  const pctCol = v => v == null ? '' : v >= .8 ? 'var(--st-ok)' : v >= .6 ? 'var(--st-warn)' : 'var(--st-bad)';
-  const gapCol = v => v == null ? '' : v <= 0 ? 'var(--st-ok)' : v <= 14 ? 'var(--st-warn)' : 'var(--st-bad)';
-  const nm = r => ovEsc(r.name) || `<i>${tr('(no supplier)', '(chưa có NCC)')}</i>`;
-  const row = r => `<tr><td class="nm">${nm(r)}</td><td>${r.delivered}</td>` +
-    `<td style="color:${pctCol(r.onTimePct)};font-weight:700">${r.onTimePct == null ? '—' : dmN(r.onTimePct * 100) + '%'}<small style="color:var(--muted);font-weight:400"> ${r.onTimeDen ? r.onTimeNum + '/' + r.onTimeDen : ''}</small></td>` +
-    `<td>${r.avgLateDays == null ? '—' : '+' + dmN(r.avgLateDays, 0)}</td><td>${d(r.committedLT)}</td><td>${d(r.actualLT)}</td>` +
-    `<td style="color:${gapCol(r.gapDays)};font-weight:700">${r.gapDays == null ? '—' : (r.gapDays > 0 ? '+' : '') + dmN(r.gapDays, 0)}</td><td>${r.inProgress}</td></tr>`;
-  const rowFew = r => `<tr class="insuf"><td class="nm">${nm(r)}</td><td>${r.delivered}</td><td class="na" colspan="5">${tr('insufficient data', 'chưa đủ dữ liệu')}</td><td>${r.inProgress}</td></tr>`;
-  scTable.innerHTML = `<table><thead><tr>${cols.map(([k, t]) => `<th data-k="${k}" class="${scSort && scSort.k === k ? 'on' : ''}">${t}${scSort && scSort.k === k ? (scSort.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody>` +
-    (ok.length ? ok.map(row).join('') : `<tr><td colspan="8" class="na">${tr('No supplier has 2 or more deliveries in this period.', 'Chưa NCC nào có từ 2 lần giao trong kỳ này.')}</td></tr>`) +
-    (few.length ? `<tr class="sc-sep"><td colspan="8">${tr('Fewer than 2 deliveries — insufficient data', 'Dưới 2 lần giao — chưa đủ dữ liệu')} (${few.length})</td></tr>` + few.map(rowFew).join('') : '') +
+  const pctCol = v => v == null ? '' : v >= .8 ? 'var(--st-ok)' : v >= .5 ? 'var(--st-warn)' : 'var(--st-bad)';
+  const gapCol = v => v == null ? 'var(--muted)' : v <= 0 ? 'var(--st-ok)' : v <= 14 ? 'var(--st-warn)' : 'var(--st-bad)';
+  const maxLT = Math.max(1, ...ok.map(r => Math.max(r.committedLT || 0, r.actualLT || 0)));
+  const nm = r => ovEsc(unescH(r.name)) || `<i>${tr('(no supplier)', '(chưa có NCC)')}</i>`;
+  const lt = r => r.committedLT == null ? '—' : `<span class="lt"><span class="bar" title="${tr('marker = committed · bar = actual','vạch dọc = cam kết · thanh màu = thực tế')} · ${tr('based on','dựa trên')} ${r.ltCount} ${tr('deliveries','lần giao')}">
+      <i class="a" style="width:${r.actualLT/maxLT*100}%;background:${gapCol(r.gapDays)}"></i><i class="c" style="left:${r.committedLT/maxLT*100}%"></i></span>
+      <span class="t">${d(r.committedLT)} → ${d(r.actualLT)} <b style="color:${gapCol(r.gapDays)}">${(r.gapDays > 0 ? '+' : '') + dmN(r.gapDays, 0)}</b></span></span>`;
+  const row = r => `<tr><td class="c">${r.grade ? `<span class="gr gr-${r.grade}">${r.grade}</span>` : '—'}</td><td class="nm">${nm(r)}</td><td>${r.delivered}</td>` +
+    `<td>${r.onTimePct == null ? '—' : `<span class="mini"><b style="color:${pctCol(r.onTimePct)}">${dmN(r.onTimePct * 100)}%</b><small style="color:var(--muted)">${r.onTimeNum}/${r.onTimeDen}</small><span class="tr"><i style="width:${r.onTimePct*100}%;background:${pctCol(r.onTimePct)}"></i></span></span>`}</td>` +
+    `<td>${r.avgLateDays == null ? '—' : '+' + dmN(r.avgLateDays, 0)}</td><td>${lt(r)}</td><td>${r.inProgress}</td></tr>`;
+  const rowFew = r => `<tr class="insuf"><td class="c">—</td><td class="nm">${nm(r)}</td><td>${r.delivered}</td><td class="na" colspan="3">${tr('insufficient data', 'chưa đủ dữ liệu')}</td><td>${r.inProgress}</td></tr>`;
+  scTable.innerHTML = `<table><thead><tr>${cols.map(([k, t, c]) => `<th data-k="${k}" class="${c || ''} ${scSort && scSort.k === k ? 'on' : ''}">${t}${scSort && scSort.k === k ? (scSort.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody>` +
+    (ok.length ? ok.map(row).join('') : `<tr><td colspan="7" class="na">${tr('No supplier has 2 or more deliveries in this period.', 'Chưa NCC nào có từ 2 lần giao trong kỳ này.')}</td></tr>`) +
+    (few.length ? `<tr class="sc-sep"><td colspan="7">${tr('Fewer than 2 deliveries — insufficient data', 'Dưới 2 lần giao — chưa đủ dữ liệu')} (${few.length})</td></tr>` + few.map(rowFew).join('') : '') +
     `</tbody></table>`;
   scTable.querySelectorAll('th').forEach(th => th.onclick = () => {
     const k = th.dataset.k;
@@ -2195,39 +2282,6 @@ function renderScTable(){
     renderScTable();
   });
 }
-let scEc = null;
-function renderScChart(){
-  if(!window.echarts){ scChartEmpty.hidden = false; scChartEmpty.textContent = tr('Chart library failed to load.', 'Không tải được thư viện biểu đồ.'); return; }
-  const list = SC.filter(r => r.sufficient && r.committedLT != null).slice(0, 15);
-  scChartEmpty.hidden = !!list.length; scChart.style.display = list.length ? '' : 'none';
-  scLegend.style.display = list.length ? '' : 'none';
-  if(!list.length){ scChartEmpty.textContent = tr('No supplier with 2+ deliveries and contract/plan dates to compare lead time.', 'Chưa NCC nào có từ 2 lần giao kèm ngày ký HĐ / kế hoạch để so lead time.'); return; }
-  scChart.style.height = Math.max(200, list.length * 34 + 40) + 'px';
-  // chú thích riêng: thanh thực tế tô theo chênh lệch so với cam kết
-  scLegend.innerHTML = [[ 'rgba(148,163,184,.45)', tr('Committed lead time', 'Lead time cam kết') ],
-    [ cssv('--st-ok'), tr('Actual ≤ committed', 'Thực tế ≤ cam kết') ], [ cssv('--st-warn'), tr('Actual +1–14 days', 'Thực tế chậm 1–14 ngày') ],
-    [ cssv('--st-bad'), tr('Actual > 14 days slower', 'Thực tế chậm > 14 ngày') ]].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
-  if(!scEc) scEc = echarts.init(scChart); else scEc.resize();
-  const txt = cssv('--txt'), mut = cssv('--muted'), bd = cssv('--border');
-  scEc.setOption({
-    textStyle:{ color:mut, fontFamily:'Segoe UI, system-ui, sans-serif' },
-    grid:{ left:8, right:46, top:8, bottom:6, containLabel:true },
-    tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, backgroundColor:cssv('--panel2'), borderColor:bd, textStyle:{ color:txt, fontSize:12 },
-      formatter: ps => { const r = list[ps[0].dataIndex];
-        return `<b>${ovEsc(r.name)}</b><br>${tr('Committed','Cam kết')}: ${dmN(r.committedLT)} ${tr('days','ngày')}<br>${tr('Actual','Thực tế')}: ${dmN(r.actualLT)} ${tr('days','ngày')}<br>` +
-               `${tr('Gap','Chênh lệch')}: <b>${r.gapDays > 0 ? '+' : ''}${dmN(r.gapDays)}</b> · ${tr('based on','dựa trên')} ${r.ltCount} ${tr('deliveries','lần giao')}`; } },
-    xAxis:{ type:'value', name:tr('days','ngày'), nameTextStyle:{ color:mut }, axisLabel:{ color:mut }, splitLine:{ lineStyle:{ color:bd } } },
-    yAxis:{ type:'category', inverse:true, data:list.map(r => r.name), axisLabel:{ color:txt, width:130, overflow:'truncate' }, axisTick:{ show:false }, axisLine:{ lineStyle:{ color:bd } } },
-    series:[
-      { name:tr('Committed lead time','Lead time cam kết'), type:'bar', data:list.map(r => Math.round(r.committedLT)), itemStyle:{ color:mut, opacity:.45, borderRadius:[0,4,4,0] }, barGap:'15%' },
-      { name:tr('Actual lead time','Lead time thực tế'), type:'bar', data:list.map(r => ({ value:Math.round(r.actualLT),
-          itemStyle:{ borderRadius:[0,4,4,0], color: r.gapDays <= 0 ? cssv('--st-ok') : r.gapDays <= 14 ? cssv('--st-warn') : cssv('--st-bad') } })),
-        label:{ show:true, position:'right', color:mut, fontSize:11, formatter: p => { const g = list[p.dataIndex].gapDays; return (g > 0 ? '+' : '') + dmN(g); } } }
-    ]
-  }, true);
-}
-new MutationObserver(() => { if(SC.length) renderScChart(); }).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
-new ResizeObserver(() => { if(scEc) scEc.resize(); }).observe(scChart);
 
 /* ===== tab 📅 Kế hoạch: MTA · dòng tiền 12 tháng · lookahead 90 ngày (số liệu: metrics.js) ===== */
 const PL = { hist:[], pays:[], ready:[], rates:{}, err:{}, sel:null, ec:{} };
@@ -4825,14 +4879,8 @@ const STATIC_VI = new Map([
   ['📅 Period','📅 Mốc thời gian'],
   ['Monthly arrival schedule','Lịch máy về theo tháng'],
   ['▮ Bars','▮ Cột'],
-  ['Value by supplier (B ₫)','Giá trị theo nhà cung cấp (tỷ ₫)'],
-  ['Equipment origin map','Bản đồ xuất xứ thiết bị'],
-  ['Installation site map','Bản đồ nơi lắp đặt'],
-  ['Machines by person in charge','Theo dõi máy móc theo người phụ trách'],
   ['Evaluation period:','Kỳ đánh giá:'],
   ['Supplier rating — on-time delivery','Đánh giá nhà cung cấp — giao hàng không trễ'],
-  ['Person-in-charge rating — on time · volume · value','Đánh giá nhân sự phụ trách — máy không về trễ · khối lượng · giá trị'],
-  ['Staff performance scorecard — weights: equipment count 50% · value 30% · on time 20%','Bảng điểm hiệu suất nhân sự — trọng số: số MMTB 50% · giá trị 30% · không trễ 20%'],
   ['Search by machine code, name, supplier...','Tìm theo mã máy, tên máy, nhà cung cấp...'],
   ['Machine code','Mã máy'],
   ['🏷 Assign machine codes','🏷 Cấp mã máy'],

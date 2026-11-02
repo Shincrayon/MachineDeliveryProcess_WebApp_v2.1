@@ -335,6 +335,15 @@
                       (b.delivered - a.delivered) || a.name.localeCompare(b.name));
   };
 
+  /* Hạng NCC trên bảng điểm: C = đúng hạn < 50% hoặc trễ TB > 14 ngày · A = đúng hạn ≥ 80% và trễ TB ≤ 7 ngày · còn lại B.
+     null khi chưa đủ dữ liệu (dưới ngưỡng lần giao) hoặc không máy nào có ngày kế hoạch để so. */
+  DM.supplierGrade = r => {
+    if (!r || !r.sufficient || r.onTimePct == null) return null;
+    const late = r.avgLateDays || 0;
+    if (r.onTimePct < 0.5 || late > 14) return 'C';
+    return r.onTimePct >= 0.8 && late <= 7 ? 'A' : 'B';
+  };
+
   /* ---------- Lịch thanh toán của 1 máy (bảng payment_schedule, đã giải mã) ----------
      Số tiền mỗi đợt: amount nếu có, không thì percent × giá trị hợp đồng (chỉ khi đợt tính bằng VND).
      Trả: tổng % đã lên lịch, tổng tiền lên lịch / đã trả / còn lại (VND), số đợt quá hạn chưa trả. */

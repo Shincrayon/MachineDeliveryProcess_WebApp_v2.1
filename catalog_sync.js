@@ -214,11 +214,22 @@ async function syncMachines(list, opt){
   window.__selfWritingM = true;
   try{
     for(const x of list){
-      const p = plan(x, C);
+      let p = plan(x, C);
       out.conflicts += p.conflicts.length;
       if(p.action !== 'create' && p.action !== 'update') continue;
       try{ const r = await apply(p, C); out.done.push({ x, code: r.code, created: r.created }); C = ctx(); }
-      catch(err){ out.failed.push({ x, err }); }
+      catch(err){
+        // hồ sơ Danh mục trong trình duyệt cũ hơn máy chủ (VD lần tải lại ngầm chạy chồng lên lần ghi trước):
+        // đọc lại hồ sơ, tính lại kế hoạch trên bản mới rồi thử 1 lần nữa
+        if(err && err.code === 'conflict' && p.cat){
+          try{
+            await refreshCat(p.cat.id); C = ctx(); p = plan(x, C);
+            if(p.action === 'create' || p.action === 'update'){ const r = await apply(p, C); out.done.push({ x, code: r.code, created: r.created }); C = ctx(); }
+            continue;
+          }catch(e2){ err = e2; }
+        }
+        out.failed.push({ x, err });
+      }
     }
   } finally { setTimeout(() => { window.__selfWritingM = false; }, 1500); }
   if(out.done.length && !opt.noReload) reloadLater();

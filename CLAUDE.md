@@ -82,6 +82,19 @@ Triển khai: chạy `20261101_10_link_tracking_catalog.sql` (sau 09; câu kiể
 Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm tra cuối ra `co_cot_ten_khac = 1`) → admin bổ sung Loại thiết bị
 (dùng nút "loại thường gặp") → ✏️ Chuẩn hoá tên → tải file duyệt → nạp lại → Ghi. File ChuanHoaTen chứa tên đã giải mã — không đưa vào git.
 
+## Thẻ 📈 Phân tích / 🏅 Đánh giá (Tiến độ máy về)
+- Phân tích: 5 thẻ chỉ số · thanh xếp hạng NCC (top 8 + "Khác", nút Giá trị / Số máy) · Xuất xứ & nơi lắp đặt (thanh chia theo trạng thái;
+  nút Danh sách | 🗺 Bản đồ — bản đồ Leaflet thay chỗ danh sách, chỉ vẽ lần đầu bấm, `initMaps`) · thanh giai đoạn sau khi về + 1 bảng
+  Về NM → nghiệm thu (nút Theo công ty | Theo NCC). Bấm 1 dòng / thẻ → `showMachines`.
+- Đánh giá: bộ lọc Kỳ đánh giá nằm trên tiêu đề bảng NCC. 1 bảng NCC — hạng `DM.supplierGrade` (metrics.js): **C** = đúng hạn < 50% hoặc trễ TB > 14 ngày · **A** = đúng hạn ≥ 80% và trễ TB ≤ 7 ngày
+  · còn lại **B**; mặc định kém nhất lên đầu. 1 bảng xếp hạng nhân sự — điểm = không trễ 50% · số thiết bị 30% · giá trị 20%.
+
+## Mỗi thẻ vừa 1 màn hình (máy tính)
+- Mọi thẻ của 2 phân hệ (Tổng quan, Phân tích, Đánh giá, Kế hoạch, Danh sách · Danh mục: Tổng quan, Danh sách, Thư viện) phải vừa 1 màn hình
+  ở 1536×864 và 1920×1080: trong `@media(min-width:1100px) and (min-height:640px)` trang là flex cột, thẻ dài cuộn BÊN TRONG thẻ
+  (tiêu đề cột sticky). Điện thoại / màn thấp: cuộn trang như thường.
+- Kiểm tra: `analytics_eval_test.py` (bước [26]) và `onescreen_mmtb_check.py` (Danh mục, 60 máy, cả 8 thẻ Thư viện).
+
 ## Quy ước làm việc
 - Migration mới = file mới trong `supabase/migrations/` (không sửa file đã có). Thư mục `supabase/` không nằm trong git.
 - Người dùng tự chạy migration trên Supabase và tự commit / push; hỏi trước khi làm gì trên Supabase thật.
