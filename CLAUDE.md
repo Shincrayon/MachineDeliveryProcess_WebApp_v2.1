@@ -1,6 +1,6 @@
 # TienDoMayVe WebApp v2.1 — ghi chú cho người phát triển
 
-App 1 file `index.html` (GitHub Pages) + `metrics.js` + `export.js`, dữ liệu trên Supabase.
+App 1 file `index.html` (GitHub Pages) + `metrics.js` + `export.js` + `catalog_sync.js`, dữ liệu trên Supabase.
 Dữ liệu máy được mã hoá trong trình duyệt (cột `sec`); không gửi bản rõ lên Supabase, không đưa tên NCC vào URL.
 
 ## Hai loại định danh của máy (bảng `machines`)
@@ -43,6 +43,28 @@ file không có cột "ID hệ thống" khi app đã có dữ liệu → chặn.
 
 Triển khai: Supabase > SQL Editor chạy `20261031_09_install_lifecycle.sql` (sau 07; chạy lại an toàn; câu kiểm tra cuối ra `so_cot = 5`).
 File Excel xuất trước bản này vẫn nạp lại được — dữ liệu lắp đặt của máy giữ nguyên.
+
+## Liên kết Tiến độ → Danh mục MMTB (migration 10, `catalog_sync.js`)
+- Liên kết: `mmtb_machines.tracking_machine_id` = `machines.id` (UNIQUE, xoá hẳn máy Tiến độ → gỡ liên kết). Mã Tiến độ (`ma_may`)
+  KHÔNG lưu bên Danh mục — app tra qua liên kết. `needs_info` = "Cần bổ sung"; `tracking_synced_at` = lần đồng bộ cuối.
+- Một chiều, chạy TRONG APP sau khi giải mã (2 bảng mã hoá `sec`) — không dùng trigger DB. Lưu Tiến độ trước, đồng bộ sau
+  (`CS.afterSave`, gọi từ `quSaveOne`, `saveMachine`→`csAfter`, `importMachines`); lỗi đồng bộ chỉ báo, không làm hỏng lần lưu.
+  Hàng chờ / lệch không có bảng riêng: tính lại mỗi lần bằng `CS.planAll` (so 2 bên sau giải mã).
+- Điều kiện: có `ma_may`. Chưa liên kết + có `nghiemthu_tt` → tạo hồ sơ mới (mã tạm `tempCode`, `code_temp`, `needs_info`,
+  `source_ref = "Từ Tiến độ máy về · <ma_may>"`); không xác định công ty (KXD) → không tạo.
+- Trạng thái: về NM → `arrived` · lắp đặt / chạy thử → `installing` · nghiệm thu → `in_operation` + `commissioned_date`.
+  Không bao giờ hạ trạng thái. Mốc `delivery_milestones`: arrived_site = venm_tt, installed = chaythu_tt, commissioned = nghiemthu_tt.
+- Trường chung (model, serial, xuất xứ, công suất, hợp đồng, NCC, công ty, ngày nghiệm thu, mốc): Danh mục trống → điền; khác → "lệch",
+  không ghi (admin chọn giữ bên nào ở ⚖️ Lệch dữ liệu; "Giữ Danh mục" ghi ngược về Tiến độ).
+- KHÔNG BAO GIỜ ghi bên Danh mục: khu vực, chuyền, máy cha, vai trò, vật liệu, mã tài sản, mã máy đã có, ghi chú, kỹ sư, người quản lý.
+  Tên máy chỉ dùng khi tạo mới, không tính lệch. **Tên máy bên Tiến độ không bao giờ bị sửa.**
+- NCC: khớp tên đã bỏ dấu / không phân biệt hoa thường với `suppliers`; không khớp → để trống + cảnh báo, KHÔNG tạo NCC mới.
+- Mọi ghi vào `mmtb_machines` mã hoá lại cả gói `sec` (giữ các trường không đổi); nhật ký: trigger `mmtb_audit_trg` → `audit_log` (`MMTB_*`).
+- Admin: nút 🔗 Danh mục (trang Danh sách) → 🧩 Ghép cặp (đề xuất + file `GhepCap_TienDo_DanhMuc_YYYY-MM-DD.xlsx`, chỉ ghi dòng đã tick),
+  🔄 Đồng bộ lại (xem trước rồi ghi), ⚖️ Lệch dữ liệu.
+
+Triển khai: chạy `20261101_10_link_tracking_catalog.sql` (sau 09; câu kiểm tra cuối ra `so_cot = 3`) → admin 🔗 → Ghép cặp → duyệt → Ghi liên kết
+→ Đồng bộ lại → xử lý Lệch. File GhepCap chứa dữ liệu đã giải mã — không đưa vào git.
 
 ## Quy ước làm việc
 - Migration mới = file mới trong `supabase/migrations/` (không sửa file đã có). Thư mục `supabase/` không nằm trong git.
