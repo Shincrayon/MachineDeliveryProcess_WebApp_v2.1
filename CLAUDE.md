@@ -113,6 +113,11 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Lọc kỳ: `DM.inPeriod(ngày, m, y)` = mọi tổ hợp tháng × năm theo ngày về NM; link `?m=03,04&y=2025,2026` (link cũ 1 tháng vẫn đúng).
 - Test: `multipick_test.py`.
 
+## Ngày dự kiến về NM (`vedukienn`) — ai tính, khi nào
+- Có `venm_tt` → = `venm_tt`; chưa có nhưng có `capcang_tt` → = cập cảng + TG lãnh máy TT: trigger `machines_actual_sync` (migration 04) tính, mọi đường ghi.
+- Chưa có cả hai: app tính = xuất xưởng + TG đi tàu TT + TG lãnh máy TT (form Sửa `calcDates`, nạp Excel, và ⚡ Cập nhật nhanh khi ĐỔI ngày xuất xưởng — `quShip`) rồi gửi kèm `vedukienn` + `danhgia`; trigger giữ nguyên. Xoá ngày xuất xưởng trong Cập nhật nhanh: giữ ngày về cũ. Test: `e2e_quick_test.py` [8g].
+- **TG đi tàu / lãnh máy TT trống HOẶC = 0 → lấy KH** ở mọi nơi (nạp Root data, nạp Excel của app, form Sửa — ô TT = 0 hiện trống, Cập nhật nhanh, trigger nhánh cập cảng: `coalesce(nullif(lanhtt,0), lanhkh)`). Trước đây ô trống bị lưu 0 → ngày về = đúng ngày xuất xưởng / cập cảng. Sửa dữ liệu cũ + trigger: `supabase/migrations/20261103_12_tt_theo_kh.sql` (PHẦN 1 xem trước, PHẦN 2 sửa). Test: `e2e_quick_test.py` [8h].
+
 ## Quy ước làm việc
 - Migration mới = file mới trong `..\supabase\migrations\` (không sửa file đã có). Thư mục `supabase\` nằm CẠNH repo app
   (`01.Machine Tracking\supabase\`), không thuộc repo app công khai; được sao lưu trong repo riêng tư ở `01.Machine Tracking\`

@@ -1174,8 +1174,9 @@ function rowsToData(rows){
     giaitrinh:String(r['Giải trình']||'').trim(),
     // các cột chi tiết dùng cho popup "xem đầy đủ thông tin"
     ctu:num(r['TG chờ tạm ứng KH (ngày)']), tamungtt:iso(r['Ngày tạm ứng TT']),
-    ditaukh:num(r['TG đi tàu KH (ngày)']), ditautt:num(r['TG đi tàu TT (ngày)']),
-    lanhkh:num(r['TG lãnh máy KH (ngày)']), lanhtt:num(r['TG lãnh máy TT (ngày)']),
+    // TT trống hoặc 0 -> lấy theo KH (quy tắc Root data; trống từng bị lưu = 0 -> ngày về = ngày xuất xưởng, migration 12)
+    ditaukh:num(r['TG đi tàu KH (ngày)']), ditautt:num(r['TG đi tàu TT (ngày)']) || num(r['TG đi tàu KH (ngày)']),
+    lanhkh:num(r['TG lãnh máy KH (ngày)']), lanhtt:num(r['TG lãnh máy TT (ngày)']) || num(r['TG lãnh máy KH (ngày)']),
     xuatxuong:iso(r['Xác nhận/dự kiến xuất xưởng']), workingday:String(r['Working day']||'').trim(),
     // ngày thực tế (Cập nhật nhanh): file không có cột -> undefined, replaceAll giữ giá trị đang có
     tauchay_tt: 'Ngày tàu chạy TT' in r ? iso(r['Ngày tàu chạy TT']) : undefined,
@@ -1263,8 +1264,8 @@ function readAll(wb){
     const lanhKH  = xlNum(gv(row,'TG lãnh máy KH (ngày)'));
     const _dtTT = gv(row,'TG đi tàu TT (ngày)');            // trống -> lấy theo KH (giống IF(O="",N,O))
     const _lmTT = gv(row,'TG lãnh máy TT (ngày)');          // trống -> lấy theo KH (giống IF(Q="",P,Q))
-    const ditauTT = (_dtTT===''||_dtTT==null) ? ditauKH : xlNum(_dtTT);
-    const lanhTT  = (_lmTT===''||_lmTT==null) ? lanhKH  : xlNum(_lmTT);
+    const ditauTT = (_dtTT===''||_dtTT==null) ? ditauKH : (xlNum(_dtTT) || ditauKH);   // 0 cũng lấy KH
+    const lanhTT  = (_lmTT===''||_lmTT==null) ? lanhKH  : (xlNum(_lmTT) || lanhKH);
     const ctm = xlNum(gv(row,'Số ngày CTM'));
     const wd = String(gv(row,'Working day')||'').trim().toLowerCase();
     const xxg = toSerial(gv(row,'Xác nhận/dự kiến xuất xưởng'));
@@ -1446,8 +1447,8 @@ function calcDates(){
   const xxg     = isoToSerial(val('f_xxg'));
   const ctu = xlNum(val('f_ctu')), ctm = xlNum(val('f_ctm'));
   const dt  = xlNum(val('f_dt')),  lm  = xlNum(val('f_lm'));                 // kế hoạch (KH)
-  const dtTT = val('f_dttt')==='' ? dt : xlNum(val('f_dttt'));               // trống -> lấy theo KH
-  const lmTT = val('f_lmtt')==='' ? lm : xlNum(val('f_lmtt'));
+  const dtTT = xlNum(val('f_dttt')) || dt;                                   // trống hoặc 0 -> lấy theo KH
+  const lmTT = xlNum(val('f_lmtt')) || lm;
   const wd  = (val('f_wd')||'no').toLowerCase();
   const base = dathang + ctu + dt + lm;
   const veKH = dathang===0 ? 0 : (wd==='yes' ? workday(base,ctm) : base + ctm);  // giống công thức Root data
@@ -2986,7 +2987,8 @@ async function csAfter(ids){
 /* ---- ⚡ Cập nhật nhanh: ngày thực tế của 1 máy hoặc nhiều máy cùng lô / container ----
    Form Sửa đầy đủ giữ nguyên. Chỉ gửi các trường đổi, kiểm tra version giống saveMachine, quyền theo RLS "sua may".
    TG đi tàu TT / lãnh máy TT / ngày về NM / đánh giá do trigger machines_actual_trg tính trên máy chủ
-   (migrations/20261030_04_quick_update.sql); quDerive() bên dưới tính giống hệt để xem trước. */
+   (migrations/20261030_04_quick_update.sql); quDerive() bên dưới tính giống hệt để xem trước.
+   Riêng đổi ngày xuất xưởng khi chưa có cập cảng / về NM TT: app tự tính ngày về NM + đánh giá (quShip) rồi gửi kèm. */
 const quEl = id => document.getElementById(id);
 /* thứ tự = trình tự thời gian = thứ tự ô trong popup và thứ tự phím Tab */
 const QU_KEYS = ['dathang','tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt','giaitrinh'].concat(INST_KEYS, ['ghichu_ld']);
@@ -2999,17 +3001,29 @@ const quCur = (x,k) => QU_TEXT.includes(k) ? unescH(x[k]||'') : (x[k]||null);
 /* máy đã về sau khi sửa (ch có venm_tt = giá trị mới, kể cả xoá) */
 const quArrived = (x,ch) => !!('venm_tt' in ch ? ch.venm_tt : x.venm_tt);
 const quStatus = setArrival;
-/* giống trigger machines_actual_sync: m = giá trị sau khi sửa */
-function quDerive(m){
+/* giống trigger machines_actual_sync: m = giá trị sau khi sửa; ship = quShip() (đổi xuất xưởng khi chưa có ngày thực tế phía sau) */
+function quDerive(m, ship){
   const o = { ditautt:m.ditautt, lanhtt:m.lanhtt, vedukienn:m.vedukienn };
   if(m.capcang_tt && m.xuatxuong) o.ditautt = DM.days(m.xuatxuong, m.capcang_tt);
   if(m.venm_tt && m.capcang_tt) o.lanhtt = DM.days(m.capcang_tt, m.venm_tt);
   if(m.venm_tt) o.vedukienn = m.venm_tt;
-  else if(m.capcang_tt) o.vedukienn = DM.addDays(m.capcang_tt, Number(o.lanhtt)||0);
+  else if(m.capcang_tt) o.vedukienn = DM.addDays(m.capcang_tt, Number(o.lanhtt)||Number(m.lanhkh)||0);   // lãnh máy TT = 0 -> KH (migration 12)
+  else if(ship && ship.vedukienn) o.vedukienn = ship.vedukienn;
   return o;
 }
+/* Đổi ngày xuất xưởng khi máy CHƯA có cập cảng và về NM TT: ngày dự kiến về NM = xuất xưởng + TG đi tàu TT + TG lãnh máy TT (TT trống / 0 -> KH)
+   (giống form Sửa / file Root data) và Đánh giá tính lại theo KH (vekh: KH mới nếu ngày đặt hàng cũng đổi).
+   Trigger chỉ tính ngày về khi có cập cảng / về NM TT nên giữ nguyên giá trị app gửi. Đã có ngày thực tế phía sau,
+   hoặc xoá ngày xuất xưởng -> không đổi ngày về. */
+function quShip(x, ch, vekh){
+  if(!ch.xuatxuong || ch.xuatxuong === (x.xuatxuong||null)) return {};
+  const m = quMerge(x, ch); if(m.capcang_tt || m.venm_tt) return {};
+  const vedukienn = DM.addDays(ch.xuatxuong, (Number(x.ditautt)||Number(x.ditaukh)||0) + (Number(x.lanhtt)||Number(x.lanhkh)||0));   // TT trống / 0 -> KH
+  const kh = vekh !== undefined ? vekh : x.vekh;
+  return { vedukienn, danhgia: !kh ? '' : kh === vedukienn ? 'Đúng tiến độ' : vedukienn < kh ? 'Sớm' : 'Trễ' };
+}
 const quMerge = (x,ch) => Object.assign(Object.fromEntries(QU_DATES.map(k=>[k, x[k]||null])),
-  { ditautt:x.ditautt, lanhtt:x.lanhtt, vedukienn:x.vedukienn }, ch);
+  { ditautt:x.ditautt, lanhtt:x.lanhtt, lanhkh:x.lanhkh, vedukienn:x.vedukienn }, ch);
 /* Ngày đặt hàng đổi -> tính lại Ngày dự kiến máy về (KH) + Đánh giá, đúng công thức form Sửa (calcDates):
    KH = đặt hàng + chờ tạm ứng KH + đi tàu KH + lãnh máy KH + CTM (Working day = yes: CTM tính ngày làm việc) */
 function quPlan(x, ch){
@@ -3019,7 +3033,7 @@ function quPlan(x, ch){
   const base = dh + ctu + dt + lm;
   const veKH = dh===0 ? 0 : (String(x.workingday||'').toLowerCase()==='yes' ? workday(base, ctm) : base + ctm);
   const vekh = serialToISO(veKH);
-  const nm = quDerive(quMerge(x, ch)).vedukienn, a = isoToSerial(vekh||''), b = isoToSerial(nm||'');
+  const nm = quDerive(quMerge(x, ch), quShip(x, ch)).vedukienn, a = isoToSerial(vekh||''), b = isoToSerial(nm||'');
   const ok = s => s>=20000 && s<=80000;
   const danhgia = (!ok(a) || !ok(b)) ? '' : (a===b ? 'Đúng tiến độ' : (a>b ? 'Sớm' : 'Trễ'));
   return { vekh, danhgia };
@@ -3062,7 +3076,9 @@ async function quSaveOne(x,ch){
   const sb = window.__sb; if(!sb) throw {code:'nodb'};
   const upd = {};
   Object.keys(ch).forEach(k=>{ if(!QU_TEXT.includes(k)) upd[k] = ch[k]; });
-  Object.assign(upd, quPlan(x, ch));          // đổi ngày đặt hàng -> vekh + danhgia (trigger vẫn tính phần ngày thực tế)
+  const pl = quPlan(x, ch);
+  Object.assign(upd, pl);                     // đổi ngày đặt hàng -> vekh + danhgia (trigger vẫn tính phần ngày thực tế)
+  Object.assign(upd, quShip(x, ch, pl.vekh)); // đổi xuất xưởng khi chưa có ngày thực tế phía sau -> vedukienn + danhgia
   const txt = QU_TEXT.filter(k=>k in ch);
   if(txt.length){
     // giải trình / ghi chú lắp đặt nằm trong sec cùng các trường nhạy cảm khác: mã hoá lại cả gói, chỉ trường vừa sửa đổi
@@ -3110,7 +3126,7 @@ function quForm(list, keep){
       + `<div class="qu-names">${list.slice(0,12).map(x=>`<span>${x.ten}</span>`).join('')}${list.length>12?`<span>+${list.length-12}</span>`:''}</div>`
     : tr('Only the boxes you change are saved. Empty a date box (×) to clear it.','Chỉ lưu các ô bạn đổi. Bấm × để xoá một ngày.');
   // nút × không nằm trong thứ tự Tab (Tab đi lần lượt từng ngày); xoá bằng bàn phím: Delete / Backspace
-  const dIn = k => `<label${QU_LD.includes(k) ? ' class="qu-ld"' : ''}><span class="qu-cap">${quLbl(k)}</span><span class="qu-f" id="quf_${k}"><input id="qu_${k}" value="${escH(val(k))}" placeholder="${batch ? tr('keep','giữ nguyên') : '—'}"><button type="button" class="qu-clr" data-clr="${k}" tabindex="-1" title="${tr('Clear','Xoá')}">×</button></span><small class="qu-note" id="qun_${k}"></small>${k==='venm_tt' && !batch ? `<button type="button" class="qu-use" id="quUseFc" hidden>${tr('Use expected date','Dùng ngày dự kiến')} (${fmtD(x0.vedukienn)})</button>` : ''}</label>`;
+  const dIn = k => `<label${QU_LD.includes(k) ? ' class="qu-ld"' : ''}><span class="qu-cap">${quLbl(k)}</span><span class="qu-f" id="quf_${k}"><input id="qu_${k}" value="${escH(val(k))}" placeholder="${batch ? tr('keep','giữ nguyên') : '—'}"><button type="button" class="qu-clr" data-clr="${k}" tabindex="-1" title="${tr('Clear','Xoá')}">×</button></span><small class="qu-note" id="qun_${k}"></small>${k==='venm_tt' && !batch ? `<button type="button" class="qu-use" id="quUseFc" hidden></button>` : ''}</label>`;
   const grp = t => `<div class="qu-grp">${t}</div>`;
   mBody.innerHTML = `<form id="quForm" novalidate><div class="add-grid qu-grid">
       ${grp(tr('Purchasing','Mua hàng'))}${QU_DATES.slice(0,3).map(dIn).join('')}
@@ -3138,7 +3154,17 @@ function quForm(list, keep){
       return;
     }
     const ch = quDiff(x0,f,false), m = quMerge(x0,ch), bad = quSeq(m);
-    quEl('quUseFc').hidden = !!f.venm_tt || !x0.vedukienn;     // chỉ hiện khi ô trống và máy có ngày dự kiến
+    // nút "Dùng ngày dự kiến về NM": ngày dự kiến tính theo các ô đang nhập (đổi xuất xưởng -> ngày mới, quShip).
+    // Chỉ hiện khi ô về NM TT trống và ngày dự kiến đã tới (≤ hôm nay): ô này là ngày THỰC TẾ, chưa tới ngày thì chưa xác nhận được.
+    const fc = quDerive(m, quShip(x0, ch)).vedukienn, useB = quEl('quUseFc');
+    useB.hidden = !!f.venm_tt || !fc || fc > DM.todayIso();
+    useB.dataset.d = fc || '';
+    useB.textContent = tr('Use expected arrival at plant','Dùng ngày dự kiến về NM') + ' (' + fmtD(fc) + ')';
+    useB.title = m.capcang_tt ? tr(`= actual port arrival ${fmtD(m.capcang_tt)} + clearance & pickup ${Number(x0.lanhtt)||Number(x0.lanhkh)||0} days`,
+                                   `= cập cảng TT ${fmtD(m.capcang_tt)} + lãnh máy ${Number(x0.lanhtt)||Number(x0.lanhkh)||0} ngày`)
+      : m.xuatxuong ? tr(`= ex-works ${fmtD(m.xuatxuong)} + shipping ${Number(x0.ditautt)||Number(x0.ditaukh)||0} + clearance & pickup ${Number(x0.lanhtt)||Number(x0.lanhkh)||0} days`,
+                         `= xuất xưởng ${fmtD(m.xuatxuong)} + đi tàu ${Number(x0.ditautt)||Number(x0.ditaukh)||0} + lãnh máy ${Number(x0.lanhtt)||Number(x0.lanhkh)||0} ngày`)
+      : tr('Expected arrival at plant currently saved','Ngày dự kiến về NM đang lưu');
     // nhóm Lắp đặt – Nghiệm thu: mờ + khoá khi ô Ngày máy về NM TT trống (nhập ngày về ngay trong popup là mở)
     const lock = !f.venm_tt;
     quEl('quLdMsg').hidden = !lock;
@@ -3160,7 +3186,8 @@ function quForm(list, keep){
     if(e.key==='Delete' || e.key==='Backspace'){ e.preventDefault(); fp[k].clear(); fp[k].close(); upd(); } }); });
   QU_TEXT.forEach(k=>{ quEl('qu_'+k).oninput = upd; });
   if(!batch) quEl('quUseFc').onclick = () => {                 // điền ngày dự kiến vào ô — vẫn phải bấm Lưu
-    if(fp.venm_tt) fp.venm_tt.setDate(x0.vedukienn, true); else { quEl('qu_venm_tt').value = x0.vedukienn; upd(); } };
+    const d = quEl('quUseFc').dataset.d; if(!d) return;
+    if(fp.venm_tt) fp.venm_tt.setDate(d, true); else { quEl('qu_venm_tt').value = d; upd(); } };
   quEl('quCancel').onclick = () => mBg.classList.remove('show');
   upd();
   document.getElementById('quForm').onsubmit = async ev => {
@@ -3197,11 +3224,12 @@ function quReview(list, f, plan){
   const sv = (k,v) => QU_TEXT.includes(k) ? (v ? escH(v) : '—') : k==='danhgia' ? dgT(v) : fmtD(v);
   const LD_SKIP = () => tr('Installation – commissioning boxes skipped: not yet arrived at plant','Bỏ qua nhóm Lắp đặt – Nghiệm thu: máy chưa về NM');
   const rows = plan.map(p=>{
-    const m = quMerge(p.x, p.ch), d = quDerive(m), w = quWarn(p.x, p.ch);
+    const pl = quPlan(p.x, p.ch), sh = quShip(p.x, p.ch, pl.vekh);
+    const m = quMerge(p.x, p.ch), d = quDerive(m, sh), w = quWarn(p.x, p.ch);
     if(quLdSkip(p.x, f, true)) w.push(LD_SKIP());
-    const lines = Object.keys(p.ch).map(k=>[k, quCur(p.x,k), p.ch[k], false]), pl = quPlan(p.x, p.ch);
+    const lines = Object.keys(p.ch).map(k=>[k, quCur(p.x,k), p.ch[k], false]), dg = 'danhgia' in sh ? sh.danhgia : pl.danhgia;
     if('vekh' in pl && (pl.vekh||null) !== (p.x.vekh||null)) lines.push(['vekh', p.x.vekh, pl.vekh, true]);
-    if('danhgia' in pl && pl.danhgia !== (p.x.danhgia||'')) lines.push(['danhgia', p.x.danhgia, pl.danhgia, true]);
+    if(dg !== undefined && dg !== (p.x.danhgia||'')) lines.push(['danhgia', p.x.danhgia, dg, true]);
     if(d.ditautt !== p.x.ditautt) lines.push(['ditautt', p.x.ditautt, d.ditautt, true]);
     if(d.lanhtt !== p.x.lanhtt) lines.push(['lanhtt', p.x.lanhtt, d.lanhtt, true]);
     if(d.vedukienn !== p.x.vedukienn) lines.push(['vedukienn', p.x.vedukienn, d.vedukienn, true]);
@@ -3603,8 +3631,8 @@ window.editMachine = i => {
   set('f_cs', unescH(x.congsuat)); set('f_nld', unescH(x.noilapdat)); set('f_ncc', unescH(x.ncc)); set('f_xx', unescH(x.xuatxu));
   set('f_model', unescH(x.model)); set('f_serial', unescH(x.serial));
   set('f_vnd', fmtMoney(x.vnd)); set('f_usd', fmtMoney(x.usd));
-  set('f_ctu', x.ctu||0); set('f_dt', x.ditaukh||0); set('f_dttt', x.ditautt||0);
-  set('f_lm', x.lanhkh||0); set('f_lmtt', x.lanhtt||0); set('f_ctm', x.sonagyctm||0);
+  set('f_ctu', x.ctu||0); set('f_dt', x.ditaukh||0); set('f_dttt', x.ditautt||'');     // TT = 0 -> ô trống = lấy theo KH
+  set('f_lm', x.lanhkh||0); set('f_lmtt', x.lanhtt||''); set('f_ctm', x.sonagyctm||0);
   set('f_wd', (x.workingday||'no').toLowerCase()==='yes'?'yes':'no'); set('f_gt', unescH(x.giaitrinh));
   const dates = {f_duyet:x.duyet, f_dh:x.dathang, f_tutt:x.tamungtt, f_xxg:x.xuatxuong, f_ntkh:x.nghiemthu_kh};
   Object.entries(dates).forEach(([id,v])=>{
