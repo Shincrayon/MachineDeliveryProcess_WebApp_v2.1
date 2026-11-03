@@ -98,6 +98,22 @@
     return o;
   };
 
+  /* ---------- thanh mốc trong chi tiết máy: đặt hàng → xuất xưởng → cập cảng → về NM → lắp đặt → nghiệm thu ----------
+     done = có ngày thực tế (xuất xưởng: ngày đã qua); lắp đặt / nghiệm thu chỉ tính khi đã về NM (như installStatus).
+     reached = chỉ số mốc xa nhất đã đạt (-1 = chưa mốc nào); mốc trước đó mà trống = skip (thiếu ngày, không chặn thanh).
+     warn = mốc về NM khi máy quá ngày dự kiến mà chưa xác nhận về. date = ngày thực tế, hoặc ngày dự kiến khi chưa đạt. */
+  DM.TRACK = ['ordered', 'shipped', 'port', 'arrived', 'installing', 'commissioned'];
+  DM.track = x => {
+    const m = DM.milestones(x), ve = m[2].actual;
+    const act = [m[0].actual, m[1].actual, iso(x.capcang_tt), ve,
+                 ve ? (iso(x.lapdat_tt) || iso(x.chaythu_tt)) : null, ve ? iso(x.nghiemthu_tt) : null];
+    const fc = [null, m[1].forecast, null, m[2].forecast, null, iso(x.nghiemthu_kh)];
+    const reached = act.reduce((r, d, i) => d ? i : r, -1);
+    const overdue = DM.arrivalStatus(x).status === 'overdue';
+    return { reached, steps: DM.TRACK.map((key, i) => ({ key, done: !!act[i], actual: !!act[i], date: act[i] || fc[i] || null,
+      skip: !act[i] && i < reached, warn: i === 3 && overdue })) };
+  };
+
   /* ---------- trạng thái vòng đời suy từ ngày ---------- */
   DM.LIFECYCLE = ['planned', 'manufacturing', 'shipping', 'arrived', 'installing', 'in_operation'];
   DM.AFTER_ARRIVAL = ['arrived', 'installing', 'in_operation'];

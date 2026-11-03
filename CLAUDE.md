@@ -1,6 +1,6 @@
 # TienDoMayVe WebApp v2.1 — ghi chú cho người phát triển
 
-App 1 file `index.html` (GitHub Pages) + `metrics.js` + `export.js` + `catalog_sync.js` + `name_std.js`, dữ liệu trên Supabase.
+App 1 file `index.html` (GitHub Pages) + `metrics.js` + `export.js` + `catalog_sync.js` + `name_std.js` + `motion.js`, dữ liệu trên Supabase.
 Dữ liệu máy được mã hoá trong trình duyệt (cột `sec`); không gửi bản rõ lên Supabase, không đưa tên NCC vào URL.
 
 ## Hai loại định danh của máy (bảng `machines`)
@@ -94,6 +94,18 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
   ở 1536×864 và 1920×1080: trong `@media(min-width:1100px) and (min-height:640px)` trang là flex cột, thẻ dài cuộn BÊN TRONG thẻ
   (tiêu đề cột sticky). Điện thoại / màn thấp: cuộn trang như thường.
 - Kiểm tra: `analytics_eval_test.py` (bước [26]) và `onescreen_mmtb_check.py` (Danh mục, 60 máy, cả 8 thẻ Thư viện).
+
+## Hiệu ứng chuyển động (`motion.js`, khối CSS "chuyển động" cuối `<style>`)
+- Không thư viện ngoài. Mỗi hiệu ứng ≤ 0,4 s (biểu đồ / thanh mốc ~0,8 s). Không thêm hiệu ứng chạy mãi — ngoại lệ: dòng trễ hạn
+  (`latePulse`) người dùng muốn giữ nhấp nháy.
+- "Giảm chuyển động" của hệ điều hành (`MO.reduced()`): CSS tắt mọi animation / transition, JS không đếm số, biểu đồ không hiệu ứng.
+- Tự động qua MutationObserver, không cần gọi: số `.kpi .val` chạy từ số cũ sang mới (bỏ qua ô dạng "8 / 12"); dải KPI hiện lần lượt
+  lần đầu; ô sáng `.tab-ink` dưới tab đang chọn; `.pages` trượt ngang khi đổi `body[data-mod]`.
+- Gọi tay: `MO.saved(id)` sau khi lưu (đã có trong `quSaveOne`, `saveMachine`, lưu hồ sơ Danh mục) → dòng `tr[data-mo=id]` loé xanh 1 lần
+  khi bảng vẽ lại. Bảng mới muốn có hiệu ứng này thì thêm `data-mo` cho dòng. `MO.skel(n)` = khung chờ; `#moBoot` gỡ khi `mainSrc` chạy.
+- Popup `.modal-bg` / `.notice-bg` luôn `display:flex`, ẩn bằng `visibility` + `opacity` (đóng mờ dần 0,12 s) — vẫn chỉ bật / tắt class `show`.
+- Thanh mốc đầu popup chi tiết: `msTrack(x)` vẽ từ `DM.track(x)` (metrics.js).
+- Kiểm tra: `motion_test.py` (cả lượt "giảm chuyển động").
 
 ## Quy ước làm việc
 - Migration mới = file mới trong `..\supabase\migrations\` (không sửa file đã có). Thư mục `supabase\` nằm CẠNH repo app

@@ -19,6 +19,7 @@
 <script src="export.js"></script>
 <script src="catalog_sync.js"></script>
 <script src="name_std.js"></script>
+<script src="motion.js"></script>
 <style>
 :root{color-scheme:dark;
   --bg:#0b1220; --panel:#121c31; --panel2:#17233d; --border:rgba(148,163,184,.14);
@@ -243,10 +244,12 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 .k-row .kn{flex:1;font-weight:600}
 .k-row .kn small{display:block;color:var(--muted);font-weight:400;font-size:11.5px}
 .k-row .kv{font-size:12px;color:var(--muted);white-space:nowrap;text-align:right}
-.modal-bg{position:fixed;inset:0;background:var(--overlay);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:100}
-.modal-bg.show{display:flex}
+.modal-bg{position:fixed;inset:0;background:var(--overlay);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:100;
+  visibility:hidden;opacity:0;pointer-events:none;transition:opacity .12s ease,visibility 0s linear .12s}
+.modal-bg.show{visibility:visible;opacity:1;pointer-events:auto;transition:opacity .22s ease}
 .modal{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--border);border-radius:16px;
-  padding:22px 24px;max-width:520px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,.55);animation:fadeUp .25s ease}
+  padding:22px 24px;max-width:520px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,.55);transform:translateY(12px) scale(.97);transition:transform .12s ease}
+.modal-bg.show .modal{transform:none;transition:transform .32s cubic-bezier(.2,.8,.2,1)}
 .modal h4{font-size:16px;font-weight:800;margin-bottom:4px;color:var(--sky);padding-right:28px}
 .modal .m-sub{font-size:12.5px;color:var(--muted);margin-bottom:14px}
 .modal .m-gt{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:10px;
@@ -542,9 +545,10 @@ td.qu-c input,th.qu-h input{width:16px;height:16px;vertical-align:middle;accent-
 .pbtn:disabled{opacity:.35;cursor:default}
 
 /* ===== hộp thông báo cập nhật (thay cho alert) ===== */
-.notice-bg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:1000;
-  background:var(--overlay);backdrop-filter:blur(5px);animation:ntFade .28s ease}
-.notice-bg.show{display:flex}
+.notice-bg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000;
+  background:var(--overlay);backdrop-filter:blur(5px);visibility:hidden;opacity:0;pointer-events:none;transition:opacity .12s ease,visibility 0s linear .12s}
+.notice-bg.show{visibility:visible;opacity:1;pointer-events:auto;transition:opacity .28s ease}
+.notice-bg:not(.show) *,.modal-bg:not(.show) *{animation-play-state:paused!important}
 @keyframes ntFade{from{opacity:0}to{opacity:1}}
 .notice{position:relative;width:min(92%,380px);text-align:center;padding:30px 26px 24px;border-radius:20px;
   background:linear-gradient(165deg,#182742,#0e1930);border:1px solid rgba(148,163,184,.18);
@@ -820,6 +824,67 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
   .dm-gwrap{max-height:70vh}
   .card h3 .sel{margin-left:0}
 }
+
+/* ===== chuyển động (motion.js) — mọi hiệu ứng mới nằm ở đây; "giảm chuyển động" của Windows tắt hết ===== */
+:root{--mo-ease:cubic-bezier(.2,.8,.2,1);--skel-a:rgba(148,163,184,.09);--skel-b:rgba(148,163,184,.2)}
+:root[data-theme="light"]{--skel-a:rgba(15,23,42,.05);--skel-b:rgba(15,23,42,.11)}
+/* tab: ô sáng trượt sang tab được chọn */
+.tabs.has-ink{position:relative}
+.tab-ink{position:absolute;left:0;top:0;border-radius:10px;pointer-events:none;z-index:0;opacity:0;
+  background:linear-gradient(160deg,rgba(96,165,250,.22),rgba(167,139,250,.16));border:1px solid rgba(96,165,250,.35);
+  transition:transform .38s var(--mo-ease),width .38s var(--mo-ease),opacity .2s}
+.tabs.has-ink .tab{position:relative;z-index:1}
+.tabs.has-ink .tab.active{background:transparent;border-color:transparent}
+/* đổi phân hệ: trượt ngang (Tiến độ từ phải, Danh mục từ trái) */
+body.mo-mod-r .pages{animation:moSlideR .4s var(--mo-ease)}
+body.mo-mod-l .pages{animation:moSlideL .4s var(--mo-ease)}
+@keyframes moSlideR{from{opacity:.2;transform:translateX(36px)}}
+@keyframes moSlideL{from{opacity:.2;transform:translateX(-36px)}}
+/* thẻ KPI hiện lần lượt (lần đầu) */
+.kpi.mo-in{animation:moKpi .45s var(--mo-ease) both;animation-delay:calc(var(--mo-i,0)*60ms)}
+@keyframes moKpi{from{opacity:0;transform:translateY(12px) scale(.97)}}
+/* dòng vừa lưu loé xanh 1 lần */
+tbody tr.mo-flash>td{animation:moFlash 1.6s ease-out}
+@keyframes moFlash{0%,30%{background:rgba(52,211,153,.26)}100%{background:transparent}}
+/* nút: cảm giác nhấn */
+:is(.nbtn,.nbtn2,.fbtn,.pbtn,.tab,.mod,.upd-btn,.qu-btn,.exp-open,.lib-tab):active{transform:scale(.96)}
+/* khung chờ lấp lánh */
+.mo-skel{display:grid;gap:10px;padding:6px 2px}
+.mo-skel i,.mo-boot i{display:block;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--skel-a) 30%,var(--skel-b) 50%,var(--skel-a) 70%);
+  background-size:300% 100%;animation:moShim 1.4s linear infinite}
+@keyframes moShim{from{background-position:100% 0}to{background-position:0 0}}
+.mo-boot{position:absolute;inset:0;z-index:5;padding:18px clamp(14px,2.5vw,36px);pointer-events:none;background:var(--bg);transition:opacity .35s}
+.mo-boot.gone{opacity:0}
+.mo-boot .kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.mo-boot .kp i{height:88px;border-radius:14px}
+.mo-boot .bd{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+.mo-boot .bd i{height:min(52vh,420px);border-radius:14px}
+.mo-load{position:relative}
+.mo-load::after{content:"";position:absolute;inset:44px 16px 16px;border-radius:10px;pointer-events:none;
+  background:linear-gradient(90deg,var(--skel-a) 30%,var(--skel-b) 50%,var(--skel-a) 70%);background-size:300% 100%;animation:moShim 1.4s linear infinite}
+/* chi tiết máy: thanh mốc tự lấp đầy */
+.ms-track{position:relative;display:flex;margin:2px 0 16px;padding-top:2px}
+.ms-line,.ms-fill{position:absolute;top:11px;left:calc(100%/12);height:3px;border-radius:2px}
+.ms-line{right:calc(100%/12);background:var(--border)}
+.ms-fill{width:calc((100% - 100%/6) * var(--p,0));background:linear-gradient(90deg,var(--blue),var(--green));transform-origin:left;
+  animation:msFill .8s var(--mo-ease) .1s both}
+@keyframes msFill{from{transform:scaleX(0)}}
+.ms-step{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;z-index:1;
+  font-size:11.5px;font-weight:600;color:var(--muted);text-align:center;line-height:1.25;min-width:0}
+.ms-step .d{width:20px;height:20px;border-radius:50%;background:var(--panel);border:2px solid var(--border);
+  display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff}
+.ms-step small{display:block;font-size:10.5px;font-weight:400;color:var(--muted)}
+.ms-step.done{color:var(--txt)}
+.ms-step.done .d{background:var(--green);border-color:var(--green);animation:msDot .35s var(--mo-ease) both;animation-delay:calc(.15s + var(--k,0)*.12s)}
+.ms-step.skip .d{border-style:dashed}
+.ms-step.next .d{border-color:var(--blue)}
+.ms-step.warn .d{border-color:var(--st-over);background:rgba(251,146,60,.18)}
+.ms-step.warn small{color:var(--st-over)}
+@keyframes msDot{from{transform:scale(.4);opacity:.2}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;
+    transition-duration:.01ms!important;transition-delay:0s!important;scroll-behavior:auto!important}
+}
 </style>
 </head>
 <body>
@@ -855,6 +920,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 </div>
 
 <div class="pages">
+  <div class="mo-boot" id="moBoot" aria-hidden="true"><div class="kp"><i></i><i></i><i></i><i></i><i></i></div><div class="bd"><i></i><i></i></div></div>
 
   <!-- ============ DANH MỤC MMTB: nội dung do mmtbSrc vẽ ============ -->
   <div class="page" id="c1"></div>
@@ -1029,6 +1095,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 </div>
 <script type="text/plain" id="mainSrc">
 let DATA = window.__DATA || [];
+if(window.MO) MO.ready();                // gỡ khung chờ lúc mở trang
 let DATA_TS = window.__DATA_TS || new Date().toISOString();
 window.__trackRows = () => DATA;          // Danh mục MMTB tra mã Tiến độ theo tracking_machine_id (catalog_sync.js)
 
@@ -2475,7 +2542,9 @@ function plEditReady(mid){
 async function initP5(){
   if(!window.echarts){ plMtaE.hidden = false; plMtaE.textContent = tr('Chart library failed to load.', 'Không tải được thư viện biểu đồ.'); }
   [plMtaT, plCashT, plLookT].forEach(e => e.textContent = tr('Loading…', 'Đang tải…'));
-  await plLoad();
+  const plCards = document.querySelectorAll('#p5 .pl-mta, #p5 .pl-cash, #p5 .pl-look');
+  plCards.forEach(c => c.classList.add('mo-load'));       // khung chờ lấp lánh tới khi có dữ liệu
+  try{ await plLoad(); } finally{ plCards.forEach(c => c.classList.remove('mo-load')); }
   plPickBtn.onclick = e => { e.stopPropagation(); plPick.hidden = !plPick.hidden; if(!plPick.hidden) plPicker(); };
   document.addEventListener('click', e => { if(!plPick.hidden && !plPick.contains(e.target)) plPick.hidden = true; });
   const all = () => { if(window.echarts){ plDrawMta(); plDrawCash(); } plDrawLook(); };
@@ -2562,7 +2631,7 @@ function render(){
   if(pageNo>nPages) pageNo = nPages;
   const view = rows.slice((pageNo-1)*PAGE_SIZE, pageNo*PAGE_SIZE);
   const qw = !!window.__canWrite;
-  tb.innerHTML = view.map((x,i)=>`<tr class="${x.status!=='arrived'&&x.danhgia==='Trễ'?'late-flag':''} slide-in" style="--i:${i};cursor:pointer" onclick="showDetail(${DATA.indexOf(x)})" title="${tr('Click to view full machine details','Bấm để xem đầy đủ thông tin thiết bị')}">
+  tb.innerHTML = view.map((x,i)=>`<tr class="${x.status!=='arrived'&&x.danhgia==='Trễ'?'late-flag':''} slide-in" data-mo="${x._id}" style="--i:${i};cursor:pointer" onclick="showDetail(${DATA.indexOf(x)})" title="${tr('Click to view full machine details','Bấm để xem đầy đủ thông tin thiết bị')}">
     <td class="mm-code">${mcCell(x)}</td>
     ${qw ? `<td class="qu-c" onclick="event.stopPropagation()"><input type="checkbox" class="qu-ck" data-id="${x._id}"${QU_SEL.has(x._id)?' checked':''} aria-label="${tr('Select for quick update','Chọn để cập nhật nhanh')}"><button type="button" class="qu-btn" title="${tr('⚡ Quick update','⚡ Cập nhật nhanh')}" onclick="quickEdit(${DATA.indexOf(x)})">⚡</button></td>` : ''}
     <td class="name">${x.ten}${x.congsuat?`<small>${x.congsuat}</small>`:''}</td>
@@ -2619,6 +2688,17 @@ window.showKPI = kind => {
     : `<div class="m-ok">${tr(`No machines in this group.`,`Không có thiết bị nào trong nhóm này.`)}</div>`;
   openM();
 };
+/* ===== thanh mốc đầu popup chi tiết (DM.track): tự lấp đầy tới mốc xa nhất đã đạt ===== */
+function msTrack(x){
+  const t = DM.track(x), n = t.steps.length;
+  const L = tr({ordered:'Ordered', shipped:'Ex-works', port:'At port', arrived:'At plant', installing:'Installing', commissioned:'Commissioned'},
+               {ordered:'Đặt hàng', shipped:'Xuất xưởng', port:'Cập cảng', arrived:'Về NM', installing:'Lắp đặt', commissioned:'Nghiệm thu'});
+  const next = t.steps.findIndex(s => !s.done && !s.skip);
+  return `<div class="ms-track" style="--p:${Math.max(0, t.reached) / (n - 1)}" aria-label="${tr('Milestones','Các mốc')}"><span class="ms-line"></span>${t.reached > 0 ? '<span class="ms-fill"></span>' : ''}` +
+    t.steps.map((s, i) => `<div class="ms-step${s.done ? ' done' : ''}${s.skip ? ' skip' : ''}${s.warn ? ' warn' : ''}${i === next ? ' next' : ''}" style="--k:${i}">` +
+      `<span class="d">${s.done ? '✓' : s.warn ? '!' : ''}</span>${L[s.key]}` +
+      `<small>${s.date ? fmtD(s.date) + (s.actual ? '' : tr(' (exp.)',' (dk)')) : s.skip ? tr('no date','thiếu ngày') : '—'}</small></div>`).join('') + `</div>`;
+}
 /* ===== Chi tiết 1 thiết bị — đầy đủ các cột như file Excel ===== */
 function openM(w){ mCard.classList.toggle('wide', !!w); mBg.classList.add('show'); }
 window.showDetail = i => {
@@ -2641,6 +2721,7 @@ window.showDetail = i => {
       : tr(`${x.daysleft} days to go`,`còn ${x.daysleft} ngày`)}`;
 
   mBody.innerHTML = `<div class="dt-wrap">
+    ${msTrack(x)}
     ${sec(tr('General','Thông tin chung'),[
       it(tr('Machine code','Mã máy'), x.ma_may ? `<b>${T(x.ma_may)}</b>` + (x.venm_tt ? '' : `<br><small style="color:var(--st-over)">⚠ ${MC_LOST()}</small>`)
         : `<span style="color:var(--muted)">${x.venm_tt ? tr('Not assigned yet (admin: 🏷 Assign machine codes)','Chưa cấp (admin: 🏷 Cấp mã máy)') : tr('— assigned when the machine arrives at the plant','— cấp khi máy về NM')}</span>`),
@@ -2850,7 +2931,7 @@ async function saveMachine(m, editId){
     if(error) throw error;
     editId = data && data[0] && data[0].id;
   }
-  if(editId) csAfter([editId]);
+  if(editId){ csAfter([editId]); if(window.MO) MO.saved(editId); }
 }
 /* 🔗 khối "Danh mục MMTB" trong popup chi tiết: đã chuyển (bấm mở hồ sơ) / chưa chuyển + lý do */
 function csBlock(x){
@@ -2979,6 +3060,7 @@ async function quSaveOne(x,ch){
   const o = window.__cleanMachine(await window.__open(data[0]));
   if(o.ten==='' && x.ten) o.ten = x.ten;
   Object.assign(x, o); quStatus(x);
+  if(window.MO) MO.saved(x._id);                       // dòng vừa lưu loé xanh khi bảng vẽ lại
   if(window.CS) CS.afterSave([x]);                     // 🔗 Danh mục: chạy sau, không chờ, lỗi không ảnh hưởng lần lưu
   return (!had && x.ma_may) ? x.ma_may : '';          // mã vừa được trigger cấp (lưu ngày về NM TT lần đầu)
 }
@@ -3316,7 +3398,7 @@ function mcExport(){
 }
 window.mcOpen = async () => {
   if(window.__role !== 'admin') return;
-  mTitle.textContent = tr('🏷 Assign machine codes','🏷 Cấp mã máy'); mSub.textContent = tr('Loading…','Đang tải…'); mBody.innerHTML = ''; openM(1);
+  mTitle.textContent = tr('🏷 Assign machine codes','🏷 Cấp mã máy'); mSub.textContent = tr('Loading…','Đang tải…'); mBody.innerHTML = window.MO ? MO.skel(6) : ''; openM(1);
   try{ const L = await mcLoad(); MC.rows = L.rows; MC.plan = mcPlan(L.rows, L.counters); }
   catch(err){ mSub.textContent = ''; mBody.innerHTML = `<div class="m-gt">${mcErr(err)}</div>`; return; }
   MC.trim = MC.rows.filter(o=>o.raw !== o.raw.trim()); MC.dl = false;
@@ -3537,7 +3619,7 @@ window.showHistory = async i => {
   const x = DATA[i]; if(!x) return;
   mTitle.textContent = tr('🕘 History: ','🕘 Lịch sử: ') + unescH(x.ten);
   mSub.textContent = tr('Newest first. History starts from when the machine was added or the most recent Excel import.','Mới nhất ở trên. Lịch sử tính từ lần máy được thêm hoặc lần Nạp Excel gần nhất.');
-  mBody.innerHTML = '<div class="hx-list"><div class="hx-item">'+tr('Loading…','Đang tải…')+'</div></div>';
+  mBody.innerHTML = '<div class="hx-list">'+(window.MO ? MO.skel(5) : '<div class="hx-item">'+tr('Loading…','Đang tải…')+'</div>')+'</div>';
   openM(1);
   try{
     const { data, error } = await window.__sb.from('audit_log').select('at,user_email,action,old_data,new_data')
@@ -3728,7 +3810,7 @@ function openChangePw(){
 async function openTrash(){
   mTitle.textContent = tr('🗑 Trash','🗑 Thùng rác');
   mSub.textContent = tr('Deleted machines. Restore one to bring it back to the dashboard, or delete it permanently from the database.','Máy đã xoá. Khôi phục để đưa máy trở lại dashboard, hoặc xoá hẳn khỏi cơ sở dữ liệu.');
-  mBody.innerHTML = '<div class="hx-list"><div class="hx-item">'+tr('Loading…','Đang tải…')+'</div></div>';
+  mBody.innerHTML = '<div class="hx-list">'+(window.MO ? MO.skel(5) : '<div class="hx-item">'+tr('Loading…','Đang tải…')+'</div>')+'</div>';
   openM(1);
   try{
     const { data, error } = await window.__sb.from('machines').select('id,ten,ncc,phutrach,deleted_at,deleted_by,sec')
@@ -4079,7 +4161,7 @@ function renderList(){
   const view = rows.slice((pg-1)*PAGE, pg*PAGE);
   mmTb.innerHTML = view.map((x,i)=>{
     const dep = sortK==='__tree' ? treeIdx.get(x.id)[1] : 0;
-    return `<tr class="slide-in${dep?' child':''}" style="--i:${i};cursor:pointer" onclick="mmShow('${x.id}')">
+    return `<tr class="slide-in${dep?' child':''}" data-mo="${x.id}" style="--i:${i};cursor:pointer" onclick="mmShow('${x.id}')">
       <td style="white-space:nowrap;color:var(--muted);font-size:12px">${E(x.machine_code)}</td>
       <td class="name" style="padding-left:${10 + dep*18}px">${dep?'<span class="ind">↳</span>':''}${E(x.name)}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${x.model || x.tracking_code ? `<small>${E(x.model || '')}${x.model && x.tracking_code ? ' · ' : ''}${x.tracking_code ? '🔗 ' + E(x.tracking_code) : ''}</small>` : ''}</td>
       <td>${E(x.company_code)}</td><td>${T(x.area_name)}</td><td>${T(x.line_name)}</td><td>${T(x.group_name)}</td>
@@ -4371,6 +4453,7 @@ async function save(){
       if(error) throw error;
     }
     mmClose();
+    if(window.MO) MO.saved(id);
     await reload();
     toast('✅ ' + (editId ? tr('Saved','Đã lưu') : tr('Added','Đã thêm')) + ': <b>' + E(shownName) + '</b>');
   }catch(e){ showNotice({ type:'error', title:tr('Could not save the machine','Chưa lưu được máy'), sub:errText(e) }); }
