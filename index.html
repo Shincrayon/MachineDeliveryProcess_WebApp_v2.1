@@ -20,6 +20,7 @@
 <script src="catalog_sync.js"></script>
 <script src="name_std.js"></script>
 <script src="motion.js"></script>
+<script src="multi_pick.js"></script>
 <style>
 :root{color-scheme:dark;
   --bg:#0b1220; --panel:#121c31; --panel2:#17233d; --border:rgba(148,163,184,.14);
@@ -885,6 +886,20 @@ tbody tr.mo-flash>td{animation:moFlash 1.6s ease-out}
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;
     transition-duration:.01ms!important;transition-delay:0s!important;scroll-behavior:auto!important}
 }
+/* ===== ô chọn nhiều tháng / năm (multi_pick.js) ===== */
+.mp-pop{position:fixed;z-index:400;min-width:200px;max-width:calc(100vw - 16px);padding:10px;border-radius:12px;border:1px solid var(--border);
+  background:var(--panel);color:var(--txt);box-shadow:0 12px 32px rgba(0,0,0,.35);animation:mpIn .16s var(--mo-ease,ease-out)}
+@keyframes mpIn{from{opacity:0;transform:translateY(-4px)}}
+.mp-grid{display:grid;gap:4px}
+.mp-it{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;border:1px solid transparent;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;user-select:none}
+.mp-it:hover{background:var(--field)}
+.mp-it.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 16%,transparent)}
+.mp-it input{margin:0;accent-color:var(--blue);cursor:pointer}
+.mp-foot{display:flex;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.mp-foot button{padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:var(--field);color:var(--txt);font-size:12px;font-weight:600;cursor:pointer}
+.mp-foot .mp-all.on{border-color:var(--blue);color:var(--blue)}
+.mp-foot .mp-done{background:var(--blue);border-color:var(--blue);color:#fff}
+select.mp-open{border-color:var(--blue)}
 </style>
 </head>
 <body>
@@ -1664,12 +1679,21 @@ const ovFilter = noPeriod => Object.assign({}, OVF, { sup: SUP[OVF.sup] || '' },
 const ovRows = () => DM.filter(DATA, ovFilter());
 const ovRowsAllTime = () => DM.filter(DATA, ovFilter(true));   // bỏ tháng/năm: cho biểu đồ theo tháng
 const ovLabel = () => {
-  const m = ovMonth.value, y = ovYear.value;
-  if(!m && !y) return tr('All','Tất cả');
-  if(!m) return y;
-  if(!y) return tr(MON[+m-1]+' (all years)', 'Tháng '+(+m)+' (mọi năm)');
-  return tr(MON[+m-1]+' '+y, 'Tháng '+(+m)+'/'+y);
+  const ms = ovMonth.value ? ovMonth.value.split(',') : [], ys = ovYear.value ? ovYear.value.split(',') : [];
+  if(!ms.length && !ys.length) return tr('All','Tất cả');
+  const yT = ys.join(', ');
+  if(!ms.length) return yT;
+  if(ms.length === 1 && ys.length <= 1){
+    const m = ms[0], y = ys[0];
+    if(!y) return tr(MON[+m-1]+' (all years)', 'Tháng '+(+m)+' (mọi năm)');
+    return tr(MON[+m-1]+' '+y, 'Tháng '+(+m)+'/'+y);
+  }
+  const mT = tr(ms.map(m=>MON[+m-1]).join(', '), 'Tháng '+ms.map(Number).join(', '));
+  return ys.length ? mT + ' · ' + yT : mT + tr(' (all years)', ' (mọi năm)');
 };
+/* ô Tháng / Năm chọn nhiều (multi_pick.js) — dùng chung cho Tổng quan, Danh sách, Đánh giá */
+const mpMonth = (sel, title) => MP.make(sel, { cols:4, title, short: v => tr(MON[+v-1], String(+v)), unit: tr('months','tháng'), done: tr('Done','Xong') });
+const mpYear  = (sel, title) => MP.make(sel, { cols:3, title, unit: tr('years','năm'), done: tr('Done','Xong') });
 const OV_LC = tr({planned:'Not yet ordered', manufacturing:'Manufacturing', shipping:'Shipping', arrived:'Arrived', delayed:'Delayed', overdue:'⚠ Overdue – unconfirmed',
                   installing:'Installing', in_operation:'Commissioned / in operation', wait_install:'⏰ Arrived – not installed', late_accept:'⚠ Late commissioning'},
               {planned:'Chưa đặt hàng', manufacturing:'Đang chế tạo', shipping:'Đang vận chuyển', arrived:'Đã về', delayed:'Đang trễ', overdue:'⚠ Quá hạn – chưa xác nhận',
@@ -1696,8 +1720,9 @@ const ovEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&am
   [...new Set([now.slice(0,4), ...DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4))])].sort().forEach(y=>opt(ovYear, y, y));
   // mở trang không có tháng/năm trên URL -> mặc định tháng và năm hiện tại
   if(!OVF.periodInUrl){ OVF.m = now.slice(5,7); OVF.y = now.slice(0,4); }
+  mpMonth(ovMonth, tr('Month of arrival at plant','Tháng dự kiến về NM')); mpYear(ovYear, tr('Year of arrival at plant','Năm dự kiến về NM'));
   const SELS = { co:fCo, sup:fSup, st:fSt, m:ovMonth, y:ovYear };
-  Object.entries(SELS).forEach(([k, el]) => { el.value = OVF[k]; if(el.value !== OVF[k]) OVF[k] = ''; });
+  Object.entries(SELS).forEach(([k, el]) => { el.value = OVF[k]; OVF[k] = el.value; });   // giá trị lạ trên URL -> bỏ; nhiều tháng/năm -> chuẩn thứ tự
   fReset.textContent = tr('✕ Clear filters', '✕ Bỏ lọc');
   fLink.textContent = tr('🔗 Copy link', '🔗 Sao chép link');
   const mark = () => {
@@ -2026,12 +2051,12 @@ function initP1(){
       title:{display:true,text:r0.total+tr(' machines',' thiết bị'),font:{size:12.5},padding:{bottom:4}}},
       animation:{animateRotate:true,duration:1200}}});
   OV_HOOKS.push(updateStatusChart);
-  /* biểu đồ tháng: chọn năm -> 12 tháng của năm đó (không chọn năm -> mọi tháng có dữ liệu);
-     chọn tháng -> làm nổi (các) cột của tháng đó, cột khác mờ */
+  /* biểu đồ tháng: chọn năm -> 12 tháng của (các) năm đó (không chọn năm -> mọi tháng có dữ liệu);
+     chọn tháng -> làm nổi các cột của (các) tháng đó, cột khác mờ */
   function monthData(){
-    const y = ovYear.value;
-    const keys = y ? Array.from({length:12},(_,i)=>y+'-'+String(i+1).padStart(2,'0')) : AGG.months;
-    const labels = keys.map(k=>{const[yy,mo]=k.split('-');return y ? MON[mo-1] : MON[mo-1]+tr(" '",'/')+yy.slice(2)});
+    const ys = ovYear.value ? ovYear.value.split(',') : [], ms = ovMonth.value ? ovMonth.value.split(',') : [];
+    const keys = ys.length ? ys.flatMap(y=>Array.from({length:12},(_,i)=>y+'-'+String(i+1).padStart(2,'0'))) : AGG.months;
+    const labels = keys.map(k=>{const[yy,mo]=k.split('-');return ys.length===1 ? MON[mo-1] : MON[mo-1]+tr(" '",'/')+yy.slice(2)});
     const base = ovRowsAllTime();
     const inM = k => base.filter(x=>x.vedukienn && x.vedukienn.slice(0,7)===k);
     return {labels,
@@ -2040,7 +2065,7 @@ function initP1(){
       soon: keys.map(k=>inM(k).filter(x=>x.status==='soon').length),
       wait: keys.map(k=>inM(k).filter(x=>x.status==='waiting').length),
       late: keys.map(k=>inM(k).filter(x=>x.danhgia==='Trễ').length),
-      dim: keys.map(k=>!!ovMonth.value && k.slice(5,7)!==ovMonth.value)};
+      dim: keys.map(k=>ms.length>0 && !ms.includes(k.slice(5,7)))};
   }
   const fade = (col, md) => md.dim.map(d => d ? col+'40' : col);
   const md0 = monthData();
@@ -2250,9 +2275,7 @@ function initMaps(){
 
 /* ===== page 4: đánh giá ===== */
 function buildEval(){
-  const mo = evMonth.value, yr = evYear.value;
-  const rowsAll = DATA.filter(x => x.vedukienn &&
-    (!yr || x.vedukienn.slice(0,4)===yr) && (!mo || x.vedukienn.slice(5,7)===mo));
+  const rowsAll = DATA.filter(x => x.vedukienn && DM.inPeriod(x.vedukienn, evMonth.value, evYear.value));
   evInfo.textContent = rowsAll.length + tr(' machines',' thiết bị');
   evInfo.title = tr('machines in period (by expected arrival at plant)','thiết bị trong kỳ (theo ngày dự kiến về NM)');
 
@@ -2558,6 +2581,7 @@ function initP4(){
   const years = [...new Set(DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4)))].sort();
   years.forEach(y=>evYear.add(new Option(y,y)));
   for(let i=1;i<=12;i++) evMonth.add(new Option(tr(MON[i-1],'Tháng '+i), String(i).padStart(2,'0')));
+  mpMonth(evMonth, tr('Month of arrival at plant','Tháng dự kiến về NM')); mpYear(evYear, tr('Year of arrival at plant','Năm dự kiến về NM'));
   evMonth.onchange = buildEval; evYear.onchange = buildEval;
   buildEval();
 }
@@ -2579,14 +2603,14 @@ const fmtM = v => v>=1e9 ? (v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:
 let lMon='', lYr='';
 for(let i=1;i<=12;i++) fMon.add(new Option(tr(MON[i-1],'Tháng '+i), String(i).padStart(2,'0')));
 [...new Set(DATA.filter(x=>x.vedukienn).map(x=>x.vedukienn.slice(0,4)))].sort().forEach(v=>fYr.add(new Option(v,v)));
-fMon.title = tr('Month of arrival at plant','Tháng dự kiến về NM'); fYr.title = tr('Year of arrival at plant','Năm dự kiến về NM');
+mpMonth(fMon, tr('Month of arrival at plant','Tháng dự kiến về NM')); mpYear(fYr, tr('Year of arrival at plant','Năm dự kiến về NM'));
 
 function filtered(){
   let rows = DATA.filter(x=>
     (filter==='all' || (filter==='delay'? x.giaitrinh : INST_FILTERS.includes(filter) ? DM.matchStatus(x, filter) : x.status===filter)) &&
     (!loc || x.noilapdat===loc) && (!origin || x.xuatxu===origin) && (!pic || x.phutrach===pic) &&
     (!q || (x.ten+' '+x.ncc+' '+(x.ma_may||'')).toLowerCase().includes(q)) &&
-    (!lMon || (x.vedukienn && x.vedukienn.slice(5,7)===lMon)) && (!lYr || (x.vedukienn && x.vedukienn.slice(0,4)===lYr)));
+    DM.inPeriod(x.vedukienn, lMon, lYr));
   rows.sort((a,b)=>{
     if(sortKey==='__prio'){
       // Máy ĐÃ VỀ: bỏ gom theo Đánh giá, xếp thuần theo ngày về — gần nhất -> lâu nhất
@@ -2815,7 +2839,7 @@ fMon.onchange = e=>{lMon=e.target.value;pageNo=1;render()};
 fYr.onchange = e=>{lYr=e.target.value;pageNo=1;render()};
 /* 📤 Xuất dữ liệu (export.js): đúng các dòng bảng đang hiện + mô tả bộ lọc + nhãn đang dùng */
 window.__listView = () => {
-  const d = [`${tr('Month','Tháng')}: ${lMon ? +lMon : tr('all','tất cả')}`, `${tr('Year','Năm')}: ${lYr || tr('all','tất cả')}`];
+  const d = [`${tr('Month','Tháng')}: ${lMon ? lMon.split(',').map(Number).join(', ') : tr('all','tất cả')}`, `${tr('Year','Năm')}: ${lYr ? lYr.split(',').join(', ') : tr('all','tất cả')}`];
   if(filter!=='all'){ const b = document.querySelector(`#p3 .fbtn[data-f="${filter}"]`); if(b) d.push(b.textContent.trim()); }
   if(loc) d.push(`${tr('Site','Nơi lắp đặt')}: ${unescH(loc)}`);
   if(origin) d.push(`${tr('Origin','Xuất xứ')}: ${ctT(unescH(origin))}`);

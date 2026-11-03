@@ -157,17 +157,19 @@
   /* ---------- bộ lọc chung ----------
      f = { co, sup, st, m, y }: mã công ty, NCC, trạng thái (giai đoạn DM.stage, 'delayed' hoặc cảnh báo lắp đặt
      'wait_install' / 'late_accept' — DM.matchStatus), tháng '01'..'12', năm 'YYYY'.
-     Tháng/năm lọc theo ngày về NM (vedukienn). */
+     Tháng/năm lọc theo ngày về NM (vedukienn); chọn được nhiều, nối bằng dấu phẩy: m='03,04', y='2025,2026'
+     = mọi tổ hợp tháng × năm (3/2025, 4/2025, 3/2026, 4/2026); '' = tất cả. */
   DM.FILTER_KEYS = ['co', 'sup', 'st', 'm', 'y'];
+  DM.inPeriod = (d, m, y) => {
+    if (!m && !y) return true;
+    d = iso(d); if (!d) return false;
+    return (!y || String(y).split(',').includes(d.slice(0, 4))) && (!m || String(m).split(',').includes(d.slice(5, 7)));
+  };
   DM.filter = (rows, f) => rows.filter(x => {
-    const d = iso(x.vedukienn);
     if (f.co && DM.companyCode(x.noilapdat) !== f.co) return false;
     if (f.sup && (x.ncc || '') !== f.sup) return false;
     if (f.st && !DM.matchStatus(x, f.st)) return false;
-    if ((f.m || f.y) && !d) return false;
-    if (f.y && d.slice(0, 4) !== f.y) return false;
-    if (f.m && d.slice(5, 7) !== f.m) return false;
-    return true;
+    return DM.inPeriod(x.vedukienn, f.m, f.y);
   });
   DM.ALERTS = ['wait_install', 'late_accept'];
   DM.matchStatus = (x, st) => st === 'delayed' ? !!DM.delay(x)
@@ -191,7 +193,7 @@
   DM.toQuery = f => {
     const q = new URLSearchParams();
     DM.FILTER_KEYS.forEach(k => { if (f[k]) q.set(k, f[k]); else if (k === 'm' || k === 'y') q.set(k, 'all'); });
-    return '?' + q.toString();
+    return '?' + q.toString().replace(/%2C/gi, ',');      // m=03,04 dễ đọc hơn m=03%2C04
   };
 
   /* ---------- KPI ----------

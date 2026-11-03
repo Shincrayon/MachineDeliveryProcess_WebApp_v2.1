@@ -1,6 +1,6 @@
 # TienDoMayVe WebApp v2.1 — ghi chú cho người phát triển
 
-App 1 file `index.html` (GitHub Pages) + `metrics.js` + `export.js` + `catalog_sync.js` + `name_std.js` + `motion.js`, dữ liệu trên Supabase.
+App 1 file `index.html` (GitHub Pages) + `metrics.js` + `export.js` + `catalog_sync.js` + `name_std.js` + `motion.js` + `multi_pick.js`, dữ liệu trên Supabase.
 Dữ liệu máy được mã hoá trong trình duyệt (cột `sec`); không gửi bản rõ lên Supabase, không đưa tên NCC vào URL.
 
 ## Hai loại định danh của máy (bảng `machines`)
@@ -106,6 +106,12 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Popup `.modal-bg` / `.notice-bg` luôn `display:flex`, ẩn bằng `visibility` + `opacity` (đóng mờ dần 0,12 s) — vẫn chỉ bật / tắt class `show`.
 - Thanh mốc đầu popup chi tiết: `msTrack(x)` vẽ từ `DM.track(x)` (metrics.js).
 - Kiểm tra: `motion_test.py` (cả lượt "giảm chuyển động").
+
+## Ô Tháng / Năm chọn nhiều (`multi_pick.js`, window.MP)
+- Tổng quan (`ovMonth/ovYear`), Danh sách (`fMon/fYr`), Đánh giá (`evMonth/evYear`): `MP.make(select)` giữ nguyên ô `<select>` (id, kiểu dáng), bấm vào mở bảng ô tick; tick là lọc ngay (bắn `change`), không có nút áp dụng.
+- `sel.value` = các giá trị đã tick nối dấu phẩy theo thứ tự danh sách (`'03,04'`), `''` = tất cả; gán `value` cũng được. Test: đặt `.value` rồi `dispatchEvent(new Event('change'))` — KHÔNG dùng `select_option`.
+- Lọc kỳ: `DM.inPeriod(ngày, m, y)` = mọi tổ hợp tháng × năm theo ngày về NM; link `?m=03,04&y=2025,2026` (link cũ 1 tháng vẫn đúng).
+- Test: `multipick_test.py`.
 
 ## Quy ước làm việc
 - Migration mới = file mới trong `..\supabase\migrations\` (không sửa file đã có). Thư mục `supabase\` nằm CẠNH repo app
