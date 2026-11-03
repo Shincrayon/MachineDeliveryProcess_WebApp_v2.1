@@ -96,7 +96,9 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Kiểm tra: `analytics_eval_test.py` (bước [26]) và `onescreen_mmtb_check.py` (Danh mục, 60 máy, cả 8 thẻ Thư viện).
 
 ## Quy ước làm việc
-- Migration mới = file mới trong `supabase/migrations/` (không sửa file đã có). Thư mục `supabase/` không nằm trong git.
+- Migration mới = file mới trong `..\supabase\migrations\` (không sửa file đã có). Thư mục `supabase\` nằm CẠNH repo app
+  (`01.Machine Tracking\supabase\`), không thuộc repo app công khai; được sao lưu trong repo riêng tư ở `01.Machine Tracking\`
+  cùng bộ test. Dữ liệu thật / email thật để ở `..\_du_lieu_goc\` — KHÔNG đưa lên git nào.
 - Người dùng tự chạy migration trên Supabase và tự commit / push; hỏi trước khi làm gì trên Supabase thật.
 - Làm trên nhánh riêng; lập kế hoạch và chờ xác nhận trước khi code.
 - Bộ test (Playwright + PGlite) để ở `..\_dev_tests_TienDoMayVe\` (ngoài repo): `python <test>.py <thư mục app>`.
