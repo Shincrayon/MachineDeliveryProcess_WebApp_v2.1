@@ -118,6 +118,13 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Chưa có cả hai: app tính = xuất xưởng + TG đi tàu TT + TG lãnh máy TT (form Sửa `calcDates`, nạp Excel, và ⚡ Cập nhật nhanh khi ĐỔI ngày xuất xưởng — `quShip`) rồi gửi kèm `vedukienn` + `danhgia`; trigger giữ nguyên. Xoá ngày xuất xưởng trong Cập nhật nhanh: giữ ngày về cũ. Test: `e2e_quick_test.py` [8g].
 - **TG đi tàu / lãnh máy TT trống HOẶC = 0 → lấy KH** ở mọi nơi (nạp Root data, nạp Excel của app, form Sửa — ô TT = 0 hiện trống, Cập nhật nhanh, trigger nhánh cập cảng: `coalesce(nullif(lanhtt,0), lanhkh)`). Trước đây ô trống bị lưu 0 → ngày về = đúng ngày xuất xưởng / cập cảng. Sửa dữ liệu cũ + trigger: `supabase/migrations/20261103_12_tt_theo_kh.sql` (PHẦN 1 xem trước, PHẦN 2 sửa). Test: `e2e_quick_test.py` [8h].
 
+## Hình thức mua — Tiến độ máy về (migration 13, `hinh_thuc_mua`, `hinh_thuc_can_xn`)
+- `import` Nhập khẩu trực tiếp · `agency` Qua đại lý · `domestic` Trong nước; trống = chưa chọn. Quyết định theo việc máy CÓ khâu nhập hàng không, KHÔNG suy từ Xuất xứ (nơi sản xuất; máy ngoại mua qua đơn vị trong nước vẫn là nhập khẩu / đại lý, và một số máy VN qua agency vẫn có lãnh máy). Hai cột không mã hoá.
+- `domestic`: ẩn tàu chạy + cập cảng (⚡) và 4 ô đi tàu / lãnh máy (form Sửa), thay bằng 1 ô TG vận chuyển lưu vào `ditaukh = ditautt`, `lanh = 0`; thanh mốc bỏ Cập cảng (`DM.track`). Công thức ngày về không đổi: tổng đi tàu + lãnh máy. Form Sửa không cho đổi sang `domestic` khi máy còn ngày tàu chạy / cập cảng.
+- `DM.missingTransit`: máy import / agency chưa về NM mà TG đi tàu / lãnh máy (TT, trống thì KH) = 0 → cảnh báo. Không chặn lưu.
+- `hinh_thuc_can_xn = true`: giá trị do migration gợi ý. Chỉ tắt khi người dùng TỰ chọn: ⚡ (ô để trống, chọn mới tính), form Sửa khi bấm Lưu, hoặc nạp Excel đổi giá trị. Sửa ngày ở ⚡ không xác nhận.
+- Chưa chạy migration: `hasPT()` = false, mọi phần tự ẩn, app chạy như cũ (nên merge app trước, chạy SQL sau). Test: `e2e_purchase_test.py`.
+
 ## Quy ước làm việc
 - Migration mới = file mới trong `..\supabase\migrations\` (không sửa file đã có). Thư mục `supabase\` nằm CẠNH repo app
   (`01.Machine Tracking\supabase\`), không thuộc repo app công khai; được sao lưu trong repo riêng tư ở `01.Machine Tracking\`

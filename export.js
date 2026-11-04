@@ -16,7 +16,7 @@ const num = v => { if(v === null || v === undefined || v === '') return null; co
 
 /* các trường: [field, kiểu s=chữ · n=số · d=ngày, mặc định chọn]. Nhãn lấy đúng nhãn app đang hiển thị (REC_LABEL / REC_LABEL_EN). */
 const DEF = [
-  ['ma_may','s',1], ['ten','s',1], ['sl','n',1], ['noilapdat','s',1], ['ncc','s',1], ['xuatxu','s',1], ['phutrach','s',1],
+  ['ma_may','s',1], ['ten','s',1], ['sl','n',1], ['noilapdat','s',1], ['ncc','s',1], ['xuatxu','s',1], ['hinh_thuc_mua','s',0], ['phutrach','s',1],
   ['vnd','n',1], ['usd','n',1], ['dathang','d',1], ['vekh','d',1], ['vedukienn','d',1], ['status','s',1], ['arrival_kind','s',0], ['danhgia','s',1],
   ['company','s',0], ['daysleft','n',0], ['congsuat','s',0], ['model','s',0], ['serial','s',0], ['duyet','d',0],
   ['ctu','n',0], ['tamungtt','d',0], ['tamung_days','n',0], ['ditaukh','n',0], ['ditautt','n',0], ['lanhkh','n',0], ['lanhtt','n',0],
@@ -61,6 +61,7 @@ function cell(x, k){
   if(k === 'company') return (window.DM && DM.companyCode(plain(x.noilapdat))) || null;
   if(k === 'danhgia'){ const v = plain(x.danhgia); return v ? CTX().dgT(v) : '?'; }   // thiếu ngày -> "?" như file Excel gốc
   if(k === 'xuatxu'){ const v = plain(x.xuatxu); return v ? CTX().ctT(v) : null; }
+  if(k === 'hinh_thuc_mua') return (CTX().PT || {})[x.hinh_thuc_mua] || null;
   if(t === 'd') return isoOk(x[k]) ? x[k].slice(0,10) : null;
   if(t === 'n') return num(x[k]);
   const v = plain(x[k]); return v === '' ? null : v;

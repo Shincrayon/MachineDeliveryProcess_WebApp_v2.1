@@ -98,10 +98,24 @@
     return o;
   };
 
+  /* ---------- hình thức mua (migrations/20261104_13): import / agency có khâu nhập hàng; domestic thì không ----------
+     hinh_thuc_mua trống = chưa chọn (coi như có khâu nhập hàng). suggestPurchase: gợi ý theo Xuất xứ, người dùng đổi được. */
+  DM.PURCHASE = ['import', 'agency', 'domestic'];
+  DM.isDomestic = x => !!x && x.hinh_thuc_mua === 'domestic';
+  DM.suggestPurchase = xuatxu => { const f = fold(xuatxu); return !f ? '' : (f === 'vietnam' || f === 'vn') ? 'domestic' : 'import'; };
+  /* đọc chữ trong file Excel: 'Qua đại lý' / 'Agency' ... -> mã; không nhận ra -> '' (giữ giá trị đang có) */
+  DM.purchaseCode = v => { const f = fold(v);
+    return /(import|nhapkhau)/.test(f) ? 'import' : /(agency|daily)/.test(f) ? 'agency' : /^(domestic|trongnuoc)/.test(f) ? 'domestic' : ''; };
+  /* máy có khâu nhập hàng, chưa về NM mà TG đi tàu / lãnh máy (TT, trống thì KH) = 0 -> ngày về đang bị tính thiếu.
+     Đã cập cảng thì đi tàu không còn quan trọng. */
+  DM.missingTransit = x => !!x && (x.hinh_thuc_mua === 'import' || x.hinh_thuc_mua === 'agency') && !iso(x.venm_tt)
+    && ((!iso(x.capcang_tt) && !(Number(x.ditautt) || Number(x.ditaukh))) || !(Number(x.lanhtt) || Number(x.lanhkh)));
+
   /* ---------- thanh mốc trong chi tiết máy: đặt hàng → xuất xưởng → cập cảng → về NM → lắp đặt → nghiệm thu ----------
      done = có ngày thực tế (xuất xưởng: ngày đã qua); lắp đặt / nghiệm thu chỉ tính khi đã về NM (như installStatus).
      reached = chỉ số mốc xa nhất đã đạt (-1 = chưa mốc nào); mốc trước đó mà trống = skip (thiếu ngày, không chặn thanh).
-     warn = mốc về NM khi máy quá ngày dự kiến mà chưa xác nhận về. date = ngày thực tế, hoặc ngày dự kiến khi chưa đạt. */
+     warn = mốc về NM khi máy quá ngày dự kiến mà chưa xác nhận về. date = ngày thực tế, hoặc ngày dự kiến khi chưa đạt.
+     Máy Trong nước: không có mốc cập cảng (trừ khi đã lỡ nhập ngày cập cảng). */
   DM.TRACK = ['ordered', 'shipped', 'port', 'arrived', 'installing', 'commissioned'];
   DM.track = x => {
     const m = DM.milestones(x), ve = m[2].actual;
@@ -110,8 +124,10 @@
     const fc = [null, m[1].forecast, null, m[2].forecast, null, iso(x.nghiemthu_kh)];
     const reached = act.reduce((r, d, i) => d ? i : r, -1);
     const overdue = DM.arrivalStatus(x).status === 'overdue';
-    return { reached, steps: DM.TRACK.map((key, i) => ({ key, done: !!act[i], actual: !!act[i], date: act[i] || fc[i] || null,
-      skip: !act[i] && i < reached, warn: i === 3 && overdue })) };
+    const steps = DM.TRACK.map((key, i) => ({ key, done: !!act[i], actual: !!act[i], date: act[i] || fc[i] || null,
+      skip: !act[i] && i < reached, warn: i === 3 && overdue }));
+    if (DM.isDomestic(x) && !act[2]) { steps.splice(2, 1); return { reached: reached > 2 ? reached - 1 : reached, steps }; }
+    return { reached, steps };
   };
 
   /* ---------- trạng thái vòng đời suy từ ngày ---------- */

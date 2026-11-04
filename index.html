@@ -900,6 +900,10 @@ tbody tr.mo-flash>td{animation:moFlash 1.6s ease-out}
 .mp-foot .mp-all.on{border-color:var(--blue);color:var(--blue)}
 .mp-foot .mp-done{background:var(--blue);border-color:var(--blue);color:#fff}
 select.mp-open{border-color:var(--blue)}
+/* ===== hình thức mua ===== */
+.pt-off{display:none!important}
+.pt-sub{display:block;font-size:10.5px;font-weight:600;color:var(--muted)}
+.pt-sub.w{color:var(--st-over)}
 </style>
 </head>
 <body>
@@ -1028,6 +1032,7 @@ select.mp-open{border-color:var(--blue)}
       <button class="fbtn r" data-f="delay">⚠️ Delay notes</button>
       <select id="fLoc"><option value="">Site: All</option></select>
       <select id="fOrigin"><option value="">Origin: All</option></select>
+      <select id="fHT" class="pt-off"></select>
       <select id="fPIC"><option value="">Person in charge: All</option></select>
       <select id="fMon" title="Month of arrival at plant"><option value="">Month: All</option></select>
       <select id="fYr" title="Year of arrival at plant"><option value="">Year: All</option></select>
@@ -1082,6 +1087,7 @@ select.mp-open{border-color:var(--blue)}
       <label>Installation site<input id="f_nld" type="text"></label>
       <label>Supplier<input id="f_ncc" type="text"></label>
       <label>Origin<input id="f_xx" type="text"></label>
+      <label id="f_htL" class="pt-off">Purchase type *<select id="f_ht"></select></label>
       <label>Model<input id="f_model" type="text"></label>
       <label>Serial number<input id="f_serial" type="text"></label>
       <label>Total value (VND)<input id="f_vnd" type="text" inputmode="numeric" placeholder="e.g. 3,000,000,000"></label>
@@ -1094,6 +1100,7 @@ select.mp-open{border-color:var(--blue)}
       <label>Shipping time, actual (days)<input id="f_dttt" type="number"></label>
       <label>Clearance &amp; pickup, plan (days)<input id="f_lm" type="number" value="0"></label>
       <label>Clearance &amp; pickup, actual (days)<input id="f_lmtt" type="number"></label>
+      <label id="f_vcL" class="pt-off">Transit time (days)<input id="f_vc" type="number" value="0" min="0"></label>
       <label>Confirmed/expected ex-works date<input id="f_xxg" type="date"></label>
       <label>Manufacturing days (CTM)<input id="f_ctm" type="number" value="0"></label>
       <label>Planned commissioning date<input id="f_ntkh" type="date"></label>
@@ -1117,6 +1124,15 @@ window.__trackRows = () => DATA;          // Danh mục MMTB tra mã Tiến đ�
 
 /* ===== trạng thái ngày về NM: CHỈ một nơi tính — DM.arrivalStatus (metrics.js) =====
    arrived = có Ngày máy về NM TT · overdue = quá ngày dự kiến, chưa xác nhận · soon ≤ 15 ngày · waiting · unknown */
+/* Hình thức mua (migrations/20261104_13). Chưa chạy migration: mọi phần về hình thức mua tự ẩn, app chạy như cũ. */
+const hasPT = () => DATA.some(x=>x._pt);
+const PT_LBL = tr({import:'Direct import', agency:'Through an agent', domestic:'Domestic'}, {import:'Nhập khẩu trực tiếp', agency:'Qua đại lý', domestic:'Trong nước'});
+const PT_OPTS = first => first + DM.PURCHASE.map(k=>`<option value="${k}">${PT_LBL[k]}</option>`).join('');
+const ptNeedsOk = x => x.hinh_thuc_can_xn || !x.hinh_thuc_mua;
+const PT_MISS = () => tr('⚠ Shipping / clearance time missing','⚠ Thiếu TG đi tàu / lãnh máy');
+/* dòng nhỏ dưới Xuất xứ trong bảng */
+const ptSub = x => !x._pt ? '' : `<small class="pt-sub">${PT_LBL[x.hinh_thuc_mua] || tr('Not chosen','Chưa chọn')}${ptNeedsOk(x) ? ' ❓' : ''}</small>`
+  + (DM.missingTransit(x) ? `<small class="pt-sub w">${PT_MISS()}</small>` : '');
 function setArrival(x){ const a = DM.arrivalStatus(x); x.status = a.status; x.daysleft = a.daysleft; return x; }
 DATA.forEach(setArrival);
 
@@ -1188,6 +1204,7 @@ function rowsToData(rows){
     chaythu_tt: 'Ngày chạy thử TT' in r ? iso(r['Ngày chạy thử TT']) : undefined,
     nghiemthu_tt: 'Ngày nghiệm thu TT' in r ? iso(r['Ngày nghiệm thu TT']) : undefined,
     ghichu_ld: 'Ghi chú lắp đặt' in r ? String(r['Ghi chú lắp đặt']||'').trim() : undefined,
+    hinh_thuc_mua: 'Hình thức mua' in r ? DM.purchaseCode(r['Hình thức mua']) : undefined,
     ma_may: 'Mã máy' in r ? String(r['Mã máy']||'').trim().toUpperCase() : undefined,
     sysid: 'ID hệ thống' in r ? String(r['ID hệ thống']||'').trim().toLowerCase() : undefined
   }));
@@ -1304,6 +1321,7 @@ function readAll(wb){
       chaythu_tt: H['Ngày chạy thử TT']!=null ? serialToISO(toSerial(gv(row,'Ngày chạy thử TT'))) : undefined,
       nghiemthu_tt: H['Ngày nghiệm thu TT']!=null ? serialToISO(toSerial(gv(row,'Ngày nghiệm thu TT'))) : undefined,
       ghichu_ld: H['Ghi chú lắp đặt']!=null ? String(gv(row,'Ghi chú lắp đặt')||'').trim() : undefined,
+      hinh_thuc_mua: H['Hình thức mua']!=null ? DM.purchaseCode(gv(row,'Hình thức mua')) : undefined,
       ma_may: H['Mã máy']!=null ? String(gv(row,'Mã máy')||'').trim().toUpperCase() : undefined,
       sysid: H['ID hệ thống']!=null ? String(gv(row,'ID hệ thống')||'').trim().toLowerCase() : undefined
     });
@@ -1446,9 +1464,11 @@ function calcDates(){
   const dathang = isoToSerial(val('f_dh'));
   const xxg     = isoToSerial(val('f_xxg'));
   const ctu = xlNum(val('f_ctu')), ctm = xlNum(val('f_ctm'));
-  const dt  = xlNum(val('f_dt')),  lm  = xlNum(val('f_lm'));                 // kế hoạch (KH)
-  const dtTT = xlNum(val('f_dttt')) || dt;                                   // trống hoặc 0 -> lấy theo KH
-  const lmTT = xlNum(val('f_lmtt')) || lm;
+  // máy Trong nước: 1 ô TG vận chuyển, lưu vào đi tàu KH = TT, lãnh máy = 0
+  const dom = val('f_ht')==='domestic', vc = xlNum(val('f_vc'));
+  const dt  = dom ? vc : xlNum(val('f_dt')),  lm  = dom ? 0 : xlNum(val('f_lm'));   // kế hoạch (KH)
+  const dtTT = dom ? vc : (xlNum(val('f_dttt')) || dt);                      // trống hoặc 0 -> lấy theo KH
+  const lmTT = dom ? 0 : (xlNum(val('f_lmtt')) || lm);
   const wd  = (val('f_wd')||'no').toLowerCase();
   const base = dathang + ctu + dt + lm;
   const veKH = dathang===0 ? 0 : (wd==='yes' ? workday(base,ctm) : base + ctm);  // giống công thức Root data
@@ -1491,6 +1511,23 @@ function updCalc(){
     ${it(tr('Planned arrival date','Ngày dự kiến máy về (KH)'), kh)}${it(tr('Expected arrival at plant','Ngày dự kiến máy về NM'), nm)}
     ${it(tr('Rating','Đánh giá'), rt)}${it(tr('Status','Trạng thái'), st)}</div>`;
 }
+/* ô Hình thức mua trong form: máy Trong nước thay 4 ô đi tàu / lãnh máy bằng 1 ô TG vận chuyển; máy mới gợi ý theo Xuất xứ */
+function ptSync(){
+  f_htL.classList.toggle('pt-off', !hasPT());
+  const dom = f_ht.value==='domestic';
+  ['f_dt','f_dttt','f_lm','f_lmtt'].forEach(id=>document.getElementById(id).closest('label').classList.toggle('pt-off', dom));
+  f_vcL.classList.toggle('pt-off', !dom);
+}
+function ptSwitch(){
+  const n = id => Number(document.getElementById(id).value)||0;
+  if(f_ht.value==='domestic' && !f_ht.dataset.dom){ f_vc.value = (n('f_dttt')||n('f_dt')) + (n('f_lmtt')||n('f_lm')); f_ht.dataset.dom = '1'; }
+  else if(f_ht.value!=='domestic' && f_ht.dataset.dom){ f_dt.value = n('f_vc'); f_dttt.value = ''; f_lm.value = 0; f_lmtt.value = ''; f_ht.dataset.dom = ''; }
+  ptSync();
+}
+f_ht.innerHTML = PT_OPTS(`<option value="">${tr('— Choose —','— Chọn —')}</option>`);
+f_ht.onchange = ()=>{ f_ht.dataset.auto = ''; ptSwitch(); };
+f_xx.addEventListener('input', ()=>{ if(!hasPT() || (f_ht.value && !f_ht.dataset.auto)) return;
+  f_ht.value = DM.suggestPurchase(f_xx.value); f_ht.dataset.auto = '1'; ptSwitch(); });
 addGrid.addEventListener('input', updCalc);
 addGrid.addEventListener('change', updCalc);
 
@@ -1499,6 +1536,11 @@ async function submitAdd(){
   const ten = val('f_ten');
   if(!ten){ showNotice({type:'error', title:tr('Machine name missing','Thiếu tên máy'), sub:tr('Please enter the machine name before adding it.','Vui lòng nhập Tên máy trước khi thêm.')}); return; }
 
+  if(hasPT()){
+    if(!val('f_ht')){ showNotice({type:'error', title:tr('Purchase type missing','Thiếu hình thức mua'), sub:tr('Please choose Direct import, Through an agent or Domestic.','Vui lòng chọn Nhập khẩu trực tiếp, Qua đại lý hoặc Trong nước.')}); return; }
+    const cur = window.__editId ? DATA.find(x=>x._id===window.__editId) : null;
+    if(val('f_ht')==='domestic' && cur && (cur.tauchay_tt || cur.capcang_tt)){ showNotice({type:'error', title:tr('This machine has port dates','Máy đang có ngày tàu chạy / cập cảng'), sub:tr('Clear the sailing and port arrival dates in ⚡ Quick update before changing it to Domestic.','Xoá ngày tàu chạy và cập cảng ở ⚡ Cập nhật nhanh trước khi đổi sang Trong nước.')}); return; }
+  }
   const tutt = isoToSerial(val('f_tutt'));
   const { xxg, ctu, ctm, dt, lm, dtTT, lmTT, wd, veKH, veNM, dg } = calcDates();
 
@@ -1516,7 +1558,8 @@ async function submitAdd(){
     ditaukh: Math.round(dt), ditautt: Math.round(dtTT),
     lanhkh: Math.round(lm), lanhtt: Math.round(lmTT),
     xuatxuong: val('f_xxg')||null, workingday: wd,
-    nghiemthu_kh: val('f_ntkh')||null
+    nghiemthu_kh: val('f_ntkh')||null,
+    hinh_thuc_mua: val('f_ht')
   };
 
   /* lưu lên kho dữ liệu chung của app */
@@ -1573,6 +1616,7 @@ function resetAddForm(){
   ['f_duyet','f_dh','f_tutt','f_xxg','f_ntkh'].forEach(id=>{ if(window.fpickers && window.fpickers[id]) window.fpickers[id].clear(); });
   ['f_ctu','f_dt','f_lm','f_ctm'].forEach(id=>document.getElementById(id).value='0');
   ['f_dttt','f_lmtt'].forEach(id=>document.getElementById(id).value='');     // trống = lấy theo KH
+  f_ht.value = ''; f_ht.dataset.auto = ''; f_ht.dataset.dom = ''; f_vc.value = '0'; ptSync();
   document.getElementById('f_sl').value='1'; document.getElementById('f_wd').value='no';
   addResult.innerHTML='';
   updCalc();
@@ -2588,7 +2632,7 @@ function initP4(){
 }
 
 /* ===== table + filters + pagination ===== */
-let filter='all', loc='', origin='', pic='', q='', sortKey='__prio', sortDir=1, pageNo=1;
+let filter='all', loc='', origin='', pic='', q='', sortKey='__prio', sortDir=1, pageNo=1, ptF='';
 const QU_SEL = new Set();          // _id các máy đang được chọn để ⚡ Cập nhật nhanh hàng loạt
 const PRIO = {overdue:-1, soon:0, waiting:1, arrived:2};
 const GPRIO = x => (({overdue:-10, soon:0, waiting:10, arrived:20})[x.status]??30) + (x.danhgia==='Trễ' ? 0 : x.danhgia==='Đúng tiến độ' ? 1 : x.danhgia==='Sớm' ? 2 : 3);
@@ -2610,6 +2654,7 @@ function filtered(){
   let rows = DATA.filter(x=>
     (filter==='all' || (filter==='delay'? x.giaitrinh : INST_FILTERS.includes(filter) ? DM.matchStatus(x, filter) : x.status===filter)) &&
     (!loc || x.noilapdat===loc) && (!origin || x.xuatxu===origin) && (!pic || x.phutrach===pic) &&
+    (!ptF || (ptF==='__miss' ? DM.missingTransit(x) : ptF==='__ok' ? ptNeedsOk(x) : x.hinh_thuc_mua===ptF)) &&
     (!q || (x.ten+' '+x.ncc+' '+(x.ma_may||'')).toLowerCase().includes(q)) &&
     DM.inPeriod(x.vedukienn, lMon, lYr));
   rows.sort((a,b)=>{
@@ -2660,7 +2705,7 @@ function render(){
     <td class="mm-code">${mcCell(x)}</td>
     ${qw ? `<td class="qu-c" onclick="event.stopPropagation()"><input type="checkbox" class="qu-ck" data-id="${x._id}"${QU_SEL.has(x._id)?' checked':''} aria-label="${tr('Select for quick update','Chọn để cập nhật nhanh')}"><button type="button" class="qu-btn" title="${tr('⚡ Quick update','⚡ Cập nhật nhanh')}" onclick="quickEdit(${DATA.indexOf(x)})">⚡</button></td>` : ''}
     <td class="name">${x.ten}${x.congsuat?`<small>${x.congsuat}</small>`:''}</td>
-    <td>${x.sl}</td><td>${x.noilapdat}</td><td>${x.ncc}</td><td>${ctT(x.xuatxu)}</td>
+    <td>${x.sl}</td><td>${x.noilapdat}</td><td>${x.ncc}</td><td>${ctT(x.xuatxu)}${ptSub(x)}</td>
     <td>${x.phutrach||'—'}</td>
     <td class="money">${fmtM(x.vnd)} ₫</td>
     <td class="money" style="color:var(--sky)">${fmtU(x.usd)}$</td>
@@ -2757,6 +2802,9 @@ window.showDetail = i => {
       it(tr('Installation site','Nơi lắp đặt'), T(x.noilapdat)),
       it(tr('Supplier','Nhà cung cấp'), T(x.ncc)),
       it(tr('Origin','Xuất xứ'), T(ctT(x.xuatxu))),
+      ...(x._pt ? [it(tr('Purchase type','Hình thức mua'), (PT_LBL[x.hinh_thuc_mua] || tr('Not chosen','Chưa chọn'))
+        + (ptNeedsOk(x) ? ` <span class="badge sm b-wait_install">❓ ${tr('Needs confirming','Cần xác nhận')}</span>` : '')
+        + (DM.missingTransit(x) ? `<small class="pt-sub w">${PT_MISS()}</small>` : ''))] : []),
       it('Model', T(x.model)),
       it(tr('Serial number','Số serial'), T(x.serial))])}
     ${sec(tr('Value','Giá trị'),[
@@ -2828,14 +2876,18 @@ document.querySelectorAll('.fbtn').forEach(b=>b.onclick=()=>{
   b.classList.add('active'); filter=b.dataset.f; pageNo=1;
   if(filter==='all'){
     sortKey='__prio'; sortDir=1;
-    loc=''; origin=''; pic=''; q=''; lMon=''; lYr='';
-    fLoc.value=''; fOrigin.value=''; fPIC.value=''; fMon.value=''; fYr.value='';
+    loc=''; origin=''; pic=''; q=''; lMon=''; lYr=''; ptF='';
+    fLoc.value=''; fOrigin.value=''; fPIC.value=''; fMon.value=''; fYr.value=''; fHT.value='';
     document.getElementById('q').value='';
   }
   render();});
 fLoc.onchange = e=>{loc=e.target.value;pageNo=1;render()};
 fOrigin.onchange = e=>{origin=e.target.value;pageNo=1;render()};
 fPIC.onchange = e=>{pic=e.target.value;pageNo=1;render()};
+fHT.innerHTML = PT_OPTS(`<option value="">${tr('Purchase type: All','Hình thức mua: Tất cả')}</option>`)
+  + `<option value="__ok">❓ ${tr('Needs confirming','Cần xác nhận')}</option><option value="__miss">${PT_MISS()}</option>`;
+fHT.classList.toggle('pt-off', !hasPT());
+fHT.onchange = e=>{ptF=e.target.value;pageNo=1;render()};
 fMon.onchange = e=>{lMon=e.target.value;pageNo=1;render()};
 fYr.onchange = e=>{lYr=e.target.value;pageNo=1;render()};
 /* 📤 Xuất dữ liệu (export.js): đúng các dòng bảng đang hiện + mô tả bộ lọc + nhãn đang dùng */
@@ -2844,11 +2896,12 @@ window.__listView = () => {
   if(filter!=='all'){ const b = document.querySelector(`#p3 .fbtn[data-f="${filter}"]`); if(b) d.push(b.textContent.trim()); }
   if(loc) d.push(`${tr('Site','Nơi lắp đặt')}: ${unescH(loc)}`);
   if(origin) d.push(`${tr('Origin','Xuất xứ')}: ${ctT(unescH(origin))}`);
+  if(ptF) d.push(`${tr('Purchase type','Hình thức mua')}: ${fHT.options[fHT.selectedIndex].text}`);
   if(pic) d.push(`${tr('Person in charge','Phụ trách')}: ${unescH(pic)}`);
   if(q) d.push(`${tr('Search','Tìm')}: "${q}"`);
   return { rows: filtered(), desc: d.join(', ') };
 };
-window.__expCtx = () => ({ labels: LANG==='vi' ? REC_LABEL : REC_LABEL_EN, LBL, ILBL, dgT, ctT });
+window.__expCtx = () => ({ labels: LANG==='vi' ? REC_LABEL : REC_LABEL_EN, LBL, ILBL, dgT, ctT, PT: PT_LBL });
 document.getElementById('q').oninput = e=>{q=e.target.value.toLowerCase();pageNo=1;render()};
 document.querySelectorAll('thead th[data-s]').forEach(th=>th.onclick=()=>{
   const k=th.dataset.s; if(sortKey===k) sortDir*=-1; else {sortKey=k;sortDir=1;} render();});
@@ -2893,7 +2946,7 @@ function dbErrText(e){
 const REC_KEYS = ['ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','vekh','vedukienn',
   'danhgia','sonagyctm','giaitrinh','ctu','tamungtt','ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','workingday'];
 const REC_LABEL = {ten:'Tên máy', phutrach:'Người phụ trách', sl:'Số lượng', congsuat:'Công suất', noilapdat:'Nơi lắp đặt',
-  ncc:'Nhà cung cấp', xuatxu:'Xuất xứ', model:'Model', serial:'Số serial', vnd:'Tổng giá trị (VNĐ)', usd:'Tổng giá trị (USD)', duyet:'Ngày duyệt ĐXĐT',
+  hinh_thuc_mua:'Hình thức mua', ncc:'Nhà cung cấp', xuatxu:'Xuất xứ', model:'Model', serial:'Số serial', vnd:'Tổng giá trị (VNĐ)', usd:'Tổng giá trị (USD)', duyet:'Ngày duyệt ĐXĐT',
   dathang:'Ngày đặt hàng', vekh:'Ngày dự kiến máy về (KH)', vedukienn:'Ngày dự kiến máy về NM', danhgia:'Đánh giá',
   sonagyctm:'Số ngày CTM', giaitrinh:'Giải trình', ctu:'TG chờ tạm ứng KH (ngày)', tamungtt:'Ngày tạm ứng TT',
   ditaukh:'TG đi tàu KH (ngày)', ditautt:'TG đi tàu TT (ngày)', lanhkh:'TG lãnh máy KH (ngày)', lanhtt:'TG lãnh máy TT (ngày)',
@@ -2903,7 +2956,7 @@ const REC_LABEL = {ten:'Tên máy', phutrach:'Người phụ trách', sl:'Số l
   ghichu_ld:'Ghi chú lắp đặt', ma_may:'Mã máy', sysid:'ID hệ thống'};
 /* nhãn hiển thị khi chọn tiếng Anh; REC_LABEL ở trên giữ tiếng Việt vì là tên cột Excel */
 const REC_LABEL_EN = {ten:'Machine name', phutrach:'Person in charge', sl:'Quantity', congsuat:'Capacity', noilapdat:'Installation site',
-  ncc:'Supplier', xuatxu:'Origin', model:'Model', serial:'Serial number', vnd:'Total value (VND)', usd:'Total value (USD)', duyet:'Proposal approval date',
+  hinh_thuc_mua:'Purchase type', ncc:'Supplier', xuatxu:'Origin', model:'Model', serial:'Serial number', vnd:'Total value (VND)', usd:'Total value (USD)', duyet:'Proposal approval date',
   dathang:'Order date', vekh:'Planned arrival date', vedukienn:'Expected arrival at plant', danhgia:'Rating',
   sonagyctm:'Manufacturing days (CTM)', giaitrinh:'Delay note', ctu:'Advance-payment wait, plan (days)', tamungtt:'Advance-payment date, actual',
   ditaukh:'Shipping time, plan (days)', ditautt:'Shipping time, actual (days)', lanhkh:'Clearance & pickup, plan (days)', lanhtt:'Clearance & pickup, actual (days)',
@@ -2944,6 +2997,7 @@ async function saveMachine(m, editId){
   const ntkh = /^\d{4}-\d{2}-\d{2}$/.test(m.nghiemthu_kh||'') ? m.nghiemthu_kh : null;
   if(ntkh || (cur && cur.nghiemthu_kh)) r0.nghiemthu_kh = ntkh;
   if(cur && cur.ghichu_ld) r0.ghichu_ld = unescH(cur.ghichu_ld);
+  if(hasPT() && m.hinh_thuc_mua){ r0.hinh_thuc_mua = m.hinh_thuc_mua; r0.hinh_thuc_can_xn = false; }   // lưu qua form = đã xác nhận
   const row = await window.__seal('machines', r0);     // mã hoá trường nhạy cảm (nếu đã bật)
   if(editId){
     const { data, error } = await sb.from('machines').update(row)
@@ -2994,6 +3048,7 @@ const quEl = id => document.getElementById(id);
 const QU_KEYS = ['dathang','tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt','giaitrinh'].concat(INST_KEYS, ['ghichu_ld']);
 const QU_TEXT = ['giaitrinh','ghichu_ld'];                                 // chữ, mã hoá trong sec
 const QU_DATES = QU_KEYS.filter(k=>!QU_TEXT.includes(k));                  // đặt hàng → … → về NM → lắp đặt → chạy thử → nghiệm thu
+const QU_PORT = ['tauchay_tt','capcang_tt'];                                // máy Trong nước không có 2 mốc này
 const QU_LD = INST_KEYS.concat(['ghichu_ld']);                             // nhóm Lắp đặt – Nghiệm thu: chỉ mở khi máy đã về NM
 const QU_FUT = ['tamungtt','tauchay_tt','capcang_tt','venm_tt'].concat(INST_KEYS);      // ngày thực tế: không nên nằm ở tương lai
 const quLbl = k => k==='dathang' ? tr('Contract signed / order date','Ngày ký HĐ/đặt hàng') : (LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k];
@@ -3050,6 +3105,10 @@ function quSeq(m){
 /* cảnh báo (không chặn): sai trình tự, ngày thực tế ở tương lai — chỉ xét cặp có trường vừa đổi */
 function quWarn(x,ch){
   const m = quMerge(x,ch), w = [], t = DM.todayIso(), bad = quSeq(m);
+  if('hinh_thuc_mua' in ch){
+    if(ch.hinh_thuc_mua==='domestic' && (m.tauchay_tt||m.capcang_tt)) w.push(tr('Domestic machine, but it has sailing / port arrival dates.','Máy Trong nước nhưng đang có ngày tàu chạy / cập cảng.'));
+    if(DM.missingTransit(Object.assign({}, x, ch))) w.push(PT_MISS());
+  }
   Object.entries(bad).forEach(([k,p])=>{ if(!(k in ch) && !(p in ch)) return;
     w.push(tr(`${quLbl(k)} (${fmtD(m[k])}) is earlier than ${quLbl(p)} (${fmtD(m[p])}).`,`${quLbl(k)} (${fmtD(m[k])}) sớm hơn ${quLbl(p)} (${fmtD(m[p])}).`)); });
   QU_FUT.forEach(k=>{ if(ch[k] && ch[k] > t) w.push(tr(`${quLbl(k)} (${fmtD(ch[k])}) is in the future.`,`${quLbl(k)} (${fmtD(ch[k])}) nằm ở tương lai.`)); });
@@ -3069,8 +3128,14 @@ function quDiff(x,f,batch){
     else if(v!==(cur||'')) ch[k] = QU_TEXT.includes(k) ? v : (v||null);
   });
   if(!quArrived(x,ch)) QU_LD.forEach(k=>{ delete ch[k]; });
+  if('hinh_thuc_mua' in f){       // chỉ ghi khi có chọn: chọn lại đúng giá trị đang có = xác nhận gợi ý
+    const v = f.hinh_thuc_mua;
+    if(v && (v!==x.hinh_thuc_mua || x.hinh_thuc_can_xn)) ch.hinh_thuc_mua = v;
+    if(batch && (v||x.hinh_thuc_mua)==='domestic') QU_PORT.forEach(k=>{ delete ch[k]; });
+  }
   return ch;
 }
+const quPortSkip = (x,f) => 'hinh_thuc_mua' in f && (f.hinh_thuc_mua||x.hinh_thuc_mua)==='domestic' && QU_PORT.some(k=>f[k]);
 const quLdSkip = (x,f,batch) => batch && !quArrived(x, quDiff(x,f,true)) && QU_LD.some(k=>f[k]!=='');
 async function quSaveOne(x,ch){
   const sb = window.__sb; if(!sb) throw {code:'nodb'};
@@ -3078,6 +3143,7 @@ async function quSaveOne(x,ch){
   Object.keys(ch).forEach(k=>{ if(!QU_TEXT.includes(k)) upd[k] = ch[k]; });
   const pl = quPlan(x, ch);
   Object.assign(upd, pl);                     // đổi ngày đặt hàng -> vekh + danhgia (trigger vẫn tính phần ngày thực tế)
+  if('hinh_thuc_mua' in ch) upd.hinh_thuc_can_xn = false;
   Object.assign(upd, quShip(x, ch, pl.vekh)); // đổi xuất xưởng khi chưa có ngày thực tế phía sau -> vedukienn + danhgia
   const txt = QU_TEXT.filter(k=>k in ch);
   if(txt.length){
@@ -3129,6 +3195,8 @@ function quForm(list, keep){
   const dIn = k => `<label${QU_LD.includes(k) ? ' class="qu-ld"' : ''}><span class="qu-cap">${quLbl(k)}</span><span class="qu-f" id="quf_${k}"><input id="qu_${k}" value="${escH(val(k))}" placeholder="${batch ? tr('keep','giữ nguyên') : '—'}"><button type="button" class="qu-clr" data-clr="${k}" tabindex="-1" title="${tr('Clear','Xoá')}">×</button></span><small class="qu-note" id="qun_${k}"></small>${k==='venm_tt' && !batch ? `<button type="button" class="qu-use" id="quUseFc" hidden></button>` : ''}</label>`;
   const grp = t => `<div class="qu-grp">${t}</div>`;
   mBody.innerHTML = `<form id="quForm" novalidate><div class="add-grid qu-grid">
+      ${hasPT() ? `<label class="full">${quLbl('hinh_thuc_mua')}${!batch && ptNeedsOk(x0) ? ` <span class="badge sm b-wait_install" style="align-self:flex-start">❓ ${tr('Needs confirming','Cần xác nhận')}</span>` : ''}<select id="qu_hinh_thuc_mua">${PT_OPTS(
+        `<option value="">${batch ? tr('keep','giữ nguyên') : !x0.hinh_thuc_can_xn ? '—' : tr(`Suggested: ${PT_LBL[x0.hinh_thuc_mua]||'—'} — choose to confirm`,`Gợi ý: ${PT_LBL[x0.hinh_thuc_mua]||'—'} — chọn để xác nhận`)}</option>`)}</select></label>` : ''}
       ${grp(tr('Purchasing','Mua hàng'))}${QU_DATES.slice(0,3).map(dIn).join('')}
       ${grp(tr('Shipping','Vận chuyển'))}${QU_DATES.slice(3,6).map(dIn).join('')}
       <label class="full">${quLbl('giaitrinh')}<textarea id="qu_giaitrinh" rows="2" maxlength="1000" placeholder="${batch ? tr('keep','giữ nguyên') : ''}">${escH(val('giaitrinh'))}</textarea></label>
@@ -3143,7 +3211,10 @@ function quForm(list, keep){
       <button type="submit" class="nbtn2" id="quSave">${batch ? tr('Review changes →','Xem lại thay đổi →') : tr('💾 Save','💾 Lưu')}</button></div></form>`;
   openM(batch);
   const fp = {};
-  const read = () => Object.fromEntries(QU_KEYS.map(k=>[k, (document.getElementById('qu_'+k).value||'').trim()]));
+  const ptSel = quEl('qu_hinh_thuc_mua');
+  // máy đang là gợi ý chưa xác nhận: để trống, người dùng phải tự chọn thì mới tính là xác nhận
+  if(ptSel) ptSel.value = keep ? (keep.hinh_thuc_mua||'') : (batch || x0.hinh_thuc_can_xn) ? '' : (x0.hinh_thuc_mua||'');
+  const read = () => Object.assign(Object.fromEntries(QU_KEYS.map(k=>[k, (document.getElementById('qu_'+k).value||'').trim()])), ptSel ? { hinh_thuc_mua:ptSel.value } : {});
   let armed = false;                       // 1 máy có cảnh báo: bấm Lưu lần 2 = vẫn lưu
   const upd = () => {
     armed = false; quEl('quSave').textContent = batch ? tr('Review changes →','Xem lại thay đổi →') : tr('💾 Save','💾 Lưu');
@@ -3154,6 +3225,8 @@ function quForm(list, keep){
       return;
     }
     const ch = quDiff(x0,f,false), m = quMerge(x0,ch), bad = quSeq(m);
+    const dom = (f.hinh_thuc_mua||x0.hinh_thuc_mua)==='domestic';
+    QU_PORT.forEach(k=>quEl('quf_'+k).closest('label').classList.toggle('pt-off', dom && !f[k]));   // Trong nước: ẩn, trừ khi đã lỡ có ngày
     // nút "Dùng ngày dự kiến về NM": ngày dự kiến tính theo các ô đang nhập (đổi xuất xưởng -> ngày mới, quShip).
     // Chỉ hiện khi ô về NM TT trống và ngày dự kiến đã tới (≤ hôm nay): ô này là ngày THỰC TẾ, chưa tới ngày thì chưa xác nhận được.
     const fc = quDerive(m, quShip(x0, ch)).vedukienn, useB = quEl('quUseFc');
@@ -3162,6 +3235,8 @@ function quForm(list, keep){
     useB.textContent = tr('Use expected arrival at plant','Dùng ngày dự kiến về NM') + ' (' + fmtD(fc) + ')';
     useB.title = m.capcang_tt ? tr(`= actual port arrival ${fmtD(m.capcang_tt)} + clearance & pickup ${Number(x0.lanhtt)||Number(x0.lanhkh)||0} days`,
                                    `= cập cảng TT ${fmtD(m.capcang_tt)} + lãnh máy ${Number(x0.lanhtt)||Number(x0.lanhkh)||0} ngày`)
+      : m.xuatxuong && dom ? tr(`= ex-works ${fmtD(m.xuatxuong)} + transit ${(Number(x0.ditautt)||Number(x0.ditaukh)||0) + (Number(x0.lanhtt)||Number(x0.lanhkh)||0)} days`,
+                                `= xuất xưởng ${fmtD(m.xuatxuong)} + vận chuyển ${(Number(x0.ditautt)||Number(x0.ditaukh)||0) + (Number(x0.lanhtt)||Number(x0.lanhkh)||0)} ngày`)
       : m.xuatxuong ? tr(`= ex-works ${fmtD(m.xuatxuong)} + shipping ${Number(x0.ditautt)||Number(x0.ditaukh)||0} + clearance & pickup ${Number(x0.lanhtt)||Number(x0.lanhkh)||0} days`,
                          `= xuất xưởng ${fmtD(m.xuatxuong)} + đi tàu ${Number(x0.ditautt)||Number(x0.ditaukh)||0} + lãnh máy ${Number(x0.lanhtt)||Number(x0.lanhkh)||0} ngày`)
       : tr('Expected arrival at plant currently saved','Ngày dự kiến về NM đang lưu');
@@ -3185,6 +3260,7 @@ function quForm(list, keep){
   QU_DATES.forEach(k=>{ const el = fp[k] && fp[k].altInput; if(el) el.addEventListener('keydown', e=>{
     if(e.key==='Delete' || e.key==='Backspace'){ e.preventDefault(); fp[k].clear(); fp[k].close(); upd(); } }); });
   QU_TEXT.forEach(k=>{ quEl('qu_'+k).oninput = upd; });
+  if(ptSel) ptSel.onchange = upd;
   if(!batch) quEl('quUseFc').onclick = () => {                 // điền ngày dự kiến vào ô — vẫn phải bấm Lưu
     const d = quEl('quUseFc').dataset.d; if(!d) return;
     if(fp.venm_tt) fp.venm_tt.setDate(d, true); else { quEl('qu_venm_tt').value = d; upd(); } };
@@ -3221,12 +3297,13 @@ function quForm(list, keep){
 }
 /* bảng xác nhận: Máy – Trường – Cũ → Mới (kèm các giá trị trigger sẽ tự tính) */
 function quReview(list, f, plan){
-  const sv = (k,v) => QU_TEXT.includes(k) ? (v ? escH(v) : '—') : k==='danhgia' ? dgT(v) : fmtD(v);
+  const sv = (k,v) => QU_TEXT.includes(k) ? (v ? escH(v) : '—') : k==='danhgia' ? dgT(v) : k==='hinh_thuc_mua' ? (PT_LBL[v]||'—') : fmtD(v);
   const LD_SKIP = () => tr('Installation – commissioning boxes skipped: not yet arrived at plant','Bỏ qua nhóm Lắp đặt – Nghiệm thu: máy chưa về NM');
   const rows = plan.map(p=>{
     const pl = quPlan(p.x, p.ch), sh = quShip(p.x, p.ch, pl.vekh);
     const m = quMerge(p.x, p.ch), d = quDerive(m, sh), w = quWarn(p.x, p.ch);
     if(quLdSkip(p.x, f, true)) w.push(LD_SKIP());
+    if(quPortSkip(p.x, f)) w.push(tr('Sailing / port arrival boxes skipped: domestic machine','Bỏ qua ô tàu chạy / cập cảng: máy Trong nước'));
     const lines = Object.keys(p.ch).map(k=>[k, quCur(p.x,k), p.ch[k], false]), dg = 'danhgia' in sh ? sh.danhgia : pl.danhgia;
     if('vekh' in pl && (pl.vekh||null) !== (p.x.vekh||null)) lines.push(['vekh', p.x.vekh, pl.vekh, true]);
     if(dg !== undefined && dg !== (p.x.danhgia||'')) lines.push(['danhgia', p.x.danhgia, dg, true]);
@@ -3559,14 +3636,14 @@ quSync(filtered());
 /* ---- Xuất Excel: cùng cấu trúc sheet "📝Cập nhật" nên nạp lại được bằng 📂 Nạp Excel ---- */
 /* Mã máy đứng đầu: là khoá khi nạp lại (giữ nguyên mã = cập nhật đúng máy; để trống = máy mới) */
 const XL_COLS = ['ma_may','ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','ctu','tamungtt',
-  'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'].concat(ACT_KEYS, LD_KEYS, ['sysid']);
+  'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'].concat(ACT_KEYS, LD_KEYS, hasPT() ? ['hinh_thuc_mua'] : [], ['sysid']);
 const pad2 = n=>String(n).padStart(2,'0');
 function stampNow(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes()); }
 function exportExcel(prefix){
   const rows = [XL_COLS.map(k=>REC_LABEL[k])];
   DATA.forEach(x=>{
     rows.push(XL_COLS.map(k=>{
-      const v = k==='sysid' ? x._id : x[k];
+      const v = k==='sysid' ? x._id : k==='hinh_thuc_mua' ? (PT_LBL[x[k]]||'') : x[k];
       if(DATE_KEYS.includes(k)) return v ? {t:'n', v:isoToSerial(v), z:'dd/mm/yyyy'} : '';
       if(typeof v==='number') return v;
       return unescH(v==null?'':v);
@@ -3596,10 +3673,13 @@ async function importMachines(data, known){
     if(m.model===undefined) m.model = unescH(old.model);
     if(m.serial===undefined) m.serial = unescH(old.serial);
     ACT_KEYS.concat(LD_KEYS).forEach(k=>{ if(m[k]===undefined) m[k] = k==='ghichu_ld' ? unescH(old[k]||'') : old[k]; });
+    // ô Hình thức mua trống / không nhận ra: giữ nguyên. Đổi sang giá trị khác: coi như đã xác nhận
+    if(!m.hinh_thuc_mua || m.hinh_thuc_mua===old.hinh_thuc_mua){ m.hinh_thuc_mua = old.hinh_thuc_mua||null; m.hinh_thuc_can_xn = !!old.hinh_thuc_can_xn; }
+    else m.hinh_thuc_can_xn = false;
   });
   const actRow = m => Object.fromEntries(ACT_KEYS.concat(LD_KEYS).map(k=>[k, k==='ghichu_ld' ? (m[k] ? String(m[k]) : null)
     : (typeof m[k]==='string' && /^\d{4}-\d{2}-\d{2}$/.test(m[k])) ? m[k] : null]));
-  const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1, id:m.sysid||null}))));     // không gửi Mã máy: chỉ hệ thống cấp
+  const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1, id:m.sysid||null, hinh_thuc_mua:m.hinh_thuc_mua||null, hinh_thuc_can_xn:!!m.hinh_thuc_can_xn}))));     // không gửi Mã máy: chỉ hệ thống cấp
   const { data: res, error } = await sb.rpc('import_machines_by_id', { rows });
   if(error) throw error;
   // 🔗 Danh mục: đọc lại toàn bộ máy vừa nạp rồi đồng bộ (chỉ máy có thay đổi mới được ghi)
@@ -3634,6 +3714,10 @@ window.editMachine = i => {
   set('f_ctu', x.ctu||0); set('f_dt', x.ditaukh||0); set('f_dttt', x.ditautt||'');     // TT = 0 -> ô trống = lấy theo KH
   set('f_lm', x.lanhkh||0); set('f_lmtt', x.lanhtt||''); set('f_ctm', x.sonagyctm||0);
   set('f_wd', (x.workingday||'no').toLowerCase()==='yes'?'yes':'no'); set('f_gt', unescH(x.giaitrinh));
+  // máy Trong nước: ô TG vận chuyển = đi tàu + lãnh máy đang lưu. Máy cần xác nhận: hiện gợi ý, bấm Lưu = xác nhận
+  set('f_ht', x.hinh_thuc_mua||''); f_ht.dataset.dom = x.hinh_thuc_mua==='domestic' ? '1' : '';
+  if(x.hinh_thuc_mua==='domestic') set('f_vc', (x.ditautt||x.ditaukh||0) + (x.lanhtt||x.lanhkh||0));
+  ptSync();
   const dates = {f_duyet:x.duyet, f_dh:x.dathang, f_tutt:x.tamungtt, f_xxg:x.xuatxuong, f_ntkh:x.nghiemthu_kh};
   Object.entries(dates).forEach(([id,v])=>{
     const fp = window.fpickers && window.fpickers[id];
@@ -3665,6 +3749,7 @@ function showVal(k,v){
   if(v===null || v===undefined || v==='') return tr('(empty)','(trống)');
   if(DATE_KEYS.includes(k)) return String(v).slice(0,10).split('-').reverse().join('/');
   if(k==='vnd'||k==='usd') return Number(v).toLocaleString(NUMLOC);
+  if(k==='hinh_thuc_mua') return PT_LBL[v] || String(v);
   return String(v);
 }
 window.showHistory = async i => {
@@ -3688,7 +3773,7 @@ window.showHistory = async i => {
       else if(n.deleted_at && !o.deleted_at){ act=tr('Moved to trash','Chuyển vào thùng rác'); col='var(--red)'; }
       else if(o.deleted_at && !n.deleted_at){ act=tr('Restored','Khôi phục'); col='var(--green)'; }
       else {
-        const ch = REC_KEYS.concat(ACT_KEYS, LD_KEYS).filter(k=> JSON.stringify(o[k]??null) !== JSON.stringify(n[k]??null));
+        const ch = REC_KEYS.concat(ACT_KEYS, LD_KEYS, ['hinh_thuc_mua']).filter(k=> JSON.stringify(o[k]??null) !== JSON.stringify(n[k]??null));
         body = ch.length ? ch.map(k=>`<div>${(LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k]}: <s>${escH(showVal(k,o[k]))}</s> → <ins>${escH(showVal(k,n[k]))}</ins></div>`).join('')
                          : '<div style="color:var(--muted)">'+tr('No content changes','Không đổi nội dung')+'</div>';
       }
@@ -5035,6 +5120,8 @@ const STATIC_VI = new Map([
   ['⚠️ Delay notes','⚠️ Giải trình'],
   ['Site: All','Nơi lắp đặt: Tất cả'],
   ['Origin: All','Xuất xứ: Tất cả'],
+  ['Purchase type *','Hình thức mua *'],
+  ['Transit time (days)','TG vận chuyển (ngày)'],
   ['Person in charge: All','Phụ trách: Tất cả'],
   ['Machine','Tên máy'],
   ['Qty','SL'],
@@ -5362,7 +5449,7 @@ window.encryptExisting = async () => {
 
 (async function(){
   const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const STR = ['ten','phutrach','congsuat','noilapdat','ncc','xuatxu','model','serial','danhgia','giaitrinh','workingday','ma_may','ghichu_ld'];
+  const STR = ['ten','phutrach','congsuat','noilapdat','ncc','xuatxu','model','serial','danhgia','giaitrinh','workingday','ma_may','ghichu_ld','hinh_thuc_mua'];
   const DATES = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt',
                  'nghiemthu_kh','lapdat_tt','chaythu_tt','nghiemthu_tt'];
   const NUMS = ['sl','vnd','usd','sonagyctm','ctu','ditaukh','ditautt','lanhkh','lanhtt'];
@@ -5373,6 +5460,8 @@ window.encryptExisting = async () => {
     DATES.forEach(k=>{ const v = d[k]; o[k] = (typeof v==='string' && isoRe.test(v.slice(0,10))) ? v.slice(0,10) : null; });
     NUMS.forEach(k=>{ const n = Number(d[k]); o[k] = isFinite(n) ? n : 0; });
     if(!o.sl) o.sl = 1;
+    o._pt = 'hinh_thuc_mua' in d;                        // cơ sở dữ liệu đã chạy migration 13
+    o.hinh_thuc_can_xn = d.hinh_thuc_can_xn === true;
     return o;
   }
   window.__cleanMachine = clean;     // ⚡ Cập nhật nhanh: chuẩn hoá dòng vừa lưu giống lúc tải trang
