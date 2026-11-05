@@ -22,6 +22,7 @@
 <script src="motion.js"></script>
 <script src="multi_pick.js"></script>
 <script src="combo.js"></script>
+<script src="page_fit.js"></script>
 <style>
 :root{color-scheme:dark;
   --bg:#0b1220; --panel:#121c31; --panel2:#17233d; --border:rgba(148,163,184,.14);
@@ -913,6 +914,32 @@ select.mp-open{border-color:var(--blue)}
 .pt-off{display:none!important}
 .pt-sub{display:block;font-size:10.5px;font-weight:600;color:var(--muted)}
 .pt-sub.w{color:var(--st-over)}
+/* ===== Danh sách vừa khít (page_fit.js): máy tính không lăn chuột, số dòng mỗi trang tính theo chỗ trống; mọi dòng cao bằng nhau ===== */
+:root{--list-row:48px}
+@media(min-width:1100px) and (min-height:640px){
+  #p3.active,#c2.active{display:flex;flex-direction:column;padding-top:12px;padding-bottom:12px}
+  #p3.active > *,#c2.active > *{flex:0 0 auto}
+  #p3.active > .tablewrap,#c2.active > .tablewrap{flex:1 1 0;min-height:0;max-height:none}
+  #p3 .pagerow,#c2 .pagerow{flex-wrap:nowrap}
+  #p3 .count-info,#c2 .count-info{white-space:nowrap}
+  #tb tr,#mmTb tr{height:var(--list-row)}
+  #tb td,#mmTb td{padding-top:0;padding-bottom:0;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+  #tb td.name,#mmTb td.name{max-width:300px}
+  #tb td small,#mmTb td small{overflow:hidden;text-overflow:ellipsis}
+  #tb .st-cell{flex-direction:row;flex-wrap:wrap;align-items:center;gap:2px 4px;width:212px}
+  #tb .st-cell .badge.sm{margin-top:0}
+  /* Tiến độ nhiều cột: gọn lại để không phải cuộn ngang */
+  #p3 thead th{padding-left:6px;padding-right:6px;letter-spacing:0;font-size:10.5px}
+  #tb td{padding-left:6px;padding-right:6px;font-size:12.5px;max-width:95px}
+  #tb td.name{max-width:140px;min-width:110px}
+  #tb td .badge{padding:3px 7px;gap:4px}
+  #tb td .badge.sm{padding:1px 6px}
+  #tb td:has(.badge),#mmTb td:has(.badge){max-width:none;overflow:visible}
+}
+@media(min-width:1800px) and (min-height:640px){
+  #tb td{max-width:170px}
+  #tb td.name{max-width:300px}
+}
 </style>
 </head>
 <body>
@@ -2665,7 +2692,7 @@ let filter='all', loc='', origin='', pic='', q='', sortKey='__prio', sortDir=1, 
 const QU_SEL = new Set();          // _id các máy đang được chọn để ⚡ Cập nhật nhanh hàng loạt
 const PRIO = {overdue:-1, soon:0, waiting:1, arrived:2};
 const GPRIO = x => (({overdue:-10, soon:0, waiting:10, arrived:20})[x.status]??30) + (x.danhgia==='Trễ' ? 0 : x.danhgia==='Đúng tiến độ' ? 1 : x.danhgia==='Sớm' ? 2 : 3);
-const PAGE_SIZE = 10;
+const LIST_FIT = PF.make(() => document.querySelector('#p3 .tablewrap'), 10, (old, now) => { pageNo = PF.page(pageNo, old, now); render(); });
 const fmtD = s => s? s.split('-').reverse().join('/') : '—';
 const fmtU = v => v.toLocaleString('en-US',{maximumFractionDigits:0});
 const fmtM = v => v>=1e9 ? (v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})+tr(' B',' tỷ') : (v/1e6).toLocaleString(NUMLOC,{maximumFractionDigits:0})+tr(' M',' tr');
@@ -2726,9 +2753,10 @@ function mcCell(x){
 }
 function render(){
   const rows = filtered();
-  const nPages = Math.max(1, Math.ceil(rows.length/PAGE_SIZE));
+  const PS = LIST_FIT.size();
+  const nPages = Math.max(1, Math.ceil(rows.length/PS));
   if(pageNo>nPages) pageNo = nPages;
-  const view = rows.slice((pageNo-1)*PAGE_SIZE, pageNo*PAGE_SIZE);
+  const view = rows.slice((pageNo-1)*PS, pageNo*PS);
   const qw = !!window.__canWrite;
   tb.innerHTML = view.map((x,i)=>`<tr class="${x.status!=='arrived'&&x.danhgia==='Trễ'?'late-flag':''} slide-in" data-mo="${x._id}" style="--i:${i};cursor:pointer" onclick="showDetail(${DATA.indexOf(x)})" title="${tr('Click to view full machine details','Bấm để xem đầy đủ thông tin thiết bị')}">
     <td class="mm-code">${mcCell(x)}</td>
@@ -4261,7 +4289,7 @@ function updOverview(){
 /* ===================== DANH SÁCH ===================== */
 const F = { q:'', co:'', area:'', line:'', grp:'', st:'' };
 let sortK = '__tree', sortD = 1, pg = 1, listDrawn = false;
-const PAGE = 50;
+const LIST_FIT = PF.make(() => c2.querySelector('.tablewrap'), 50, (old, now) => { pg = PF.page(pg, old, now); renderList(); });
 const COLS = [
   ['machine_code', tr('Code','Mã')], ['name', tr('Machine','Tên máy')], ['company_code', tr('Plant','Nhà máy')],
   ['area_code', tr('Area','Khu vực')], ['line_name', tr('Line','Chuyền')], ['group_name', tr('Group','Nhóm')],
@@ -4323,8 +4351,9 @@ function renderList(){
     if(sortK==='lifecycle_status'){ x = LC.indexOf(x); y = LC.indexOf(y); }
     if(x==null || x==='') return 1; if(y==null || y==='') return -1;
     return (typeof x==='number' || !isNaN(+x) && !isNaN(+y) && x!=='' ? (+x - +y) : String(x).localeCompare(String(y))) * sortD; });
-  const nP = Math.max(1, Math.ceil(rows.length / PAGE)); if(pg > nP) pg = nP;
-  const view = rows.slice((pg-1)*PAGE, pg*PAGE);
+  const PS = LIST_FIT.size();
+  const nP = Math.max(1, Math.ceil(rows.length / PS)); if(pg > nP) pg = nP;
+  const view = rows.slice((pg-1)*PS, pg*PS);
   mmTb.innerHTML = view.map((x,i)=>{
     const dep = sortK==='__tree' ? treeIdx.get(x.id)[1] : 0;
     return `<tr class="slide-in${dep?' child':''}" data-mo="${x.id}" style="--i:${i};cursor:pointer" onclick="mmShow('${x.id}')">

@@ -94,6 +94,8 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
   ở 1536×864 và 1920×1080: trong `@media(min-width:1100px) and (min-height:640px)` trang là flex cột, thẻ dài cuộn BÊN TRONG thẻ
   (tiêu đề cột sticky). Điện thoại / màn thấp: cuộn trang như thường.
 - Kiểm tra: `analytics_eval_test.py` (bước [26]) và `onescreen_mmtb_check.py` (Danh mục, 60 máy, cả 8 thẻ Thư viện).
+- Riêng Danh sách của 2 phân hệ không cuộn cả bên trong thẻ: `page_fit.js` (window.PF) tính số dòng mỗi trang theo chỗ trống, mọi dòng cao bằng `--list-row`,
+  chữ dài 1 dòng có "…" (rê chuột thấy đủ). Đổi cỡ cửa sổ giữ máy đầu trang đang xem. Điện thoại / màn thấp: Tiến độ 10, Danh mục 50 máy mỗi trang, cuộn như cũ. Test: `e2e_list_fit_test.py`.
 
 ## Hiệu ứng chuyển động (`motion.js`, khối CSS "chuyển động" cuối `<style>`)
 - Không thư viện ngoài. Mỗi hiệu ứng ≤ 0,4 s (biểu đồ / thanh mốc ~0,8 s). Không thêm hiệu ứng chạy mãi — ngoại lệ: dòng trễ hạn
