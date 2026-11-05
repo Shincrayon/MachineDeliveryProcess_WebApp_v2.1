@@ -21,6 +21,7 @@
 <script src="name_std.js"></script>
 <script src="motion.js"></script>
 <script src="multi_pick.js"></script>
+<script src="combo.js"></script>
 <style>
 :root{color-scheme:dark;
   --bg:#0b1220; --panel:#121c31; --panel2:#17233d; --border:rgba(148,163,184,.14);
@@ -900,6 +901,14 @@ tbody tr.mo-flash>td{animation:moFlash 1.6s ease-out}
 .mp-foot .mp-all.on{border-color:var(--blue);color:var(--blue)}
 .mp-foot .mp-done{background:var(--blue);border-color:var(--blue);color:#fff}
 select.mp-open{border-color:var(--blue)}
+/* ===== ô chọn hoặc gõ mới trong form (combo.js) ===== */
+.cb-pop{position:fixed;z-index:400;padding:4px;overflow:auto;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--txt);box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.cb-pop[hidden]{display:none}
+.cb-it{padding:6px 9px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;overflow-wrap:anywhere}
+.cb-it.on{background:color-mix(in srgb,var(--blue) 18%,transparent)}
+.cb-fresh{padding:6px 9px;font-size:12.5px;font-weight:400;color:var(--muted);overflow-wrap:anywhere}
+.cb-hint{font-size:12px;font-weight:400;color:var(--st-over);margin-top:4px;line-height:1.5}
+.cb-hint button{padding:0;border:0;background:none;color:var(--blue);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer}
 /* ===== hình thức mua ===== */
 .pt-off{display:none!important}
 .pt-sub{display:block;font-size:10.5px;font-weight:600;color:var(--muted)}
@@ -1084,7 +1093,7 @@ select.mp-open{border-color:var(--blue)}
       <label>Person in charge<input id="f_pt" type="text"></label>
       <label>Quantity<input id="f_sl" type="number" value="1" min="1"></label>
       <label>Capacity<input id="f_cs" type="text" placeholder="e.g. 3000 kg/h"></label>
-      <label>Installation site<input id="f_nld" type="text"></label>
+      <label>Installation site<select id="f_nld"></select></label>
       <label>Supplier<input id="f_ncc" type="text"></label>
       <label>Origin<input id="f_xx" type="text"></label>
       <label id="f_htL" class="pt-off">Purchase type *<select id="f_ht"></select></label>
@@ -1528,6 +1537,25 @@ f_ht.innerHTML = PT_OPTS(`<option value="">${tr('— Choose —','— Chọn —
 f_ht.onchange = ()=>{ f_ht.dataset.auto = ''; ptSwitch(); };
 f_xx.addEventListener('input', ()=>{ if(!hasPT() || (f_ht.value && !f_ht.dataset.auto)) return;
   f_ht.value = DM.suggestPurchase(f_xx.value); f_ht.dataset.auto = '1'; ptSwitch(); });
+/* ô chọn từ dữ liệu đang có (combo.js): vẫn gõ được giá trị mới */
+CB.labels = { pre:tr('Did you mean','Có phải'), post:tr('?','không?'), fresh:tr('New value','Giá trị mới') };
+CB.make(f_pt, { items:()=>DATA.map(x=>unescH(x.phutrach)) });
+CB.make(f_xx, { items:()=>DATA.map(x=>unescH(x.xuatxu)) });
+CB.make(f_ncc, { items:()=>DATA.map(x=>unescH(x.ncc)).concat(((window.__MMTB||{}).suppliers||[]).map(s=>s.name)) });
+/* ô Nơi lắp đặt: chỉ chọn nhà máy trong thư viện. Lưu đúng cách ghi nhiều máy của công ty đó đang dùng (bộ lọc, biểu đồ gom theo chữ),
+   công ty chưa có máy thì lưu mã (mã không đổi, đổi tên trong thư viện vẫn nhận ra). Máy đang ghi cách khác / nơi lạ: giữ nguyên, không mất khi mở Sửa */
+function siteFill(cur){
+  cur = (cur||'').trim();
+  const curCo = DM.companyCode(cur), used = {};
+  DATA.forEach(x=>{ const t = unescH(x.noilapdat).trim(), c = DM.companyCode(t); if(c){ const u = used[c] = used[c] || {}; u[t] = (u[t]||0) + 1; } });
+  const common = code => Object.entries(used[code]||{}).sort((a,b)=>b[1]-a[1])[0]?.[0] || code;
+  const rows = DM.COMPANY_LIST.filter(c=>c.active || c.code===curCo);
+  f_nld.innerHTML = '';
+  f_nld.add(new Option(tr('— Choose —','— Chọn —'), ''));
+  rows.forEach(c=>f_nld.add(new Option(c.code + (c.name ? ' — ' + c.name : ''), c.code===curCo ? cur : common(c.code))));
+  if(cur && !rows.some(c=>c.code===curCo)) f_nld.add(new Option(cur + ' ' + tr('(not in the library)','(chưa có trong thư viện)'), cur));
+  f_nld.value = cur;
+}
 addGrid.addEventListener('input', updCalc);
 addGrid.addEventListener('change', updCalc);
 
@@ -1612,7 +1640,8 @@ async function submitAdd(){
 }
 
 function resetAddForm(){
-  ['f_mamay','f_ten','f_pt','f_cs','f_nld','f_ncc','f_xx','f_model','f_serial','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_ntkh','f_gt'].forEach(id=>document.getElementById(id).value='');
+  ['f_mamay','f_ten','f_pt','f_cs','f_ncc','f_xx','f_model','f_serial','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_ntkh','f_gt'].forEach(id=>document.getElementById(id).value='');
+  siteFill(''); CB.clearHints();
   ['f_duyet','f_dh','f_tutt','f_xxg','f_ntkh'].forEach(id=>{ if(window.fpickers && window.fpickers[id]) window.fpickers[id].clear(); });
   ['f_ctu','f_dt','f_lm','f_ctm'].forEach(id=>document.getElementById(id).value='0');
   ['f_dttt','f_lmtt'].forEach(id=>document.getElementById(id).value='');     // trống = lấy theo KH
@@ -3708,7 +3737,7 @@ window.editMachine = i => {
   resetAddForm();
   const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value = (v==null?'':v); };
   set('f_mamay', x.ma_may||''); set('f_ten', unescH(x.ten)); set('f_pt', unescH(x.phutrach)); set('f_sl', x.sl||1);
-  set('f_cs', unescH(x.congsuat)); set('f_nld', unescH(x.noilapdat)); set('f_ncc', unescH(x.ncc)); set('f_xx', unescH(x.xuatxu));
+  set('f_cs', unescH(x.congsuat)); siteFill(unescH(x.noilapdat)); set('f_ncc', unescH(x.ncc)); set('f_xx', unescH(x.xuatxu));
   set('f_model', unescH(x.model)); set('f_serial', unescH(x.serial));
   set('f_vnd', fmtMoney(x.vnd)); set('f_usd', fmtMoney(x.usd));
   set('f_ctu', x.ctu||0); set('f_dt', x.ditaukh||0); set('f_dttt', x.ditautt||'');     // TT = 0 -> ô trống = lấy theo KH
@@ -4446,6 +4475,9 @@ function buildForm(){
   ['m_type','m_sup'].forEach(id=>{ document.getElementById(id).addEventListener('change', nameHint); });
   document.querySelectorAll('.m_mat').forEach(c=>c.addEventListener('change', nameHint));
   m_code.oninput = ()=>{ m_code.dataset.touched = '1'; };
+  // ô chọn từ dữ liệu Danh mục (combo.js): vẫn gõ được giá trị mới. Ô đơn vị quá hẹp, không chèn dòng nhắc
+  [['m_origin','origin'],['m_brand','manufacturer'],['m_eng','engineer'],['m_mgr','manager'],['m_capu','capacity_unit',false]].forEach(([id,k,hint])=>
+    CB.make(document.getElementById(id), { items:()=>MM.machines.map(x=>x[k]), hint }));
   mmSave.onclick = save;
 }
 function fillFormDeps(keep){
@@ -4486,6 +4518,7 @@ function openForm(x){
   buildForm();
   editId = x ? x.id : null;
   m_code.dataset.touched = x ? '1' : '';
+  CB.clearHints();
   mmFTitle.textContent = x ? tr('✏️ Edit: ','✏️ Sửa: ') + x.name : tr('➕ Add machine to the catalog','➕ Thêm máy vào Danh mục MMTB');
   mmSave.textContent = x ? tr('💾 Save changes','💾 Lưu thay đổi') : tr('➕ Add machine','➕ Thêm máy');
   // nhóm: chọn từ thư viện; nhóm cũ của máy (nếu không còn trong thư viện) vẫn giữ để không mất
@@ -4643,7 +4676,8 @@ const LIB = {
     fields:[ {k:'code', l:tr('Code (e.g. DTR)','Mã (VD DTR)'), req:1, upper:1, lockEdit:1}, {k:'name', l:tr('Name','Tên'), req:1},
              {k:'is_active', l:tr('Active','Đang hoạt động'), type:'bool', def:true} ],
     cols:['code','name','is_active'], uniq:['code'],
-    used: r=>cnt(MM.machines, x=>x.company_id===r.id) + cnt(MM.areas, a=>a.company_id===r.id) + cnt(MM.lines, l=>l.company_id===r.id),
+    used: r=>cnt(MM.machines, x=>x.company_id===r.id) + cnt(MM.areas, a=>a.company_id===r.id) + cnt(MM.lines, l=>l.company_id===r.id)
+      + cnt(DATA, x=>DM.companyCode(unescH(x.noilapdat))===r.code),      // máy bên Tiến độ nhận công ty theo Nơi lắp đặt
     sort:(a,b)=>String(a.code).localeCompare(b.code) },
   areas:     { icon:'🏢', title:tr('Workshops','Nhà xưởng'), table:'areas', rows:()=>MM.areas,
     fields:[ {k:'company_id', l:tr('Plant','Nhà máy'), type:'company', req:1}, {k:'code', l:tr('Workshop code (e.g. F07)','Mã xưởng (VD F07)'), req:1, upper:1},
@@ -4758,6 +4792,8 @@ window.libEdit = (k, id) => {
     if(k==='types' && obj.default_unit && window.NS) obj.default_unit = NS.normUnit(obj.default_unit) || obj.default_unit;   // đơn vị chuẩn
     const miss = d.fields.find(f=>f.req && !(f.lockEdit && cur) && (obj[f.k]==null || obj[f.k]===''));
     if(miss) return err(tr('Please fill in: ','Hãy nhập: ') + miss.l);
+    if(k==='companies' && !cur && !DM.companyCodeOk(obj.code))
+      return err(tr('The plant code must be 2–4 capital letters, and KXD is reserved.','Mã nhà máy phải gồm 2–4 chữ in hoa, không dùng KXD (dành riêng).'));
     const mine = d.uniq.map(u=>String((u in obj ? obj[u] : v[u]) ?? '').toLowerCase()).join('|');
     if(d.rows().some(r=>r.id!==id && d.uniq.map(u=>String(r[u] ?? '').toLowerCase()).join('|')===mine))
       return err(tr('This already exists in the library.','Mục này đã có trong thư viện.'));
@@ -5492,6 +5528,7 @@ window.encryptExisting = async () => {
       const bad = rs.find(r=>r.error);
       if(bad) return Object.assign(empty, { err: bad.error.message || String(bad.error.code || 'error') });
       const [m0, co, ar, ln0, sp0, ms, rates] = rs.map(r=>r.data || []);
+      DM.setCompanies(co);      // nhà máy trong thư viện: Tiến độ máy về nhận ra ngay
       const [m, ln, sp] = await Promise.all([openAll(m0), openAll(ln0), openAll(sp0)]);
       // nhóm thiết bị (07_library.sql); chưa có bảng thì lấy theo nhóm đang dùng trong máy
       const gr = await sb.from('mmtb_groups').select('*').order('sort_order').order('name');

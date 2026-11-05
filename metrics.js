@@ -42,11 +42,28 @@
   };
 
   /* ---------- công ty: nơi lắp đặt (chữ) -> mã công ty ---------- */
-  DM.COMPANIES = ['DTR', 'DAL', 'DOL', 'KN', 'TDP', 'TT'];
+  const CO_BASE = ['DTR', 'DAL', 'DOL', 'KN', 'TDP', 'TT'];
+  DM.COMPANIES = CO_BASE;
   const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]/g, '');
+  DM.fold = fold;
   const CO_ALIAS = { dtr: 'DTR', duytanrecycling: 'DTR', dal: 'DAL', dailoc: 'DAL', dol: 'DOL', donglam: 'DOL',
                      kn: 'KN', khanhnga: 'KN', tdp: 'TDP', tandaiphat: 'TDP', tt: 'TT', tantao: 'TT' };
-  DM.companyCode = noilapdat => CO_ALIAS[fold(noilapdat)] || null;
+  let coAlias = CO_ALIAS;
+  DM.companyCode = noilapdat => coAlias[fold(noilapdat)] || null;
+  // mã nhà máy phải khớp định dạng Mã máy (XXXX-2026-001); KXD = "không xác định"
+  DM.companyCodeOk = c => /^[A-Z]{2,4}$/.test(c) && c !== 'KXD';
+  // danh sách cho ô Nơi lắp đặt; chưa đọc được thư viện thì dùng 6 công ty mặc định
+  DM.COMPANY_LIST = DM.COMPANIES.map(code => ({ code, name: '', active: true }));
+  /* nhà máy lấy từ thư viện (bảng companies). 6 công ty cũ giữ cách nhận và thứ tự; giống machine_company_code (migration 14) */
+  DM.setCompanies = rows => {
+    const ok = (rows || []).filter(r => DM.companyCodeOk(r.code));
+    if (!ok.length) return;
+    coAlias = Object.assign({}, CO_ALIAS);
+    ok.forEach(r => [r.code, r.name].forEach(t => { const k = fold(t); if (k && !coAlias[k]) coAlias[k] = r.code; }));
+    DM.COMPANIES = CO_BASE.concat(ok.map(r => r.code).filter(c => !CO_BASE.includes(c)).sort());
+    DM.COMPANY_LIST = ok.map(r => ({ code: r.code, name: r.name || '', active: r.is_active !== false }))
+      .sort((a, b) => DM.COMPANIES.indexOf(a.code) - DM.COMPANIES.indexOf(b.code));
+  };
 
   /* ---------- mốc chuẩn của 1 máy ---------- */
   DM.MILESTONES = ['contract_signed', 'shipped', 'arrived_site'];
