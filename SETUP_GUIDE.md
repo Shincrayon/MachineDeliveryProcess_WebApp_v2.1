@@ -1,6 +1,6 @@
 # Web app Tiến Độ Máy Về (v2.1) — hướng dẫn triển khai
 
-Giao diện giữ nguyên dashboard `Dashboard_TienDoMayVe.html`. Dữ liệu lưu trên **Supabase**, trang web đặt trên **GitHub Pages**. Người dùng mở link, đăng nhập bằng email và mật khẩu do quản trị cấp. Không cần Claude hay tài khoản Microsoft.
+Giao diện giữ nguyên dashboard `Dashboard_TienDoMayVe.html`. Dữ liệu lưu trên **Supabase**, trang web đặt trên **Vercel**, mã nguồn nằm trên GitHub. Người dùng mở link, đăng nhập bằng email và mật khẩu do quản trị cấp. Không cần Claude hay tài khoản Microsoft.
 
 ## Các file trong thư mục
 
@@ -101,30 +101,28 @@ Vào menu trái **SQL Editor** → **New query**, lần lượt làm 3 lần:
 4. Đăng nhập bằng tài khoản ở bước 3. Dashboard hiện đủ 84 máy là kết nối đúng.
 5. Thử nhanh: bấm một máy → ✏️ Sửa thông tin → lưu → 🕘 Lịch sử phải thấy dòng vừa sửa.
 
-## Bước 6. Đưa lên mạng bằng GitHub Pages (≈10 phút)
+## Bước 6. Đưa lên mạng bằng Vercel (≈10 phút)
 
-1. Vào https://github.com → **New repository**:
-   - Tên: ví dụ `TienDoMayVe`
-   - Chọn **Public**, vì GitHub Pages miễn phí yêu cầu repo public. Chỉ mã giao diện là công khai. Dữ liệu máy nằm trên Supabase, không nằm trong repo.
-2. Trong repo vừa tạo → **Add file → Upload files** → kéo thả `index.html` và `config.js` → **Commit changes**.
-   - Thư mục `supabase/` và file Excel **không cần và không nên** đưa lên.
-3. **Settings → Pages**:
-   - Source: **Deploy from a branch**
-   - Branch: `main`, thư mục `/ (root)` → Save.
-4. Sau 1–2 phút, link có dạng `https://<tên-github>.github.io/TienDoMayVe/`. Gửi link này cho mọi người.
-5. Supabase → **Authentication → URL Configuration** → **Site URL**: dán link ở trên → Save.
+1. Đưa mã nguồn lên một repo GitHub, gồm `index.html`, `config.js` và các file `.js` đi kèm.
+   - Thư mục `supabase/` và file Excel **không cần và không nên** đưa lên. Dữ liệu máy nằm trên Supabase, không nằm trong repo.
+2. Vào https://vercel.com → **Add New → Project** → chọn repo vừa tạo.
+   - Framework Preset: **Other**, không cần lệnh build → **Deploy**.
+3. Sau 1–2 phút có link dạng `https://<tên-dự-án>.vercel.app/` (hiện tại: https://machinestracking.vercel.app/). Gửi link này cho mọi người.
+4. Supabase → **Authentication → URL Configuration** → **Site URL**: dán link ở trên → Save.
 
-Khi sửa `index.html` sau này, chỉ cần **Upload files** đè lên trong repo. Khoảng 1 phút sau trang tự cập nhật.
+Khi sửa app sau này, push lên nhánh `main` là trang tự cập nhật. Nhánh khác có link xem trước riêng; link đó dùng chung database thật, lưu trên đó là ghi vào dữ liệu thật.
 
 ## Thêm đồng nghiệp
 
-1. Supabase → **Authentication → Users → Add user**: tạo email và mật khẩu, tick **Auto Confirm User**.
-2. Mở `02_users.sql`:
-   - Thêm 1 dòng: `, ('email@duytanrecycling.com', 'Họ tên', 'editor')`
-   - Dán vào SQL Editor → **Run**.
-3. Gửi link, email và mật khẩu cho người đó.
+Admin bấm nút **👥** trên thanh trên cùng, điền email, họ tên, quyền rồi bấm **Thêm**. App hiện mật khẩu tạm đúng một lần: bấm **Sao chép** rồi gửi cho người đó, và gửi riêng mật khẩu dữ liệu. Người đó phải đổi mật khẩu ở lần đăng nhập đầu. Cũng trong cửa sổ này: đổi quyền, đặt lại mật khẩu, thu hồi quyền, xem nhật ký.
 
-**Thu hồi quyền:** chạy lệnh `delete` ở cuối file `02_users.sql`, hoặc xoá user trong Authentication → Users.
+**Cách dự phòng khi nút 👥 lỗi:**
+
+1. Supabase → **Authentication → Users → Add user**: tạo email và mật khẩu, tick **Auto Confirm User**.
+2. **SQL Editor**: dán câu `insert` theo mẫu trong `02_users.sql`, sửa email, họ tên, quyền → **Run**. Không lưu email thật vào file.
+3. Gửi link, email, mật khẩu và mật khẩu dữ liệu cho người đó.
+
+**Thu hồi quyền khi dùng cách dự phòng:** chạy lệnh `delete` ở cuối file `02_users.sql`, và xoá user trong Authentication → Users.
 
 ## Dùng hằng ngày
 

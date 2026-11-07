@@ -23,6 +23,7 @@
 <script src="multi_pick.js"></script>
 <script src="combo.js"></script>
 <script src="page_fit.js"></script>
+<script src="users_admin.js"></script>
 <style>
 :root{color-scheme:dark;
   --bg:#0b1220; --panel:#121c31; --panel2:#17233d; --border:rgba(148,163,184,.14);
@@ -914,6 +915,34 @@ select.mp-open{border-color:var(--blue)}
 .pt-off{display:none!important}
 .pt-sub{display:block;font-size:10.5px;font-weight:600;color:var(--muted)}
 .pt-sub.w{color:var(--st-over)}
+/* ===== cửa sổ 👥 Quản lý người dùng (users_admin.js) ===== */
+.add-grid.ua-form{grid-template-columns:2fr 2fr 1.2fr auto;align-items:end;gap:10px;margin:4px 0 6px}
+.ua-msg{min-height:1.2em;font-size:13px;margin-bottom:8px}
+.ua-new{margin-bottom:10px;font-size:13px}
+.ua-pw{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
+.ua-pw code{font-size:15px;font-weight:700;padding:4px 10px;border-radius:8px;background:var(--panel2);user-select:all;overflow-wrap:anywhere}
+.ua-new small{color:var(--muted);line-height:1.5}
+.ua-scroll{max-height:calc(100vh - 150px);overflow:auto;padding-right:4px}
+.pay-tbl.ua-tbl{max-height:none}
+.ua-tbl td{vertical-align:middle}
+.ua-tbl td.act{white-space:nowrap;text-align:right}
+.ua-tbl select{padding:4px 6px;border-radius:7px;border:1px solid var(--border);background:var(--panel2);color:var(--txt);font-size:12.5px}
+.ua-tbl td.act button{background:transparent;border:1px solid var(--border);border-radius:7px;padding:3px 8px;margin-left:4px;cursor:pointer;color:var(--txt);font-size:12px}
+.ua-tbl td.act button.ask{border-color:var(--st-bad);color:var(--st-bad);font-weight:700}
+.ua-tag{display:block;color:var(--muted);font-size:11px}
+.ua-log{margin-top:10px;font-size:12.5px;color:var(--muted)}
+.ua-log summary{cursor:pointer}
+.ua-log #uaLogB{max-height:24vh;overflow:auto;line-height:1.7;margin-top:6px;overflow-wrap:anywhere}
+@media(max-width:640px){
+  .add-grid.ua-form{grid-template-columns:1fr}
+  .ua-tbl table,.ua-tbl tbody,.ua-tbl tr{display:block;width:100%;min-width:0}
+  .ua-tbl thead{display:none}
+  .ua-tbl tr{padding:8px 2px;border-bottom:1px solid var(--border)}
+  .ua-tbl td{display:flex;justify-content:space-between;gap:12px;padding:3px 2px;border:0;text-align:right;overflow-wrap:anywhere}
+  .ua-tbl td::before{content:attr(data-l);color:var(--muted);font-size:12px;font-weight:600;text-align:left;flex:0 0 auto}
+  .ua-tbl td.act{justify-content:flex-end;white-space:normal;flex-wrap:wrap}
+  .ua-tbl td.act::before{content:none}
+}
 /* ===== Danh sách vừa khít (page_fit.js): máy tính không lăn chuột, số dòng mỗi trang tính theo chỗ trống; mọi dòng cao bằng nhau ===== */
 :root{--list-row:48px}
 @media(min-width:1100px) and (min-height:640px){
@@ -966,6 +995,7 @@ select.mp-open{border-color:var(--blue)}
   <button class="upd-btn mod-delivery" id="btnAdd" style="border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.12);color:var(--blue)" title="Add a new machine">➕ Add</button>
   <button class="upd-btn mod-delivery" id="btnExport" hidden title="Download the full list as an Excel file; the last column (System ID) is the key when you import it back — do not change it">⬇️ Excel</button>
   <button class="upd-btn mod-delivery" id="btnTrash" hidden title="Deleted machines — restore or delete permanently">🗑</button>
+  <button class="upd-btn" id="btnUsers" hidden title="Manage users">👥</button>
   <button class="upd-btn" id="btnPw" hidden title="Change password">🔑</button>
   <button class="upd-btn" id="btnLogout" hidden title="Sign out">⎋</button>
   <button class="upd-btn theme-btn" id="btnLang" title="Chuyển sang tiếng Việt">VI</button>
@@ -4046,7 +4076,7 @@ window.purgeTrash = j => {
 (function appState(){
   if(window.__canWrite===false){ btnAdd.hidden = true; btnPick.hidden = true; }
   if(window.__canWrite){ btnExport.hidden = false; btnExport.onclick = ()=>{ try{ exportExcel('TienDoMayVe'); }catch(e){ showNotice({type:'error', title:tr('Could not export the file','Chưa xuất được file'), sub:escH(e.message)}); } }; }
-  if(window.__role==='admin'){ btnTrash.hidden = false; btnTrash.onclick = openTrash; }
+  if(window.__role==='admin'){ btnTrash.hidden = false; btnTrash.onclick = openTrash; btnUsers.hidden = false; btnUsers.onclick = UA.open; }
   if(window.__userEmail){ btnLogout.hidden = false; btnLogout.title = tr('Sign out (','Đăng xuất (') + window.__userEmail + ')';
     btnPw.hidden = false; btnPw.onclick = openChangePw; }
   btnLogout.onclick = async ()=>{ await appSignOut(); location.reload(); };
@@ -5148,6 +5178,7 @@ const STATIC_VI = new Map([
   ['Deleted machines — restore or delete permanently','Máy đã xoá — khôi phục hoặc xoá hẳn'],
   ['Sign out','Đăng xuất'],
   ['Change password','Đổi mật khẩu'],
+  ['Manage users','Quản lý người dùng'],
   ['Total equipment','Tổng thiết bị'],
   ['Total value','Tổng giá trị'],
   ['Awaiting','Đang chờ về'],
@@ -5687,6 +5718,7 @@ window.encryptExisting = async () => {
   window.__role = me.role;
   window.__canWrite = (me.role==='editor' || me.role==='admin');
   window.__canWriteM = ['editor','catalog_editor','admin'].includes(me.role);
+  await UA.forceChangePw(sb, session.user, card, appSignOut);
   await cryptoGate(sb, me.role, card);
   window.__MMTB = await loadMmtb(sb);
 

@@ -1,6 +1,6 @@
 # TienDoMayVe WebApp v2.1 — ghi chú cho người phát triển
 
-App 1 file `index.html` (GitHub Pages) + `metrics.js` + `export.js` + `catalog_sync.js` + `name_std.js` + `motion.js` + `multi_pick.js`, dữ liệu trên Supabase.
+App 1 file `index.html` (Vercel, https://machinestracking.vercel.app/ — push `main` là tự lên bản mới) + `metrics.js` + `export.js` + `catalog_sync.js` + `name_std.js` + `motion.js` + `multi_pick.js` + `combo.js` + `page_fit.js` + `users_admin.js`, dữ liệu trên Supabase.
 Dữ liệu máy được mã hoá trong trình duyệt (cột `sec`); không gửi bản rõ lên Supabase, không đưa tên NCC vào URL.
 
 ## Hai loại định danh của máy (bảng `machines`)
@@ -96,6 +96,13 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Kiểm tra: `analytics_eval_test.py` (bước [26]) và `onescreen_mmtb_check.py` (Danh mục, 60 máy, cả 8 thẻ Thư viện).
 - Riêng Danh sách của 2 phân hệ không cuộn cả bên trong thẻ: `page_fit.js` (window.PF) tính số dòng mỗi trang theo chỗ trống, mọi dòng cao bằng `--list-row`,
   chữ dài 1 dòng có "…" (rê chuột thấy đủ). Đổi cỡ cửa sổ giữ máy đầu trang đang xem. Điện thoại / màn thấp: Tiến độ 10, Danh mục 50 máy mỗi trang, cuộn như cũ. Test: `e2e_list_fit_test.py`.
+
+## Quản lý người dùng (nút 👥, chỉ admin)
+- `users_admin.js` (window.UA) gọi Edge Function `manage-users` (`supabase/functions/manage-users/index.ts`, repo sao lưu). Hàm giữ service role, tự xác minh JWT + quyền admin; chỉ nhận origin link Vercel và Live Server (link xem trước của Vercel không dùng được).
+- Mật khẩu tạm chỉ trả 1 lần, không lưu, không ghi nhật ký. Cờ `user_metadata.must_change_pw` buộc đổi mật khẩu trước `cryptoGate` (`UA.forceChangePw`). Mật khẩu dữ liệu không đi qua tính năng này.
+- Không thao tác được lên chính mình, nên luôn còn ít nhất 1 admin. Thu hồi: xoá `app_users` trước, rồi xoá tài khoản. Nhật ký: bảng `user_admin_log` (migration 15), chỉ service role ghi.
+- Triển khai: chạy `20261107_15_user_admin_log.sql` → Supabase › Edge Functions: tạo `manage-users`, dán `index.ts`, Deploy → merge app. `02_users.sql` để dự phòng khi hàm lỗi.
+- Test: `users_fn_test.py` (logic hàm, deps giả), `e2e_users_admin_test.py` (giao diện, hàm giả). Hàm thật chỉ thử được sau khi lên Supabase.
 
 ## Hiệu ứng chuyển động (`motion.js`, khối CSS "chuyển động" cuối `<style>`)
 - Không thư viện ngoài. Mỗi hiệu ứng ≤ 0,4 s (biểu đồ / thanh mốc ~0,8 s). Không thêm hiệu ứng chạy mãi — ngoại lệ: dòng trễ hạn
