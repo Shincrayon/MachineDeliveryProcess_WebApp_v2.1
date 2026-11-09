@@ -110,6 +110,12 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Triển khai: migration 15 → 16 → Supabase › Edge Functions: dán `index.ts` vào `manage-users`, Deploy → merge app (làm liền nhau: hàm mới + app cũ hoặc ngược lại thì thêm người lỗi). `02_users.sql` để dự phòng khi hàm lỗi.
 - Test: `users_fn_test.py` (logic hàm, deps giả), `e2e_users_admin_test.py` (giao diện, hàm giả), `e2e_user_keys_test.py` (tách mật khẩu, RLS `user_keys`, đăng nhập với Supabase Auth giả có kiểm tra mật khẩu). Hàm và Auth thật chỉ thử được sau khi triển khai.
 
+## Quyền viewer: chỉ Tổng quan + Danh sách (migration 17)
+- `viewer` chỉ thấy tab `c1`, `c2`, `p1`, `p3`. `window.__tabOk(id)` (mainSrc, cạnh `showPage`) bỏ các tab khác khỏi thanh tab; `showPage` ở cả 2 phân hệ gọi nó, mở tab khác bằng code thì về Tổng quan của phân hệ đó.
+- Không có nút 💳 Thanh toán trong chi tiết máy; `showPayments` thoát ngay với viewer.
+- Ẩn tab KHÔNG phải bảo mật. Bảo mật thật: migration 17 cho chỉ `admin`, `editor`, `catalog_editor` đọc `payment_schedule`, `site_readiness`, `milestone_forecast_history`. Viewer vẫn nhận đủ bảng máy (Danh sách cần), nên Phân tích / Đánh giá có mở lại bằng F12 cũng không lộ gì mới.
+- Tab hoặc bảng mới chỉ dành cho người sửa: thêm vào chặn ở cả 2 lớp. Test: `e2e_viewer_tabs_test.py`.
+
 ## Hiệu ứng chuyển động (`motion.js`, khối CSS "chuyển động" cuối `<style>`)
 - Không thư viện ngoài. Mỗi hiệu ứng ≤ 0,4 s (biểu đồ / thanh mốc ~0,8 s). Không thêm hiệu ứng chạy mãi — ngoại lệ: dòng trễ hạn
   (`latePulse`) người dùng muốn giữ nhấp nháy.

@@ -1738,7 +1738,13 @@ Chart.defaults.maintainAspectRatio = false;
 
 /* ===== tab navigation, lazy chart init ===== */
 const inited = {};
+/* viewer chỉ xem Tổng quan + Danh sách (2 phân hệ): bỏ các tab khác; mở bằng đường khác thì về Tổng quan.
+   Chỉ là giao diện — lịch thanh toán / mặt bằng / lịch sử ngày được máy chủ chặn (migration 17). */
+const VIEW_TABS = ['c1','c2','p1','p3'];
+window.__tabOk = id => (window.__role !== 'viewer' || VIEW_TABS.includes(id)) ? id : (/^c/.test(id) ? 'c1' : 'p1');
+document.querySelectorAll('.tab').forEach(t=>{ if(window.__tabOk(t.dataset.p) !== t.dataset.p) t.remove(); });
 function showPage(id){
+  id = window.__tabOk(id);
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id===id));
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.p===id));
   if(!inited[id]){ inited[id]=true; if(id==='p1') initP1(); if(id==='p2') initP2(); if(id==='p4') initP4(); if(id==='p5') initP5(); }
@@ -2938,7 +2944,7 @@ window.showDetail = i => {
     </div>
     <div class="dt-actions">
       <button class="nbtn2 ghost" onclick="showHistory(${i})">${tr(`🕘 History`,`🕘 Lịch sử`)}</button>
-      <button class="nbtn2 ghost" onclick="showPayments(${i})">${tr(`💳 Payments`,`💳 Thanh toán`)}</button>
+      ${window.__role !== 'viewer' ? `<button class="nbtn2 ghost" onclick="showPayments(${i})">${tr(`💳 Payments`,`💳 Thanh toán`)}</button>` : ''}
       ${window.__canWrite ? `<button class="nbtn2 ghost" onclick="askDelete(${i})">${tr(`🗑 Delete machine`,`🗑 Xoá máy`)}</button>
       <button class="nbtn2 ghost" onclick="quickEdit(${i})">${tr(`⚡ Quick update`,`⚡ Cập nhật nhanh`)}</button>
       <button class="nbtn2" onclick="editMachine(${i})">${tr(`✏️ Edit`,`✏️ Sửa thông tin`)}</button>` : ''}</div>
@@ -3885,7 +3891,7 @@ function payErrText(e){
   return dbErrText(e);
 }
 window.showPayments = async (i, editId) => {
-  const x = DATA[i]; if(!x) return;
+  const x = DATA[i]; if(!x || window.__role === 'viewer') return;   // viewer không xem thanh toán
   const sb = window.__sb, canW = !!window.__canWrite;
   mTitle.textContent = tr('💳 Payments: ', '💳 Thanh toán: ') + unescH(x.ten);
   mSub.textContent = tr('Loading…', 'Đang tải…');
@@ -5127,6 +5133,7 @@ function updHeaderTs(){
 const last = { mmtb:'c1', delivery:'p1' };
 const _show = showPage;
 showPage = function(id){
+  id = window.__tabOk(id);
   _show(id);
   const m = /^c/.test(id) ? 'mmtb' : 'delivery'; last[m] = id;
   if(id==='c1') drawOverview();

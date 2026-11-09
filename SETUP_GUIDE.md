@@ -37,7 +37,7 @@ Mỗi lần mở app ở tab mới, app hỏi mật khẩu dữ liệu. Đóng t
 **Mã PIN 6 số (đặt bằng SQL, không có trên app):** trong SQL Editor chạy `select public.admin_set_pin('123456');` (thay bằng PIN của bạn). Đổi PIN: chạy lại lệnh với PIN mới. Nhập sai mật khẩu dữ liệu 5 lần thì ô nhập bị khoá, phải nhập đúng PIN mới được thử tiếp; sai PIN 5 lần thì chờ 15 phút. PIN băm bcrypt, kiểm tra và đếm số lần sai đều trên máy chủ. PIN **không** mở được dữ liệu. Bỏ PIN: `update public.app_pin set pin_hash = null;`
 
 **Quyền người dùng**
-- `viewer`: chỉ xem.
+- `viewer`: chỉ xem **Tổng quan** và **Danh sách** của cả 2 phân hệ. Không thấy Thư viện, Phân tích, Đánh giá, Kế hoạch và 💳 Thanh toán; máy chủ cũng không gửi lịch thanh toán, mặt bằng, lịch sử ngày cho viewer (cần chạy migration `20261109_17_viewer_limits.sql`).
 - `editor`: xem, nhập máy, sửa, xoá, nạp Excel ở cả 2 phân hệ.
 - `catalog_editor`: chỉ thêm, sửa, xoá ở **Danh mục MMTB**; phần Tiến độ máy về chỉ xem. Có sau khi chạy `05_mmtb_schema.sql`.
 - `admin`: như editor, thêm **Thùng rác** (khôi phục hoặc xoá hẳn máy).
@@ -160,6 +160,7 @@ Admin bấm nút **👥** trên thanh trên cùng, điền email, họ tên, quy
 | *"Sai email hoặc mật khẩu"* | Kiểm tra lại user trong Authentication → Users, đã tick Auto Confirm chưa |
 | *"Chưa được cấp quyền"* | Email chưa có trong `app_users`: chạy lại `02_users.sql` có email đó |
 | Không thấy nút Nhập máy / Nạp Excel / Excel | Tài khoản đang là `viewer` |
+| Chỉ thấy tab Tổng quan và Danh sách | Tài khoản đang là `viewer`, đúng thiết kế |
 | Không thấy nút 🗑 Thùng rác | Chỉ tài khoản `admin` mới có |
 | Báo *"Máy này vừa được người khác sửa hoặc xoá"* | Có người vừa sửa máy đó. Bấm 🔄 Làm mới rồi sửa lại |
 | Báo lỗi khi cấp quyền trong `02_users.sql` | Email không phải `@duytanrecycling.com` |
