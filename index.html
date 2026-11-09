@@ -3998,7 +3998,7 @@ function pwErrText(e){
 }
 function openChangePw(){
   mTitle.textContent = tr('🔑 Change password','🔑 Đổi mật khẩu');
-  mSub.textContent = (window.__userEmail || '') + ' · ' + tr('at least 6 characters','tối thiểu 6 ký tự');
+  mSub.textContent = (window.__userEmail || '') + ' · ' + tr('at least 10 characters','tối thiểu 10 ký tự');
   mBody.innerHTML = `<form id="pwForm" novalidate>
     <div class="add-grid" style="grid-template-columns:1fr;margin-top:4px">
       <label>${tr('New password','Mật khẩu mới')}<input id="pwNew" type="password" autocomplete="new-password" required></label>
@@ -4015,16 +4015,19 @@ function openChangePw(){
   const err = t => { msg.style.color = 'var(--red)'; msg.textContent = t; };
   show.onchange = ()=>{ a.type = b.type = show.checked ? 'text' : 'password'; };
   document.getElementById('pwCancel').onclick = ()=> mBg.classList.remove('show');
+  /* Supabase chỉ nhận auth_pw; không phải admin thì gói lại khoá dữ liệu theo mật khẩu mới (users_admin.js, migration 16).
+     Đổi được mà lưu khoá lỗi: lần bấm sau chỉ lưu lại khoá, không đổi mật khẩu lần nữa */
   document.getElementById('pwForm').onsubmit = async e=>{
     e.preventDefault();
-    if(a.value.length < 6) return err(tr('The password must be at least 6 characters.','Mật khẩu phải có ít nhất 6 ký tự.'));
-    if(a.value !== b.value) return err(tr('The two passwords do not match.','Hai mật khẩu không khớp.'));
+    const p = UA.pwProblem(a.value, b.value);
+    if(p) return err(p);
     save.disabled = true; msg.style.color = 'var(--muted)'; msg.textContent = tr('Saving…','Đang lưu…');
     try{
-      const { error } = await window.__sb.auth.updateUser({ password: a.value });
-      if(error) throw error;
+      const r = await changeOwnPassword(window.__sb, window.__userEmail, a.value, window.__role, { pw_v: 1 });
+      if(r.keyFirst) throw { keyFirst: true };
+      if(r.error) throw r.error;
       mBody.innerHTML = `<div class="m-ok">✅ ${tr('Password changed. Use the new password the next time you sign in.','Đã đổi mật khẩu. Lần đăng nhập sau hãy dùng mật khẩu mới.')}</div>`;
-    }catch(ex){ err(pwErrText(ex)); }
+    }catch(ex){ err(ex && ex.keyFirst ? tr('Could not save the data key, so the password was not changed. Check your connection and try again.','Chưa lưu được khoá dữ liệu nên mật khẩu chưa đổi. Hãy kiểm tra mạng rồi thử lại.') : pwErrText(ex)); }
     finally{ save.disabled = false; }
   };
   setTimeout(()=>a.focus(), 50);
@@ -5290,7 +5293,7 @@ btnLang.onclick = switchLang;
 async function appSignOut(){
   try{ if(window.__sb) await window.__sb.auth.signOut({ scope:'local' }); }catch(e){}
   try{ Object.keys(localStorage).filter(k=>/^sb-.+-auth-token/.test(k)).forEach(k=>localStorage.removeItem(k)); }catch(e){}
-  try{ sessionStorage.removeItem('tdmv_k'); }catch(e){}      // quên luôn khoá giải mã dữ liệu
+  try{ sessionStorage.removeItem('tdmv_k'); sessionStorage.removeItem('tdmv_w'); }catch(e){}      // quên luôn khoá giải mã dữ liệu
 }
 
 /* ===== giao diện sáng / tối ===== */
@@ -5338,12 +5341,16 @@ const CRYPTO = (()=>{
     const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12);
     return 'e1:' + b64(out);
   }
-  async function decStr(s){
+  async function decStr(s, k = key){
     if(typeof s !== 'string' || !s.startsWith('e1:')) throw new Error('bad format');
     const u = unb64(s.slice(3));
-    return td.decode(await crypto.subtle.decrypt({ name:'AES-GCM', iv:u.slice(0,12) }, key, u.slice(12)));
+    return td.decode(await crypto.subtle.decrypt({ name:'AES-GCM', iv:u.slice(0,12) }, k, u.slice(12)));
   }
   async function remember(){ try{ sessionStorage.setItem(SKEY, b64(new Uint8Array(await crypto.subtle.exportKey('raw', key)))); }catch(e){} }
+  /* khoá gói riêng cho từng người (user_keys, migration 16): mật khẩu -> auth_pw (gửi Supabase) + wrap key (giữ ở trình duyệt).
+     Salt theo email để tính được trước khi đăng nhập. Biết auth_pw không suy ra được wrap key. */
+  const AES = raw => crypto.subtle.importKey('raw', raw, 'AES-GCM', true, ['encrypt','decrypt']);
+  const WKEY = 'tdmv_w';
   return {
     get on(){ return !!key; },
     encObj: o => encStr(JSON.stringify(o)),
@@ -5362,13 +5369,75 @@ const CRYPTO = (()=>{
     async resume(row){
       let raw; try{ raw = sessionStorage.getItem(SKEY); }catch(e){}
       if(!raw) return false;
-      try{ key = await crypto.subtle.importKey('raw', unb64(raw), 'AES-GCM', false, ['encrypt','decrypt']);
+      try{ key = await AES(unb64(raw));          // xuất được: admin cần gói khoá cho người mới sau khi tải lại trang
            if(await decStr(row.check_value) === CHECK) return true; }catch(e){}
       key = null; try{ sessionStorage.removeItem(SKEY); }catch(e){} return false;
     },
-    forget(){ key = null; try{ sessionStorage.removeItem(SKEY); }catch(e){} }
+    forget(){ key = null; try{ sessionStorage.removeItem(SKEY); }catch(e){} },
+    async loginKeys(email, password){
+      const base = await crypto.subtle.importKey('raw', te.encode(password), 'PBKDF2', false, ['deriveBits']);
+      const bits = new Uint8Array(await crypto.subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', iterations:ITER,
+        salt: te.encode('tdmv-login-v1|' + String(email || '').trim().toLowerCase()) }, base, 512));
+      /* tiền tố Aa1!: đủ chữ hoa, chữ thường, số, ký hiệu nếu Supabase bật yêu cầu ký tự mật khẩu */
+      return { authPw: 'Aa1!' + [...bits.subarray(0, 32)].map(x => x.toString(16).padStart(2, '0')).join(''), wrapRaw: bits.slice(32) };
+    },
+    async wrapFor(wrapRaw){
+      if(!key) throw new Error('locked');
+      const iv = crypto.getRandomValues(new Uint8Array(12)), raw = new Uint8Array(await crypto.subtle.exportKey('raw', key));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, await AES(wrapRaw), raw));
+      const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12);
+      return 'w1:' + b64(out);
+    },
+    /* sai thì khoá đang có giữ nguyên */
+    async unwrap(wrapRaw, wrapped, row){
+      try{
+        if(typeof wrapped !== 'string' || !wrapped.startsWith('w1:')) return false;
+        const u = unb64(wrapped.slice(3));
+        const k = await AES(new Uint8Array(await crypto.subtle.decrypt({ name:'AES-GCM', iv:u.slice(0, 12) }, await AES(wrapRaw), u.slice(12))));
+        if(await decStr(row.check_value, k) !== CHECK) return false;
+        key = k; await remember(); return true;
+      }catch(e){ return false; }
+    },
+    setPending(wrapRaw){ try{ sessionStorage.setItem(WKEY, b64(wrapRaw)); }catch(e){} },
+    takePending(){ let s = null; try{ s = sessionStorage.getItem(WKEY); sessionStorage.removeItem(WKEY); }catch(e){} return s ? unb64(s) : null; }
   };
 })();
+/* lưu bản gói khoá của chính mình (người dùng không phải admin). prev: bản gói theo mật khẩu hiện tại, giữ lại trong lúc đổi
+   mật khẩu — ghi khoá mới TRƯỚC rồi mới đổi mật khẩu, đổi lỗi thì mật khẩu cũ vẫn mở được */
+async function saveOwnWrap(sb, email, wrapRaw, prev){
+  try{ return await sb.from('user_keys').upsert({ email: String(email).trim().toLowerCase(), wrapped: await CRYPTO.wrapFor(wrapRaw),
+         wrapped_prev: prev || null, updated_at: new Date().toISOString() }, { onConflict: 'email' }); }
+  catch(e){ return { error: e }; }
+}
+/* mở bản gói của mình: thử bản hiện tại rồi bản cũ. 'cur' | 'prev' | '' */
+async function openOwnWrap(wrapRaw, uk, row){
+  if(!uk || !row) return '';
+  if(await CRYPTO.unwrap(wrapRaw, uk.wrapped, row)) return 'cur';
+  if(uk.wrapped_prev && await CRYPTO.unwrap(wrapRaw, uk.wrapped_prev, row)) return 'prev';
+  return '';
+}
+/* đổi mật khẩu của chính mình (màn hình bắt đổi, nút 🔑): người dùng không phải admin thì lưu bản gói mới trước.
+   -> { error, keyFirst } ; keyFirst = lỗi ở bước lưu khoá, mật khẩu CHƯA đổi */
+async function changeOwnPassword(sb, email, password, role, data){
+  const k = await CRYPTO.loginKeys(email, password);
+  const own = role !== 'admin' && CRYPTO.on;
+  if(own){
+    const { data: cur } = await sb.from('user_keys').select('wrapped, wrapped_prev').maybeSingle();
+    const r = await saveOwnWrap(sb, email, k.wrapRaw, cur ? (cur.wrapped_prev || cur.wrapped) : null);
+    if(r && r.error) return { error: r.error, keyFirst: true };
+  }
+  const { error } = await sb.auth.updateUser(Object.assign({ password: k.authPw }, data ? { data } : {}));
+  if(error) return { error };
+  try{ markMigrated(email); }catch(e){}
+  if(own) try{ await sb.from('user_keys').update({ wrapped_prev: null }).eq('email', String(email).trim().toLowerCase()); }catch(e){}
+  return {};
+}
+/* máy này đã đăng nhập kiểu mới với email đó: bỏ bước thử mật khẩu gốc (không gửi chữ gõ sai cho Supabase) */
+const PWV_KEY = 'tdmv_pwv';
+function migratedHere(email){ try{ return (JSON.parse(localStorage.getItem(PWV_KEY) || '[]')).includes(String(email).trim().toLowerCase()); }catch(e){ return false; } }
+function markMigrated(email){ const e = String(email).trim().toLowerCase(); let a = [];
+  try{ a = JSON.parse(localStorage.getItem(PWV_KEY) || '[]'); }catch(e){}
+  if(!a.includes(e)){ a.push(e); try{ localStorage.setItem(PWV_KEY, JSON.stringify(a)); }catch(e){} } }
 /* trường nhạy cảm của từng bảng + giá trị để trống trong cột gốc */
 const SEC = {
   machines:        { f:['ten','phutrach','congsuat','ncc','model','serial','vnd','usd','giaitrinh','ghichu_ld'],
@@ -5400,7 +5469,8 @@ window.__open = async row => {
 const openAll = rows => Promise.all((rows || []).map(window.__open));
 
 /* màn hình tạo / nhập mật khẩu dữ liệu; trả về true khi đã có khoá (hoặc admin chọn "Để sau") */
-async function cryptoGate(sb, role, card){
+/* role khác admin mở bằng mật khẩu đăng nhập (bản gói user_keys); admin vẫn mở bằng mật khẩu dữ liệu */
+async function cryptoGate(sb, role, card, email){
   const { data: row, error } = await sb.from('app_crypto').select('*').maybeSingle();
   if(error) return true;                        // chưa chạy 06_encryption.sql: app chạy như cũ, không mã hoá
   if(row && await CRYPTO.resume(row)) return true;
@@ -5439,10 +5509,16 @@ async function cryptoGate(sb, role, card){
       };
       return;
     }
-    const bg = card(`<h2>${tr('🔐 Unlock data','🔐 Mở khoá dữ liệu')}</h2>
+    const own = role !== 'admin';
+    const bg = card((own
+      ? `<h2>${tr('🔐 Unlock','🔐 Mở khoá')}</h2>
+      <p>${tr('Enter your sign-in password to open the data in this tab. If it does not work, ask an admin to reset your password.','Nhập mật khẩu đăng nhập để mở dữ liệu trong tab này. Không mở được thì nhờ admin đặt lại mật khẩu.')} <span style="color:var(--muted)">${esc(window.__userEmail || '')}</span></p>
+      <form id="cuForm" novalidate><div style="display:flex;flex-direction:column;gap:12px">
+        <label id="cuPwBox">${tr('Sign-in password','Mật khẩu đăng nhập')}<input id="cuP" type="password" autocomplete="current-password"></label>`
+      : `<h2>${tr('🔐 Unlock data','🔐 Mở khoá dữ liệu')}</h2>
       <p>${tr('Enter the data password to decrypt the machine data in this tab.','Nhập mật khẩu dữ liệu để giải mã dữ liệu máy trong tab này.')} <span style="color:var(--muted)">${esc(window.__userEmail || '')}</span></p>
       <form id="cuForm" novalidate><div style="display:flex;flex-direction:column;gap:12px">
-        <label id="cuPwBox">${tr('Data password','Mật khẩu dữ liệu')}<input id="cuP" type="password" autocomplete="current-password"></label>
+        <label id="cuPwBox">${tr('Data password','Mật khẩu dữ liệu')}<input id="cuP" type="password" autocomplete="current-password"></label>`) + `
         <label id="cuPinBox" hidden><span id="cuPinMsg"></span><input id="cuPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••••"></label>
         <div class="err" id="cuErr"></div>
         <button type="submit" id="cuBtn"></button>
@@ -5486,12 +5562,22 @@ async function cryptoGate(sb, role, card){
         return;
       }
       cuBtn.disabled = true; cuBtn.textContent = tr('Unlocking…','Đang mở khoá…');
-      const ok = await CRYPTO.unlock(cuP.value, row);
+      /* không phải admin: thử bản gói bằng mật khẩu đăng nhập, rồi mật khẩu dữ liệu (người đang biết nó chuyển được 1 lần) */
+      let ok = false;
+      if(own){
+        const { data: uk } = await sb.from('user_keys').select('wrapped, wrapped_prev').maybeSingle();   // đọc lại: tab khác có thể vừa đổi mật khẩu
+        const k = await CRYPTO.loginKeys(email, cuP.value); ok = !!(await openOwnWrap(k.wrapRaw, uk, row));
+      }
+      if(!ok){
+        ok = await CRYPTO.unlock(cuP.value, row);
+        const pend = own && ok ? CRYPTO.takePending() : null;
+        if(pend){ const r = await saveOwnWrap(sb, email, pend); if(r && r.error) CRYPTO.setPending(pend); }
+      }
       if(ok){ clearInterval(timer); await rpc('report_pw_ok'); return done(true); }
       st = await rpc('report_pw_fail') || st;
       view();
       if(!st.need_pin){
-        cuErr.textContent = tr('Wrong data password.','Sai mật khẩu dữ liệu.') +
+        cuErr.textContent = (own ? tr('Wrong password.','Sai mật khẩu.') : tr('Wrong data password.','Sai mật khẩu dữ liệu.')) +
           (st.pin_set ? tr(` ${st.pw_left} tries left before the PIN is required.`, ` Còn ${st.pw_left} lần trước khi phải nhập PIN.`) : '');
         cuP.select();
       }
@@ -5695,12 +5781,35 @@ window.encryptExisting = async () => {
       const email = lgEmail.value.trim(), password = lgPass.value;
       if(!email || !password){ lgErr.textContent = tr('Enter your email and password.','Nhập email và mật khẩu.'); return; }
       lgBtn.disabled = true; lgBtn.textContent = tr('Signing in…','Đang đăng nhập…'); lgErr.textContent = '';
-      const { error } = await sb.auth.signInWithPassword({ email, password });
+      /* Supabase chỉ nhận auth_pw suy ra từ mật khẩu (migration 16). Chỉ khi bị từ chối vì sai mật khẩu mới thử mật khẩu gốc:
+         tài khoản cũ / đặt tay trên Supabase; vào được thì chuyển ngay sang auth_pw. */
+      /* LEGACY_LOGIN: false trong config.js = tắt hẳn bước thử mật khẩu gốc (khi mọi tài khoản đã chuyển, xem cuối migration 16) */
+      const badPw = e => e && (e.code === 'invalid_credentials' || /invalid login credentials/i.test(e.message || ''));
+      const keys = await CRYPTO.loginKeys(email, password);
+      let { error } = await sb.auth.signInWithPassword({ email, password: keys.authPw });
+      if(!error) markMigrated(email);
+      else if(badPw(error) && cfg.LEGACY_LOGIN !== false && !migratedHere(email)){
+        const r2 = await sb.auth.signInWithPassword({ email, password });
+        if(!r2.error){
+          error = null;
+          try{ const u = await sb.auth.updateUser({ password: keys.authPw, data: { pw_v: 1 } }); if(!u.error) markMigrated(email); }catch(e){}
+        }else if(!badPw(r2.error)) error = r2.error;          // lỗi khác (quá nhiều lần thử, mạng): báo đúng lỗi đó
+      }
       if(error){
         lgBtn.disabled = false; lgBtn.textContent = tr('Sign in','Đăng nhập');
         lgErr.textContent = loginErrText(error);
         return;
       }
+      /* không phải admin: mở khoá luôn bằng bản gói; chưa có thì giữ wrap key trong tab chờ mật khẩu dữ liệu */
+      try{
+        const { data: me0 } = await sb.from('app_users').select('role').eq('email', email.trim().toLowerCase()).maybeSingle();
+        if(me0 && me0.role !== 'admin'){
+          const [{ data: row }, { data: uk }] = await Promise.all([sb.from('app_crypto').select('*').maybeSingle(), sb.from('user_keys').select('wrapped, wrapped_prev').maybeSingle()]);
+          const got = await openOwnWrap(keys.wrapRaw, uk, row);
+          if(!got) CRYPTO.setPending(keys.wrapRaw);
+          else if(got === 'cur' && uk.wrapped_prev) await sb.from('user_keys').update({ wrapped_prev: null }).eq('email', email.trim().toLowerCase());
+        }
+      }catch(e){}
       location.reload();
     };
     return;
@@ -5718,8 +5827,8 @@ window.encryptExisting = async () => {
   window.__role = me.role;
   window.__canWrite = (me.role==='editor' || me.role==='admin');
   window.__canWriteM = ['editor','catalog_editor','admin'].includes(me.role);
-  await UA.forceChangePw(sb, session.user, card, appSignOut);
-  await cryptoGate(sb, me.role, card);
+  await cryptoGate(sb, me.role, card, session.user.email);
+  await UA.forceChangePw(sb, session.user, card, appSignOut, me.role);   // sau cryptoGate: cần khoá để gói lại
   window.__MMTB = await loadMmtb(sb);
 
   const { data: rows0, error } = await sb.from('machines').select('*').is('deleted_at', null).order('sort_order', { ascending:true });

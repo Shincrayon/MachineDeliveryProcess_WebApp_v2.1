@@ -114,13 +114,20 @@ Khi sửa app sau này, push lên nhánh `main` là trang tự cập nhật. Nh�
 
 ## Thêm đồng nghiệp
 
-Admin bấm nút **👥** trên thanh trên cùng, điền email, họ tên, quyền rồi bấm **Thêm**. App hiện mật khẩu tạm đúng một lần: bấm **Sao chép** rồi gửi cho người đó, và gửi riêng mật khẩu dữ liệu. Người đó phải đổi mật khẩu ở lần đăng nhập đầu. Cũng trong cửa sổ này: đổi quyền, đặt lại mật khẩu, thu hồi quyền, xem nhật ký.
+Admin bấm nút **👥** trên thanh trên cùng, điền email, họ tên, quyền rồi bấm **Thêm**. App hiện mật khẩu tạm đúng một lần: bấm **Sao chép** rồi gửi cho người đó. Người đó phải đổi mật khẩu ở lần đăng nhập đầu. Cũng trong cửa sổ này: đổi quyền, đặt lại mật khẩu, thu hồi quyền, xem nhật ký.
+
+- **Quyền `editor`, `catalog_editor`, `viewer`:** chỉ cần email và mật khẩu, không cần mật khẩu dữ liệu.
+- **Quyền `admin`:** gửi riêng thêm mật khẩu dữ liệu. Admin vẫn nhập mật khẩu dữ liệu mỗi lần mở app.
+- **Người dùng quên mật khẩu:** admin bấm **Đặt lại mật khẩu**. Đừng đặt mật khẩu trên trang Supabase: người đó sẽ đăng nhập được nhưng không mở được dữ liệu.
+- **Cấp quyền cho tài khoản đã có sẵn:** bấm thêm **Đặt lại mật khẩu** để người đó mở được dữ liệu.
+- **Đổi email của một tài khoản trên Supabase:** sau đó phải **Đặt lại mật khẩu** cho người đó.
+- **Khi mọi tài khoản đã đăng nhập lại ít nhất một lần sau bản cập nhật này** (câu đếm cuối file migration 16 ra 0): thêm `LEGACY_LOGIN: false` vào `config.js` để Supabase không bao giờ nhận mật khẩu thật nữa.
 
 **Cách dự phòng khi nút 👥 lỗi:**
 
 1. Supabase → **Authentication → Users → Add user**: tạo email và mật khẩu, tick **Auto Confirm User**.
 2. **SQL Editor**: dán câu `insert` theo mẫu trong `02_users.sql`, sửa email, họ tên, quyền → **Run**. Không lưu email thật vào file.
-3. Gửi link, email, mật khẩu và mật khẩu dữ liệu cho người đó.
+3. Gửi link, email, mật khẩu và mật khẩu dữ liệu cho người đó. Người không phải admin nhập mật khẩu dữ liệu một lần, từ lần sau chỉ cần mật khẩu đăng nhập.
 
 **Thu hồi quyền khi dùng cách dự phòng:** chạy lệnh `delete` ở cuối file `02_users.sql`, và xoá user trong Authentication → Users.
 

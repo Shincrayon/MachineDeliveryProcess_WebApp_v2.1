@@ -99,10 +99,16 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 
 ## Quản lý người dùng (nút 👥, chỉ admin)
 - `users_admin.js` (window.UA) gọi Edge Function `manage-users` (`supabase/functions/manage-users/index.ts`, repo sao lưu). Hàm giữ service role, tự xác minh JWT + quyền admin; chỉ nhận origin link Vercel và Live Server (link xem trước của Vercel không dùng được).
-- Mật khẩu tạm chỉ trả 1 lần, không lưu, không ghi nhật ký. Cờ `user_metadata.must_change_pw` buộc đổi mật khẩu trước `cryptoGate` (`UA.forceChangePw`). Mật khẩu dữ liệu không đi qua tính năng này.
-- Không thao tác được lên chính mình, nên luôn còn ít nhất 1 admin. Thu hồi: xoá `app_users` trước, rồi xoá tài khoản. Nhật ký: bảng `user_admin_log` (migration 15), chỉ service role ghi.
-- Triển khai: chạy `20261107_15_user_admin_log.sql` → Supabase › Edge Functions: tạo `manage-users`, dán `index.ts`, Deploy → merge app. `02_users.sql` để dự phòng khi hàm lỗi.
-- Test: `users_fn_test.py` (logic hàm, deps giả), `e2e_users_admin_test.py` (giao diện, hàm giả). Hàm thật chỉ thử được sau khi lên Supabase.
+- **Chỉ admin cần mật khẩu dữ liệu.** Quyền khác chỉ cần email + mật khẩu: khoá dữ liệu gói riêng cho từng người trong bảng `user_keys` (migration 16).
+- Mật khẩu gõ vào tách bằng PBKDF2 (`CRYPTO.loginKeys`, salt `'tdmv-login-v1|' + email chữ thường`) thành `auth_pw` (Supabase chỉ thấy chuỗi này) và wrap key (không rời trình duyệt). Không cắt khoảng trắng của mật khẩu.
+- Đăng nhập: thử `auth_pw`; chỉ khi bị từ chối vì sai mật khẩu mới thử mật khẩu gốc (tài khoản cũ / đặt tay trên Supabase), vào được thì tự chuyển sang `auth_pw`. Quyền khác admin mở bản gói ngay lúc đăng nhập; chưa có bản gói thì giữ wrap key ở `sessionStorage['tdmv_w']`, nhập mật khẩu dữ liệu một lần là tự gói. Tab mới: hỏi mật khẩu đăng nhập (vẫn đếm sai 5 lần → PIN).
+- Mật khẩu tạm sinh ở trình duyệt admin (`UA.randomPassword`); hàm chỉ nhận `auth_pw` + `wrapped`, cần tab admin đang mở khoá. Cờ `user_metadata.must_change_pw` buộc đổi mật khẩu SAU `cryptoGate` (`UA.forceChangePw`, cần khoá để gói lại). Mật khẩu tối thiểu 10 ký tự, chặn ký tự ngoài ASCII (bộ gõ tiếng Việt), ở cả nút 🔑.
+- `auth_pw` = `'Aa1!'` + 64 hex (tiền tố để qua yêu cầu ký tự mật khẩu của Supabase). Đổi mật khẩu (`changeOwnPassword`): lưu bản gói mới kèm bản cũ (`wrapped_prev`) TRƯỚC, rồi `updateUser`, xong mới xoá bản cũ — đổi lỗi thì mật khẩu cũ vẫn mở được.
+- Bước thử mật khẩu gốc bị bỏ khi máy đã nhớ email đã chuyển (`localStorage['tdmv_pwv']`) hoặc `LEGACY_LOGIN: false` trong `config.js`. Đã chuyển = `user_metadata.pw_v = 1`; câu đếm người chưa chuyển ở cuối migration 16.
+- Đặt mật khẩu trực tiếp trên Supabase hoặc đổi email của tài khoản: đăng nhập được nhưng không mở được bản gói, phải Đặt lại mật khẩu trong app.
+- Không thao tác được lên chính mình, nên luôn còn ít nhất 1 admin; hạ 1 trong 2 admin cuối phải bấm xác nhận. Thu hồi: xoá `app_users` → `user_keys` → tài khoản. Nhật ký: `user_admin_log` (migration 15), chỉ service role ghi.
+- Triển khai: migration 15 → 16 → Supabase › Edge Functions: dán `index.ts` vào `manage-users`, Deploy → merge app (làm liền nhau: hàm mới + app cũ hoặc ngược lại thì thêm người lỗi). `02_users.sql` để dự phòng khi hàm lỗi.
+- Test: `users_fn_test.py` (logic hàm, deps giả), `e2e_users_admin_test.py` (giao diện, hàm giả), `e2e_user_keys_test.py` (tách mật khẩu, RLS `user_keys`, đăng nhập với Supabase Auth giả có kiểm tra mật khẩu). Hàm và Auth thật chỉ thử được sau khi triển khai.
 
 ## Hiệu ứng chuyển động (`motion.js`, khối CSS "chuyển động" cuối `<style>`)
 - Không thư viện ngoài. Mỗi hiệu ứng ≤ 0,4 s (biểu đồ / thanh mốc ~0,8 s). Không thêm hiệu ứng chạy mãi — ngoại lệ: dòng trễ hạn
