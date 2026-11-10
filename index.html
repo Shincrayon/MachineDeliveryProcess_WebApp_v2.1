@@ -4384,7 +4384,7 @@ function renderList(){
   mmTb.innerHTML = view.map((x,i)=>{
     const dep = sortK==='__tree' ? treeIdx.get(x.id)[1] : 0;
     return `<tr class="slide-in${dep?' child':''}" data-mo="${x.id}" style="--i:${i};cursor:pointer" onclick="mmShow('${x.id}')">
-      <td class="name" style="padding-left:${10 + dep*18}px">${dep?'<span class="ind">↳</span>':''}${E(x.name)}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${x.model || x.tracking_code ? `<small>${E(x.model || '')}${x.model && x.tracking_code ? ' · ' : ''}${x.tracking_code ? '🔗 ' + E(x.tracking_code) : ''}</small>` : ''}</td>
+      <td class="name" style="padding-left:${10 + dep*18}px">${dep?'<span class="ind">↳</span>':''}${E(x.name)}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${x.model || x.tracking_machine_id ? `<small>${E(x.model || '')}${x.model && x.tracking_machine_id ? ' · ' : ''}${x.tracking_machine_id ? `<span title="${tr('Linked to Delivery','Đã liên kết Tiến độ máy về')}">🔗</span>` : ''}</small>` : ''}</td>
       <td>${E(x.company_code)}</td><td>${T(x.area_name)}</td><td>${T(x.line_name)}</td><td>${T(x.group_name)}</td>
       <td>${T(x.supplier_name)}</td><td>${T(x.manufacturer)}</td><td>${N(x.quantity || 1)}</td>
       <td class="money">${money(x)}</td><td>${badge(x.lifecycle_status)}</td></tr>`; }).join('')
