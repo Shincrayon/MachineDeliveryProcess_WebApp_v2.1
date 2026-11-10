@@ -26,7 +26,7 @@ Giao diện giữ nguyên dashboard `Dashboard_TienDoMayVe.html`. Dữ liệu l�
 4. Danh mục MMTB (đang trống) → bấm **📥 Nạp file dữ liệu** → chọn `supabase/import/mmtb_rows.json`.
 5. Chạy lại mục 5 trong `06_encryption.sql`: cả 4 số phải bằng 0. Sau đó có thể chạy mục 6 (tuỳ chọn) để bỏ dữ liệu thường còn trong nhật ký sửa cũ.
 
-Mỗi lần mở app ở tab mới, app hỏi mật khẩu dữ liệu. Đóng tab hoặc đăng xuất là quên khoá.
+Chỉ **admin** nhập mật khẩu dữ liệu, và nhập lại ở mỗi tab mới; đóng tab hoặc đăng xuất là quên khoá. Quyền khác không bao giờ nhập mật khẩu dữ liệu: trình duyệt nhớ khoá tới khi bấm Đăng xuất, nên mở tab mới là vào thẳng. Dùng máy chung thì nhớ bấm **Đăng xuất**.
 
 **Thư viện (Danh mục MMTB › 📚 Thư viện, chỉ admin sửa)**
 - **Mã máy** = mã nhà máy + dãy số kế toán, VD `DTR-104600041`. Chưa có số kế toán thì app cấp tạm 9 số ngẫu nhiên (nhãn *tạm*); mã cũ giữ ở cột *Mã cũ*.
@@ -120,6 +120,7 @@ Admin bấm nút **👥** trên thanh trên cùng, điền email, họ tên, quy
 - **Quyền `admin`:** gửi riêng thêm mật khẩu dữ liệu. Admin vẫn nhập mật khẩu dữ liệu mỗi lần mở app.
 - **Người dùng quên mật khẩu:** admin bấm **Đặt lại mật khẩu**. Đừng đặt mật khẩu trên trang Supabase: người đó sẽ đăng nhập được nhưng không mở được dữ liệu.
 - **Cấp quyền cho tài khoản đã có sẵn:** bấm thêm **Đặt lại mật khẩu** để người đó mở được dữ liệu.
+- **Người dùng báo "Tài khoản chưa được kích hoạt":** tài khoản tạo trước bản cập nhật, hoặc mật khẩu đặt trên trang Supabase. Admin bấm **Đặt lại mật khẩu** cho người đó.
 - **Đổi email của một tài khoản trên Supabase:** sau đó phải **Đặt lại mật khẩu** cho người đó.
 - **Khi mọi tài khoản đã đăng nhập lại ít nhất một lần sau bản cập nhật này** (câu đếm cuối file migration 16 ra 0): thêm `LEGACY_LOGIN: false` vào `config.js` để Supabase không bao giờ nhận mật khẩu thật nữa.
 
@@ -127,7 +128,7 @@ Admin bấm nút **👥** trên thanh trên cùng, điền email, họ tên, quy
 
 1. Supabase → **Authentication → Users → Add user**: tạo email và mật khẩu, tick **Auto Confirm User**.
 2. **SQL Editor**: dán câu `insert` theo mẫu trong `02_users.sql`, sửa email, họ tên, quyền → **Run**. Không lưu email thật vào file.
-3. Gửi link, email, mật khẩu và mật khẩu dữ liệu cho người đó. Người không phải admin nhập mật khẩu dữ liệu một lần, từ lần sau chỉ cần mật khẩu đăng nhập.
+3. Mở app bằng admin, bấm 👥 › **Đặt lại mật khẩu** cho email đó (người không phải admin cần bước này mới mở được dữ liệu), rồi gửi link, email và mật khẩu tạm cho người đó.
 
 **Thu hồi quyền khi dùng cách dự phòng:** chạy lệnh `delete` ở cuối file `02_users.sql`, và xoá user trong Authentication → Users.
 

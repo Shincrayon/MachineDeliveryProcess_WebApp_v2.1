@@ -5301,6 +5301,7 @@ async function appSignOut(){
   try{ if(window.__sb) await window.__sb.auth.signOut({ scope:'local' }); }catch(e){}
   try{ Object.keys(localStorage).filter(k=>/^sb-.+-auth-token/.test(k)).forEach(k=>localStorage.removeItem(k)); }catch(e){}
   try{ sessionStorage.removeItem('tdmv_k'); sessionStorage.removeItem('tdmv_w'); }catch(e){}      // quên luôn khoá giải mã dữ liệu
+  try{ localStorage.removeItem('tdmv_kd'); }catch(e){}                                              // khoá nhớ trên máy (không phải admin)
 }
 
 /* ===== giao diện sáng / tối ===== */
@@ -5357,7 +5358,8 @@ const CRYPTO = (()=>{
   /* khoá gói riêng cho từng người (user_keys, migration 16): mật khẩu -> auth_pw (gửi Supabase) + wrap key (giữ ở trình duyệt).
      Salt theo email để tính được trước khi đăng nhập. Biết auth_pw không suy ra được wrap key. */
   const AES = raw => crypto.subtle.importKey('raw', raw, 'AES-GCM', true, ['encrypt','decrypt']);
-  const WKEY = 'tdmv_w';
+  const WKEY = 'tdmv_w', DKEY = 'tdmv_kd', who = e => String(e || '').trim().toLowerCase();
+  const dropDevice = () => { try{ localStorage.removeItem(DKEY); }catch(e){} };
   return {
     get on(){ return !!key; },
     encObj: o => encStr(JSON.stringify(o)),
@@ -5380,7 +5382,21 @@ const CRYPTO = (()=>{
            if(await decStr(row.check_value) === CHECK) return true; }catch(e){}
       key = null; try{ sessionStorage.removeItem(SKEY); }catch(e){} return false;
     },
-    forget(){ key = null; try{ sessionStorage.removeItem(SKEY); }catch(e){} },
+    forget(){ key = null; try{ sessionStorage.removeItem(SKEY); }catch(e){} dropDevice(); },
+    /* người không phải admin: nhớ khoá trên trình duyệt này (localStorage, kèm email) tới khi Đăng xuất -> tab mới vào thẳng.
+       admin không bao giờ dùng: mỗi tab nhập lại mật khẩu dữ liệu. */
+    async keepOnDevice(email){
+      if(!key) return;
+      try{ localStorage.setItem(DKEY, JSON.stringify({ e: who(email), k: b64(new Uint8Array(await crypto.subtle.exportKey('raw', key))) })); }catch(e){}
+    },
+    async fromDevice(email, row){
+      let o = null; try{ o = JSON.parse(localStorage.getItem(DKEY) || 'null'); }catch(e){}
+      if(!o || !o.k) return false;
+      if(o.e !== who(email)){ dropDevice(); return false; }            // khoá của người khác dùng chung máy: bỏ
+      try{ const k = await AES(unb64(o.k)); if(await decStr(row.check_value, k) === CHECK){ key = k; await remember(); return true; } }catch(e){}
+      dropDevice(); return false;
+    },
+    dropDevice,
     async loginKeys(email, password){
       const base = await crypto.subtle.importKey('raw', te.encode(password), 'PBKDF2', false, ['deriveBits']);
       const bits = new Uint8Array(await crypto.subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', iterations:ITER,
@@ -5405,8 +5421,9 @@ const CRYPTO = (()=>{
         key = k; await remember(); return true;
       }catch(e){ return false; }
     },
-    setPending(wrapRaw){ try{ sessionStorage.setItem(WKEY, b64(wrapRaw)); }catch(e){} },
-    takePending(){ let s = null; try{ s = sessionStorage.getItem(WKEY); sessionStorage.removeItem(WKEY); }catch(e){} return s ? unb64(s) : null; }
+    /* đánh dấu: vừa đăng nhập mà không mở được bản gói (chưa có / hỏng) -> màn hình "chưa kích hoạt" */
+    setPending(){ try{ sessionStorage.setItem(WKEY, '1'); }catch(e){} },
+    takePending(){ let s = null; try{ s = sessionStorage.getItem(WKEY); sessionStorage.removeItem(WKEY); }catch(e){} return !!s; }
   };
 })();
 /* lưu bản gói khoá của chính mình (người dùng không phải admin). prev: bản gói theo mật khẩu hiện tại, giữ lại trong lúc đổi
@@ -5480,7 +5497,10 @@ const openAll = rows => Promise.all((rows || []).map(window.__open));
 async function cryptoGate(sb, role, card, email){
   const { data: row, error } = await sb.from('app_crypto').select('*').maybeSingle();
   if(error) return true;                        // chưa chạy 06_encryption.sql: app chạy như cũ, không mã hoá
-  if(row && await CRYPTO.resume(row)) return true;
+  const own = role !== 'admin';
+  if(!own) CRYPTO.dropDevice();                 // admin: không nhớ khoá trên máy
+  if(row && await CRYPTO.resume(row)){ if(own){ CRYPTO.takePending(); await CRYPTO.keepOnDevice(email); } return true; }
+  if(row && own && await CRYPTO.fromDevice(email, row)){ CRYPTO.takePending(); return true; }
   const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;');
   return new Promise(async resolve=>{
     const done = ok => { const bg = document.getElementById('loginBg'); if(bg) bg.remove(); resolve(ok); };
@@ -5516,13 +5536,24 @@ async function cryptoGate(sb, role, card, email){
       };
       return;
     }
-    const own = role !== 'admin';
-    const bg = card((own
-      ? `<h2>${tr('🔐 Unlock','🔐 Mở khoá')}</h2>
-      <p>${tr('Enter your sign-in password to open the data in this tab. If it does not work, ask an admin to reset your password.','Nhập mật khẩu đăng nhập để mở dữ liệu trong tab này. Không mở được thì nhờ admin đặt lại mật khẩu.')} <span style="color:var(--muted)">${esc(window.__userEmail || '')}</span></p>
-      <form id="cuForm" novalidate><div style="display:flex;flex-direction:column;gap:12px">
-        <label id="cuPwBox">${tr('Sign-in password','Mật khẩu đăng nhập')}<input id="cuP" type="password" autocomplete="current-password"></label>`
-      : `<h2>${tr('🔐 Unlock data','🔐 Mở khoá dữ liệu')}</h2>
+    /* không phải admin: KHÔNG có ô nhập. Vừa đăng nhập mà không mở được bản gói -> chưa kích hoạt (admin đặt lại mật khẩu);
+       còn lại (mất khoá trên máy) -> đăng nhập lại là mở */
+    if(own){
+      const fresh = CRYPTO.takePending();
+      const bg = card(fresh
+        ? `<h2>${tr('⏳ Account not activated yet','⏳ Tài khoản chưa được kích hoạt')}</h2>
+          <p>${tr('Ask an admin to press 👥 › <b>Reset password</b> for this email, then sign in with the temporary password.',
+                  'Nhờ admin bấm 👥 › <b>Đặt lại mật khẩu</b> cho email này, rồi đăng nhập bằng mật khẩu tạm.')}</p>
+          <p style="color:var(--muted)">${esc(email || '')}</p>
+          <button type="button" id="cuRe">${tr('Sign out','Đăng xuất')}</button>`
+        : `<h2>${tr('🔐 Please sign in again','🔐 Đăng nhập lại')}</h2>
+          <p>${tr('Sign in again to open the data on this browser.','Đăng nhập lại để mở dữ liệu trên trình duyệt này.')}</p>
+          <p style="color:var(--muted)">${esc(email || '')}</p>
+          <button type="button" id="cuRe">${tr('Sign in again','Đăng nhập lại')}</button>`);
+      bg.querySelector('#cuRe').onclick = async ()=>{ await appSignOut(); location.reload(); };
+      return;
+    }
+    const bg = card((`<h2>${tr('🔐 Unlock data','🔐 Mở khoá dữ liệu')}</h2>
       <p>${tr('Enter the data password to decrypt the machine data in this tab.','Nhập mật khẩu dữ liệu để giải mã dữ liệu máy trong tab này.')} <span style="color:var(--muted)">${esc(window.__userEmail || '')}</span></p>
       <form id="cuForm" novalidate><div style="display:flex;flex-direction:column;gap:12px">
         <label id="cuPwBox">${tr('Data password','Mật khẩu dữ liệu')}<input id="cuP" type="password" autocomplete="current-password"></label>`) + `
@@ -5569,22 +5600,12 @@ async function cryptoGate(sb, role, card, email){
         return;
       }
       cuBtn.disabled = true; cuBtn.textContent = tr('Unlocking…','Đang mở khoá…');
-      /* không phải admin: thử bản gói bằng mật khẩu đăng nhập, rồi mật khẩu dữ liệu (người đang biết nó chuyển được 1 lần) */
-      let ok = false;
-      if(own){
-        const { data: uk } = await sb.from('user_keys').select('wrapped, wrapped_prev').maybeSingle();   // đọc lại: tab khác có thể vừa đổi mật khẩu
-        const k = await CRYPTO.loginKeys(email, cuP.value); ok = !!(await openOwnWrap(k.wrapRaw, uk, row));
-      }
-      if(!ok){
-        ok = await CRYPTO.unlock(cuP.value, row);
-        const pend = own && ok ? CRYPTO.takePending() : null;
-        if(pend){ const r = await saveOwnWrap(sb, email, pend); if(r && r.error) CRYPTO.setPending(pend); }
-      }
+      const ok = await CRYPTO.unlock(cuP.value, row);
       if(ok){ clearInterval(timer); await rpc('report_pw_ok'); return done(true); }
       st = await rpc('report_pw_fail') || st;
       view();
       if(!st.need_pin){
-        cuErr.textContent = (own ? tr('Wrong password.','Sai mật khẩu.') : tr('Wrong data password.','Sai mật khẩu dữ liệu.')) +
+        cuErr.textContent = tr('Wrong data password.','Sai mật khẩu dữ liệu.') +
           (st.pin_set ? tr(` ${st.pw_left} tries left before the PIN is required.`, ` Còn ${st.pw_left} lần trước khi phải nhập PIN.`) : '');
         cuP.select();
       }
@@ -5807,13 +5828,13 @@ window.encryptExisting = async () => {
         lgErr.textContent = loginErrText(error);
         return;
       }
-      /* không phải admin: mở khoá luôn bằng bản gói; chưa có thì giữ wrap key trong tab chờ mật khẩu dữ liệu */
+      /* không phải admin: mở khoá luôn bằng bản gói; không mở được thì đánh dấu để báo "chưa kích hoạt" */
       try{
         const { data: me0 } = await sb.from('app_users').select('role').eq('email', email.trim().toLowerCase()).maybeSingle();
         if(me0 && me0.role !== 'admin'){
           const [{ data: row }, { data: uk }] = await Promise.all([sb.from('app_crypto').select('*').maybeSingle(), sb.from('user_keys').select('wrapped, wrapped_prev').maybeSingle()]);
           const got = await openOwnWrap(keys.wrapRaw, uk, row);
-          if(!got) CRYPTO.setPending(keys.wrapRaw);
+          if(!got) CRYPTO.setPending();
           else if(got === 'cur' && uk.wrapped_prev) await sb.from('user_keys').update({ wrapped_prev: null }).eq('email', email.trim().toLowerCase());
         }
       }catch(e){}
