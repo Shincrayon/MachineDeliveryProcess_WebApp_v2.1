@@ -9,7 +9,7 @@
    · Trạng thái theo DM.installStatus: về NM -> arrived · lắp đặt / chạy thử -> installing · nghiệm thu -> in_operation
      (commissioned_date = nghiemthu_tt). Không bao giờ hạ trạng thái bên Danh mục.
    · Mốc delivery_milestones: arrived_site = venm_tt · installed (vận hành thử) = chaythu_tt · commissioned = nghiemthu_tt.
-   · Trường chung (model, serial, xuất xứ, công suất, hợp đồng, NCC, công ty): Danh mục trống -> điền; khác -> "lệch", không ghi.
+   · Trường chung (model, serial, xuất xứ, thương hiệu, công suất, hợp đồng, NCC, công ty): Danh mục trống -> điền; khác -> "lệch", không ghi.
      Tên máy chỉ dùng khi tạo mới. KHÔNG BAO GIỜ ghi: khu vực, chuyền, máy cha, vai trò, vật liệu, mã tài sản, mã máy đã có,
      ghi chú, kỹ sư, người quản lý. NCC: khớp tên đã bỏ dấu, không tự tạo NCC mới.
    · Lưu Tiến độ trước, đồng bộ sau (CS.afterSave); lỗi không làm hỏng lần lưu. Hàng chờ = máy đủ điều kiện mà Danh mục còn
@@ -59,13 +59,13 @@ function want(x, C){
   const cap = parseCap(x.congsuat);
   const vnd = +x.vnd || 0, usd = +x.usd || 0;
   return { company_id: coRow ? coRow.id : null, company_code: co, supplier_id: sup ? sup.id : null, ncc, ncc_unmatched: !!ncc && !sup,
-           model: txt(x.model), serial_number: txt(x.serial), origin: txt(x.xuatxu),
+           model: txt(x.model), serial_number: txt(x.serial), origin: txt(x.xuatxu), manufacturer: txt(x.thuong_hieu),
            capacity: cap, contract: vnd > 0 ? { currency:'VND', amount: vnd } : usd > 0 ? { currency:'USD', amount: usd } : null, vnd, usd };
 }
 /* trạng thái Danh mục muốn có (null = chưa về NM -> không đổi) */
 const target = x => DM.installStatus(x).stage;
 const FIELD_L = () => ({ company: L('Company','Công ty'), supplier: L('Supplier','Nhà cung cấp'), model: 'Model', serial_number: L('Serial number','Số serial'),
-  origin: L('Origin','Xuất xứ'), capacity: L('Capacity','Công suất'), contract: L('Contract value','Giá trị hợp đồng'),
+  origin: L('Origin','Xuất xứ'), manufacturer: L('Brand','Thương hiệu'), capacity: L('Capacity','Công suất'), contract: L('Contract value','Giá trị hợp đồng'),
   commissioned_date: L('Commissioning date','Ngày nghiệm thu'), 'ms:arrived_site': L('Milestone: arrival at plant','Mốc: về nhà máy'),
   'ms:installed': L('Milestone: trial run','Mốc: vận hành thử'), 'ms:commissioned': L('Milestone: commissioning','Mốc: nghiệm thu') });
 const REASON = () => ({ no_code: L('no machine code yet (not arrived at plant)','chưa có Mã máy (chưa về NM)'),
@@ -89,7 +89,7 @@ function plan(x, C){
     const s = p.set;
     s.name = txt(x.ten) || x.ma_may; s.company_id = w.company_id; s.lifecycle_status = st || 'in_operation'; s.commissioned_date = iso(x.nghiemthu_tt);
     if(w.supplier_id) s.supplier_id = w.supplier_id;
-    ['model','serial_number','origin'].forEach(k => { if(w[k]) s[k] = w[k]; });
+    ['model','serial_number','origin','manufacturer'].forEach(k => { if(w[k]) s[k] = w[k]; });
     if(w.capacity){ s.capacity_value = w.capacity.value; if(w.capacity.unit) s.capacity_unit = w.capacity.unit; }
     if(w.contract){ s.contract_currency = w.contract.currency; s.contract_amount = w.contract.amount; }
     p.ms = MS_MAP.filter(([, k]) => x[k]).map(([m, k]) => ({ milestone: m, actual_date: iso(x[k]), exists: false }));
@@ -104,7 +104,7 @@ function plan(x, C){
     if(!cat.supplier_id) s.supplier_id = w.supplier_id;
     else if(cat.supplier_id !== w.supplier_id) cf('supplier', w.ncc, (C.supId.get(cat.supplier_id) || {}).name || '—', w.supplier_id, cat.supplier_id);
   }
-  ['model','serial_number','origin'].forEach(k => {
+  ['model','serial_number','origin','manufacturer'].forEach(k => {
     if(!w[k]) return;
     if(cat[k] == null || String(cat[k]).trim() === '') s[k] = w[k];
     else if(fold(cat[k]) !== fold(w[k])) cf(k, w[k], cat[k], w[k], cat[k]);
@@ -333,7 +333,24 @@ window.csOpen = () => {
   mBody.innerHTML = `<div class="cs-menu">
     <button type="button" class="nbtn2 ghost" onclick="csPair()">🧩 ${L('Pair existing machines','Ghép cặp máy đã có')}<small>${L(`${linked} linked`,`${linked} máy đã liên kết`)}</small></button>
     <button type="button" class="nbtn2 ghost" onclick="csSync()">🔄 ${L('Sync to Catalog','Đồng bộ lại sang Danh mục')}<small>${pend ? L(`${pend} waiting`,`${pend} máy chờ đồng bộ`) : L('up to date','đã khớp')}</small></button>
-    <button type="button" class="nbtn2 ghost" onclick="csDiff()">⚖️ ${L('Data differences','Lệch dữ liệu')}<small>${L(`${nc} field(s)`,`${nc} trường`)}</small></button></div>`;
+    <button type="button" class="nbtn2 ghost" onclick="csDiff()">⚖️ ${L('Data differences','Lệch dữ liệu')}<small>${L(`${nc} field(s)`,`${nc} trường`)}</small></button>
+    ${brandFill(C).length ? `<button type="button" class="nbtn2 ghost" id="csBrand" onclick="csBrand()">🏷 ${L('Fill brands from the Catalog','Điền thương hiệu từ Danh mục')}<small>${L(`${brandFill(C).length} machine(s) without a brand`,`${brandFill(C).length} máy chưa có thương hiệu`)}</small></button>` : ''}</div>`;
+};
+/* 🏷 máy Tiến độ đã liên kết, chưa có thương hiệu, Danh mục có thương hiệu (migrations/20261110_18) -> điền 1 lần */
+const brandFill = C => rowsT().filter(x => x._th && !un(x.thuong_hieu).trim() && x.ten !== '🔒')
+  .map(x => ({ x, c: C.byTrack.get(x._id) })).filter(o => o.c && !o.c.__locked && txt(o.c.manufacturer) && o.c.manufacturer !== '🔒');
+window.csBrand = async () => {
+  const C = needCtx(); if(!C) return;
+  const list = brandFill(C), b = $('csBrand'); if(b) b.disabled = true;
+  let ok = 0, bad = 0;
+  for(const o of list){
+    try{ await writeTrack(o.x, { thuong_hieu: txt(o.c.manufacturer) }); ok++; }
+    catch(e){ bad++; console.warn('[Danh mục] chưa điền được thương hiệu', o.x.ma_may, e); }
+  }
+  if(typeof render === 'function') try{ render(); }catch(e){}
+  quToast((bad ? '⚠ ' : '✅ ') + L(`Filled the brand for ${ok} machine(s)` + (bad ? ` · ${bad} failed` : ''),
+                                   `Đã điền thương hiệu cho ${ok} máy` + (bad ? ` · ${bad} máy lỗi` : '')));
+  window.csOpen();
 };
 
 /* 🧩 ghép cặp */
@@ -433,7 +450,7 @@ window.csSync = () => {
 };
 
 /* ⚖️ lệch dữ liệu: chọn giữ bên nào. Giữ Tiến độ -> ghi Danh mục; Giữ Danh mục -> ghi Tiến độ (không bao giờ đụng tên máy). */
-const BACK = { model:'model', serial_number:'serial', origin:'xuatxu', capacity:'congsuat', supplier:'ncc', commissioned_date:'nghiemthu_tt',
+const BACK = { model:'model', serial_number:'serial', origin:'xuatxu', manufacturer:'thuong_hieu', capacity:'congsuat', supplier:'ncc', commissioned_date:'nghiemthu_tt',
                'ms:installed':'chaythu_tt', 'ms:commissioned':'nghiemthu_tt', contract:'_contract' };   // company, ms:arrived_site: sửa ở Tiến độ
 let DIFF = [];
 window.csDiff = () => {

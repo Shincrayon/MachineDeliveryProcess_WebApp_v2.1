@@ -909,6 +909,8 @@ select.mp-open{border-color:var(--blue)}
 .pt-off{display:none!important}
 .pt-sub{display:block;font-size:10.5px;font-weight:600;color:var(--muted)}
 .pt-sub.w{color:var(--st-over)}
+/* Thương hiệu trên, NCC dòng nhỏ dưới (migrations/20261110_18) */
+.th-ncc{display:block;font-size:10.5px;font-weight:600;color:var(--muted)}
 /* ===== cửa sổ 👥 Quản lý người dùng (users_admin.js) ===== */
 .add-grid.ua-form{grid-template-columns:2fr 2fr 1.2fr auto;align-items:end;gap:10px;margin:4px 0 6px}
 .ua-msg{min-height:1.2em;font-size:13px;margin-bottom:8px}
@@ -1107,7 +1109,7 @@ select.mp-open{border-color:var(--blue)}
         <thead><tr>
           <th class="qu-h" id="quTh" hidden><input type="checkbox" id="quAll"></th>
           <th data-s="ten">Machine</th><th data-s="sl">Qty</th><th data-s="noilapdat">Site</th>
-          <th data-s="ncc">Supplier</th><th data-s="xuatxu">Origin</th><th data-s="phutrach">Person in charge</th>
+          <th data-s="ncc" id="thNcc">Supplier</th><th data-s="xuatxu">Origin</th><th data-s="phutrach">Person in charge</th>
           <th data-s="vnd">Unit price (VND)</th><th data-s="usd">Unit price (USD)</th>
           <th data-s="dathang">Order date</th><th data-s="vekh">Planned arrival</th><th data-s="vedukienn">Expected at plant</th>
           <th data-s="status">Status</th><th data-s="danhgia">Rating</th>
@@ -1144,6 +1146,7 @@ select.mp-open{border-color:var(--blue)}
       <label>Quantity<input id="f_sl" type="number" value="1" min="1"></label>
       <label>Capacity<input id="f_cs" type="text" placeholder="e.g. 3000 kg/h"></label>
       <label>Installation site<select id="f_nld"></select></label>
+      <label id="f_thL" class="pt-off">Brand<input id="f_th" type="text"></label>
       <label>Supplier<input id="f_ncc" type="text"></label>
       <label>Origin<input id="f_xx" type="text"></label>
       <label id="f_htL" class="pt-off">Purchase type *<select id="f_ht"></select></label>
@@ -1185,6 +1188,10 @@ window.__trackRows = () => DATA;          // Danh mục MMTB tra mã Tiến đ�
    arrived = có Ngày máy về NM TT · overdue = quá ngày dự kiến, chưa xác nhận · soon ≤ 15 ngày · waiting · unknown */
 /* Hình thức mua (migrations/20261104_13). Chưa chạy migration: mọi phần về hình thức mua tự ẩn, app chạy như cũ. */
 const hasPT = () => DATA.some(x=>x._pt);
+/* Thương hiệu (migrations/20261110_18). Chưa chạy migration: ô / cột tự ẩn, app chạy như cũ. */
+const hasTH = () => DATA.some(x=>x._th);
+/* ô Nhà cung cấp trong bảng: Thương hiệu ở trên, NCC dòng nhỏ dưới; máy chưa có thương hiệu: NCC như cũ */
+const thCell = x => x.thuong_hieu ? `${x.thuong_hieu}${x.ncc ? `<small class="th-ncc">${x.ncc}</small>` : ''}` : x.ncc;
 const PT_LBL = tr({import:'Direct import', agency:'Through an agent', domestic:'Domestic'}, {import:'Nhập khẩu trực tiếp', agency:'Qua đại lý', domestic:'Trong nước'});
 const PT_OPTS = first => first + DM.PURCHASE.map(k=>`<option value="${k}">${PT_LBL[k]}</option>`).join('');
 const ptNeedsOk = x => x.hinh_thuc_can_xn || !x.hinh_thuc_mua;
@@ -1240,6 +1247,7 @@ function rowsToData(rows){
     sl:num(r['Số lượng'])||1, congsuat:String(r['Công suất']||'').trim(),
     noilapdat:String(r['Nơi lắp đặt']||'').trim(), ncc:String(r['Nhà cung cấp']||'').trim(),
     xuatxu:String(r['Xuất xứ']||'').trim(),
+    thuong_hieu: 'Thương hiệu' in r ? String(r['Thương hiệu']||'').trim() : undefined,
     model: 'Model' in r ? String(r['Model']||'').trim() : undefined,
     serial: 'Số serial' in r ? String(r['Số serial']||'').trim() : undefined,
     vnd:num(r['Tổng giá trị (VNĐ)']), usd:num(r['Tổng giá trị (USD)']),
@@ -1358,6 +1366,7 @@ function readAll(wb){
       noilapdat:String(gv(row,'Nơi lắp đặt')||'').trim(),
       ncc:String(gv(row,'Nhà cung cấp')||'').trim(),
       xuatxu:String(gv(row,'Xuất xứ')||'').trim(),
+      thuong_hieu: H['Thương hiệu']!=null ? String(gv(row,'Thương hiệu')||'').trim() : undefined,
       // file Excel cũ chưa có cột Model / Số serial -> để undefined, replaceAll giữ giá trị đang có
       model: H['Model']!=null ? String(gv(row,'Model')||'').trim() : undefined,
       serial: H['Số serial']!=null ? String(gv(row,'Số serial')||'').trim() : undefined,
@@ -1573,6 +1582,7 @@ function updCalc(){
 /* ô Hình thức mua trong form: máy Trong nước thay 4 ô đi tàu / lãnh máy bằng 1 ô TG vận chuyển; máy mới gợi ý theo Xuất xứ */
 function ptSync(){
   f_htL.classList.toggle('pt-off', !hasPT());
+  f_thL.classList.toggle('pt-off', !hasTH());
   const dom = f_ht.value==='domestic';
   ['f_dt','f_dttt','f_lm','f_lmtt'].forEach(id=>document.getElementById(id).closest('label').classList.toggle('pt-off', dom));
   f_vcL.classList.toggle('pt-off', !dom);
@@ -1591,6 +1601,7 @@ f_xx.addEventListener('input', ()=>{ if(!hasPT() || (f_ht.value && !f_ht.dataset
 CB.labels = { pre:tr('Did you mean','Có phải'), post:tr('?','không?'), fresh:tr('New value','Giá trị mới') };
 CB.make(f_pt, { items:()=>DATA.map(x=>unescH(x.phutrach)) });
 CB.make(f_xx, { items:()=>DATA.map(x=>unescH(x.xuatxu)) });
+CB.make(f_th, { items:()=>DATA.map(x=>unescH(x.thuong_hieu)).concat(((window.__MMTB||{}).machines||[]).map(c=>c.manufacturer).filter(v=>v && v!=='🔒')) });
 CB.make(f_ncc, { items:()=>DATA.map(x=>unescH(x.ncc)).concat(((window.__MMTB||{}).suppliers||[]).map(s=>s.name)) });
 /* ô Nơi lắp đặt: chỉ chọn nhà máy trong thư viện. Lưu đúng cách ghi nhiều máy của công ty đó đang dùng (bộ lọc, biểu đồ gom theo chữ),
    công ty chưa có máy thì lưu mã (mã không đổi, đổi tên trong thư viện vẫn nhận ra). Máy đang ghi cách khác / nơi lạ: giữ nguyên, không mất khi mở Sửa */
@@ -1637,7 +1648,7 @@ async function submitAdd(){
     lanhkh: Math.round(lm), lanhtt: Math.round(lmTT),
     xuatxuong: val('f_xxg')||null, workingday: wd,
     nghiemthu_kh: val('f_ntkh')||null,
-    hinh_thuc_mua: val('f_ht')
+    hinh_thuc_mua: val('f_ht'), thuong_hieu: val('f_th')
   };
 
   /* lưu lên kho dữ liệu chung của app */
@@ -1690,7 +1701,7 @@ async function submitAdd(){
 }
 
 function resetAddForm(){
-  ['f_mamay','f_ten','f_pt','f_cs','f_ncc','f_xx','f_model','f_serial','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_ntkh','f_gt'].forEach(id=>document.getElementById(id).value='');
+  ['f_mamay','f_ten','f_pt','f_cs','f_th','f_ncc','f_xx','f_model','f_serial','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_ntkh','f_gt'].forEach(id=>document.getElementById(id).value='');
   siteFill(''); CB.clearHints();
   ['f_duyet','f_dh','f_tutt','f_xxg','f_ntkh'].forEach(id=>{ if(window.fpickers && window.fpickers[id]) window.fpickers[id].clear(); });
   ['f_ctu','f_dt','f_lm','f_ctm'].forEach(id=>document.getElementById(id).value='0');
@@ -2740,7 +2751,7 @@ function filtered(){
     (filter==='all' || (filter==='delay'? x.giaitrinh : INST_FILTERS.includes(filter) ? DM.matchStatus(x, filter) : x.status===filter)) &&
     (!loc || x.noilapdat===loc) && (!origin || x.xuatxu===origin) && (!pic || x.phutrach===pic) &&
     (!ptF || (ptF==='__miss' ? DM.missingTransit(x) : ptF==='__ok' ? ptNeedsOk(x) : x.hinh_thuc_mua===ptF)) &&
-    (!q || (x.ten+' '+x.ncc+' '+(x.ma_may||'')).toLowerCase().includes(q)) &&
+    (!q || (x.ten+' '+x.ncc+' '+(x.thuong_hieu||'')+' '+(x.ma_may||'')).toLowerCase().includes(q)) &&
     DM.inPeriod(x.vedukienn, lMon, lYr));
   rows.sort((a,b)=>{
     if(sortKey==='__prio'){
@@ -2778,6 +2789,7 @@ const INST_LOST = () => tr('This machine has installation / commissioning dates 
 const MC_LOST = () => tr('This machine has a code but lost its actual arrival date','Máy đã có mã nhưng mất ngày về TT');
 function render(){
   const rows = filtered();
+  thNcc.textContent = hasTH() ? tr('Brand / Supplier','Thương hiệu / NCC') : tr('Supplier','Nhà cung cấp');
   const PS = LIST_FIT.size();
   const nPages = Math.max(1, Math.ceil(rows.length/PS));
   if(pageNo>nPages) pageNo = nPages;
@@ -2786,7 +2798,7 @@ function render(){
   tb.innerHTML = view.map((x,i)=>`<tr class="${x.status!=='arrived'&&x.danhgia==='Trễ'?'late-flag':''} slide-in" data-mo="${x._id}" style="--i:${i};cursor:pointer" onclick="showDetail(${DATA.indexOf(x)})" title="${tr('Click to view full machine details','Bấm để xem đầy đủ thông tin thiết bị')}">
     ${qw ? `<td class="qu-c" onclick="event.stopPropagation()"><input type="checkbox" class="qu-ck" data-id="${x._id}"${QU_SEL.has(x._id)?' checked':''} aria-label="${tr('Select for quick update','Chọn để cập nhật nhanh')}"><button type="button" class="qu-btn" title="${tr('⚡ Quick update','⚡ Cập nhật nhanh')}" onclick="quickEdit(${DATA.indexOf(x)})">⚡</button></td>` : ''}
     <td class="name">${x.ten}${x.congsuat?`<small>${x.congsuat}</small>`:''}</td>
-    <td>${x.sl}</td><td>${x.noilapdat}</td><td>${x.ncc}</td><td>${ctT(x.xuatxu)}${ptSub(x)}</td>
+    <td>${x.sl}</td><td>${x.noilapdat}</td><td>${thCell(x)}</td><td>${ctT(x.xuatxu)}${ptSub(x)}</td>
     <td>${x.phutrach||'—'}</td>
     <td class="money">${fmtM(x.vnd)} ₫</td>
     <td class="money" style="color:var(--sky)">${fmtU(x.usd)}$</td>
@@ -2881,6 +2893,7 @@ window.showDetail = i => {
       it(tr('Quantity','Số lượng'), N(x.sl)),
       it(tr('Capacity','Công suất'), T(x.congsuat)),
       it(tr('Installation site','Nơi lắp đặt'), T(x.noilapdat)),
+      ...(x._th ? [it(tr('Brand','Thương hiệu'), T(x.thuong_hieu))] : []),
       it(tr('Supplier','Nhà cung cấp'), T(x.ncc)),
       it(tr('Origin','Xuất xứ'), T(ctT(x.xuatxu))),
       ...(x._pt ? [it(tr('Purchase type','Hình thức mua'), (PT_LBL[x.hinh_thuc_mua] || tr('Not chosen','Chưa chọn'))
@@ -3027,7 +3040,7 @@ function dbErrText(e){
 const REC_KEYS = ['ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','vekh','vedukienn',
   'danhgia','sonagyctm','giaitrinh','ctu','tamungtt','ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','workingday'];
 const REC_LABEL = {ten:'Tên máy', phutrach:'Người phụ trách', sl:'Số lượng', congsuat:'Công suất', noilapdat:'Nơi lắp đặt',
-  hinh_thuc_mua:'Hình thức mua', ncc:'Nhà cung cấp', xuatxu:'Xuất xứ', model:'Model', serial:'Số serial', vnd:'Tổng giá trị (VNĐ)', usd:'Tổng giá trị (USD)', duyet:'Ngày duyệt ĐXĐT',
+  hinh_thuc_mua:'Hình thức mua', ncc:'Nhà cung cấp', thuong_hieu:'Thương hiệu', xuatxu:'Xuất xứ', model:'Model', serial:'Số serial', vnd:'Tổng giá trị (VNĐ)', usd:'Tổng giá trị (USD)', duyet:'Ngày duyệt ĐXĐT',
   dathang:'Ngày đặt hàng', vekh:'Ngày dự kiến máy về (KH)', vedukienn:'Ngày dự kiến máy về NM', danhgia:'Đánh giá',
   sonagyctm:'Số ngày CTM', giaitrinh:'Giải trình', ctu:'TG chờ tạm ứng KH (ngày)', tamungtt:'Ngày tạm ứng TT',
   ditaukh:'TG đi tàu KH (ngày)', ditautt:'TG đi tàu TT (ngày)', lanhkh:'TG lãnh máy KH (ngày)', lanhtt:'TG lãnh máy TT (ngày)',
@@ -3037,7 +3050,7 @@ const REC_LABEL = {ten:'Tên máy', phutrach:'Người phụ trách', sl:'Số l
   ghichu_ld:'Ghi chú lắp đặt', ma_may:'Mã máy', sysid:'ID hệ thống'};
 /* nhãn hiển thị khi chọn tiếng Anh; REC_LABEL ở trên giữ tiếng Việt vì là tên cột Excel */
 const REC_LABEL_EN = {ten:'Machine name', phutrach:'Person in charge', sl:'Quantity', congsuat:'Capacity', noilapdat:'Installation site',
-  hinh_thuc_mua:'Purchase type', ncc:'Supplier', xuatxu:'Origin', model:'Model', serial:'Serial number', vnd:'Total value (VND)', usd:'Total value (USD)', duyet:'Proposal approval date',
+  hinh_thuc_mua:'Purchase type', ncc:'Supplier', thuong_hieu:'Brand', xuatxu:'Origin', model:'Model', serial:'Serial number', vnd:'Total value (VND)', usd:'Total value (USD)', duyet:'Proposal approval date',
   dathang:'Order date', vekh:'Planned arrival date', vedukienn:'Expected arrival at plant', danhgia:'Rating',
   sonagyctm:'Manufacturing days (CTM)', giaitrinh:'Delay note', ctu:'Advance-payment wait, plan (days)', tamungtt:'Advance-payment date, actual',
   ditaukh:'Shipping time, plan (days)', ditautt:'Shipping time, actual (days)', lanhkh:'Clearance & pickup, plan (days)', lanhtt:'Clearance & pickup, actual (days)',
@@ -3078,6 +3091,7 @@ async function saveMachine(m, editId){
   const ntkh = /^\d{4}-\d{2}-\d{2}$/.test(m.nghiemthu_kh||'') ? m.nghiemthu_kh : null;
   if(ntkh || (cur && cur.nghiemthu_kh)) r0.nghiemthu_kh = ntkh;
   if(cur && cur.ghichu_ld) r0.ghichu_ld = unescH(cur.ghichu_ld);
+  if(hasTH()) r0.thuong_hieu = m.thuong_hieu==null ? (cur ? unescH(cur.thuong_hieu||'') : '') : String(m.thuong_hieu);
   if(hasPT() && m.hinh_thuc_mua){ r0.hinh_thuc_mua = m.hinh_thuc_mua; r0.hinh_thuc_can_xn = false; }   // lưu qua form = đã xác nhận
   const row = await window.__seal('machines', r0);     // mã hoá trường nhạy cảm (nếu đã bật)
   if(editId){
@@ -3716,8 +3730,8 @@ quSync(filtered());
 
 /* ---- Xuất Excel: cùng cấu trúc sheet "📝Cập nhật" nên nạp lại được bằng 📂 Nạp Excel ---- */
 /* Mã máy đứng đầu: là khoá khi nạp lại (giữ nguyên mã = cập nhật đúng máy; để trống = máy mới) */
-const XL_COLS = ['ma_may','ten','phutrach','sl','congsuat','noilapdat','ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','ctu','tamungtt',
-  'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'].concat(ACT_KEYS, LD_KEYS, hasPT() ? ['hinh_thuc_mua'] : [], ['sysid']);
+const XL_COLS = ['ma_may','ten','phutrach','sl','congsuat','noilapdat'].concat(hasTH() ? ['thuong_hieu'] : [], ['ncc','xuatxu','model','serial','vnd','usd','duyet','dathang','ctu','tamungtt',
+  'ditaukh','ditautt','lanhkh','lanhtt','xuatxuong','sonagyctm','workingday','giaitrinh','vekh','vedukienn','danhgia'], ACT_KEYS, LD_KEYS, hasPT() ? ['hinh_thuc_mua'] : [], ['sysid']);
 const pad2 = n=>String(n).padStart(2,'0');
 function stampNow(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes()); }
 function exportExcel(prefix){
@@ -3753,6 +3767,7 @@ async function importMachines(data, known){
     const old = m.sysid && known.get(m.sysid); if(!old) return;
     if(m.model===undefined) m.model = unescH(old.model);
     if(m.serial===undefined) m.serial = unescH(old.serial);
+    if(m.thuong_hieu===undefined) m.thuong_hieu = unescH(old.thuong_hieu||'');
     ACT_KEYS.concat(LD_KEYS).forEach(k=>{ if(m[k]===undefined) m[k] = k==='ghichu_ld' ? unescH(old[k]||'') : old[k]; });
     // ô Hình thức mua trống / không nhận ra: giữ nguyên. Đổi sang giá trị khác: coi như đã xác nhận
     if(!m.hinh_thuc_mua || m.hinh_thuc_mua===old.hinh_thuc_mua){ m.hinh_thuc_mua = old.hinh_thuc_mua||null; m.hinh_thuc_can_xn = !!old.hinh_thuc_can_xn; }
@@ -3760,7 +3775,7 @@ async function importMachines(data, known){
   });
   const actRow = m => Object.fromEntries(ACT_KEYS.concat(LD_KEYS).map(k=>[k, k==='ghichu_ld' ? (m[k] ? String(m[k]) : null)
     : (typeof m[k]==='string' && /^\d{4}-\d{2}-\d{2}$/.test(m[k])) ? m[k] : null]));
-  const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1, id:m.sysid||null, hinh_thuc_mua:m.hinh_thuc_mua||null, hinh_thuc_can_xn:!!m.hinh_thuc_can_xn}))));     // không gửi Mã máy: chỉ hệ thống cấp
+  const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1, id:m.sysid||null, hinh_thuc_mua:m.hinh_thuc_mua||null, hinh_thuc_can_xn:!!m.hinh_thuc_can_xn}, hasTH() ? {thuong_hieu:m.thuong_hieu||null} : {}))));     // không gửi Mã máy: chỉ hệ thống cấp
   const { data: res, error } = await sb.rpc('import_machines_by_id', { rows });
   if(error) throw error;
   // 🔗 Danh mục: đọc lại toàn bộ máy vừa nạp rồi đồng bộ (chỉ máy có thay đổi mới được ghi)
@@ -3789,7 +3804,7 @@ window.editMachine = i => {
   resetAddForm();
   const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value = (v==null?'':v); };
   set('f_mamay', x.ma_may||''); set('f_ten', unescH(x.ten)); set('f_pt', unescH(x.phutrach)); set('f_sl', x.sl||1);
-  set('f_cs', unescH(x.congsuat)); siteFill(unescH(x.noilapdat)); set('f_ncc', unescH(x.ncc)); set('f_xx', unescH(x.xuatxu));
+  set('f_cs', unescH(x.congsuat)); siteFill(unescH(x.noilapdat)); set('f_th', unescH(x.thuong_hieu)); set('f_ncc', unescH(x.ncc)); set('f_xx', unescH(x.xuatxu));
   set('f_model', unescH(x.model)); set('f_serial', unescH(x.serial));
   set('f_vnd', fmtMoney(x.vnd)); set('f_usd', fmtMoney(x.usd));
   set('f_ctu', x.ctu||0); set('f_dt', x.ditaukh||0); set('f_dttt', x.ditautt||'');     // TT = 0 -> ô trống = lấy theo KH
@@ -5220,6 +5235,7 @@ const STATIC_VI = new Map([
   ['Qty','SL'],
   ['Site','Nơi lắp đặt'],
   ['Supplier','Nhà cung cấp'],
+  ['Brand','Thương hiệu'],
   ['Origin','Xuất xứ'],
   ['Person in charge','Người phụ trách'],
   ['Unit price (VND)','Đơn giá (VNĐ)'],
@@ -5646,7 +5662,7 @@ window.encryptExisting = async () => {
 
 (async function(){
   const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const STR = ['ten','phutrach','congsuat','noilapdat','ncc','xuatxu','model','serial','danhgia','giaitrinh','workingday','ma_may','ghichu_ld','hinh_thuc_mua'];
+  const STR = ['ten','phutrach','congsuat','noilapdat','ncc','xuatxu','model','serial','danhgia','giaitrinh','workingday','ma_may','ghichu_ld','hinh_thuc_mua','thuong_hieu'];
   const DATES = ['duyet','dathang','vekh','vedukienn','tamungtt','xuatxuong','tauchay_tt','capcang_tt','venm_tt',
                  'nghiemthu_kh','lapdat_tt','chaythu_tt','nghiemthu_tt'];
   const NUMS = ['sl','vnd','usd','sonagyctm','ctu','ditaukh','ditautt','lanhkh','lanhtt'];
@@ -5657,6 +5673,8 @@ window.encryptExisting = async () => {
     DATES.forEach(k=>{ const v = d[k]; o[k] = (typeof v==='string' && isoRe.test(v.slice(0,10))) ? v.slice(0,10) : null; });
     NUMS.forEach(k=>{ const n = Number(d[k]); o[k] = isFinite(n) ? n : 0; });
     if(!o.sl) o.sl = 1;
+    o._th = 'thuong_hieu' in d;                         // cơ sở dữ liệu đã chạy migration 18
+    if(o._th && !SEC.machines.f.includes('thuong_hieu')){ SEC.machines.f.push('thuong_hieu'); SEC.machines.blank.thuong_hieu = null; }   // mã hoá cùng gói sec
     o._pt = 'hinh_thuc_mua' in d;                        // cơ sở dữ liệu đã chạy migration 13
     o.hinh_thuc_can_xn = d.hinh_thuc_can_xn === true;
     return o;
