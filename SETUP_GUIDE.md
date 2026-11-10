@@ -114,7 +114,7 @@ Khi sửa app sau này, push lên nhánh `main` là trang tự cập nhật. Nh�
 
 ## Thêm đồng nghiệp
 
-Admin bấm nút **👥** trên thanh trên cùng, điền email, họ tên, quyền rồi bấm **Thêm**. App hiện mật khẩu tạm đúng một lần: bấm **Sao chép** rồi gửi cho người đó. Người đó phải đổi mật khẩu ở lần đăng nhập đầu. Cũng trong cửa sổ này: đổi quyền, đặt lại mật khẩu, thu hồi quyền, xem nhật ký.
+Admin bấm nút **👥** trên thanh trên cùng, điền email, họ tên, quyền rồi bấm **Thêm**. App hiện mật khẩu tạm đúng một lần: bấm **Sao chép mật khẩu** (chỉ chép mật khẩu) rồi gửi cho người đó cùng link app và email. Người đó phải đổi mật khẩu ở lần đăng nhập đầu. Cũng trong cửa sổ này: đổi quyền, đặt lại mật khẩu, thu hồi quyền, xem nhật ký.
 
 - **Quyền `editor`, `catalog_editor`, `viewer`:** chỉ cần email và mật khẩu, không cần mật khẩu dữ liệu.
 - **Quyền `admin`:** gửi riêng thêm mật khẩu dữ liệu. Admin vẫn nhập mật khẩu dữ liệu mỗi lần mở app.

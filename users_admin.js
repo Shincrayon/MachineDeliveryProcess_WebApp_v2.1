@@ -79,19 +79,16 @@
   }
 
   function showNew(email, password, role) {
-    const link = location.origin + '/';
     /* thêm khung mới, không đè: thêm liền nhiều người vẫn còn mật khẩu của người trước */
     el('uaNew').insertAdjacentHTML('afterbegin', `<div class="m-ok ua-new">
       <b>${esc(email)}</b><div class="ua-pw"><code>${esc(password)}</code>
-      <button type="button" class="nbtn2 ua-copy">${tr('📋 Copy', '📋 Sao chép')}</button></div>
+      <button type="button" class="nbtn2 ua-copy">${tr('📋 Copy password', '📋 Sao chép mật khẩu')}</button></div>
       <small>${tr('Temporary password, shown only once. The person must change it at first sign-in.', 'Mật khẩu tạm, chỉ hiện một lần. Người đó sẽ phải đổi khi đăng nhập lần đầu.')}<br>
       ${role === 'admin' ? tr('Admin: also send the data password separately. The app does not send it.', 'Quyền admin: hãy gửi riêng mật khẩu dữ liệu. App không gửi hộ.')
                          : tr('No data password needed: email and password are enough.', 'Không cần mật khẩu dữ liệu: chỉ cần email và mật khẩu.')}</small></div>`);
     const btn = el('uaNew').querySelector('.ua-copy');
-    btn.onclick = async () => {
-      const text = tr(`App: ${link}\nEmail: ${email}\nTemporary password: ${password}\nYou will be asked to change it at first sign-in.`,
-                      `App: ${link}\nEmail: ${email}\nMật khẩu tạm: ${password}\nBạn sẽ được yêu cầu đổi mật khẩu khi đăng nhập lần đầu.`);
-      try { await navigator.clipboard.writeText(text); btn.textContent = tr('✓ Copied', '✓ Đã chép'); }
+    btn.onclick = async () => {                      // chỉ chép mật khẩu tạm
+      try { await navigator.clipboard.writeText(password); btn.textContent = tr('✓ Copied', '✓ Đã chép'); }
       catch (e) { btn.textContent = tr('⚠ Copy blocked, copy by hand', '⚠ Trình duyệt chặn, hãy chép tay'); }
     };
   }
