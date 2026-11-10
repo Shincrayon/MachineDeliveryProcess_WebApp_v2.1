@@ -10,7 +10,7 @@ Dữ liệu máy được mã hoá trong trình duyệt (cột `sec`); không g�
 | Cột | `id` (uuid) | `ma_may` |
 | Có từ khi | tạo dòng | máy **đã về** (có `venm_tt` – Ngày máy về NM TT) |
 | Dùng để | **khoá khớp dòng** khi nạp / xuất Excel; liên kết bảng khác (thanh toán, checklist…) | định danh tài sản cho người dùng (dán nhãn, tìm kiếm, báo cáo) |
-| Trên giao diện | không hiện | cột đầu bảng, popup, Gantt… |
+| Trên giao diện | không hiện | **chỉ trong cửa sổ chi tiết** khi bấm vào máy (cả Danh mục MMTB). Không hiện ở bảng Danh sách, Tổng quan, Kế hoạch, tooltip (user chốt 2026-11-10). Ô tìm kiếm vẫn tìm theo mã; form Sửa, ⚡, 🏷, Tên chuẩn vẫn hiện |
 | Trong Excel (⬇️ Excel) | cột **cuối** "ID hệ thống" — ghi chú "KHÔNG SỬA" | cột **đầu** "Mã máy" — chỉ đọc |
 
 Quy tắc Mã máy:

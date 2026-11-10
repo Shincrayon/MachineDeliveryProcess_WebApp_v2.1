@@ -207,12 +207,6 @@ tbody tr:hover{background:rgba(96,165,250,.07)}
 .ac-tools select,.ac-tools input{padding:6px 9px;border-radius:9px;border:1px solid var(--border);background:var(--panel);color:var(--txt);font:inherit;font-size:12.5px}
 .ac-tools input[type=number]{width:64px}
 .ac-tools .nbtn2{padding:6px 12px;font-size:12px}
-/* 🏷 Mã máy: cột đầu bảng Danh sách, cố định khi cuộn ngang */
-#tb td.mm-code,th.mm-code-h{position:sticky;left:0;background:var(--panel);white-space:nowrap;font-variant-numeric:tabular-nums}
-#tb td.mm-code{z-index:1;font-weight:700;font-size:12px;color:var(--sky);box-shadow:inset -1px 0 0 var(--border)}
-th.mm-code-h{z-index:3}
-#tb td.mm-code .muted{font-weight:400;color:var(--muted)}
-#tb td.mm-code .mc-lost{color:var(--st-over)}
 .mc-tbl{max-height:52vh} .mc-tbl table{min-width:760px} .mc-tbl td.m{white-space:nowrap}
 .mc-tbl tr.mc-note td.mc-n{color:var(--st-over)} .mc-tbl td.mc-n{font-size:11.5px}
 .mc-ok{margin-right:auto;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
@@ -1111,7 +1105,6 @@ select.mp-open{border-color:var(--blue)}
     <div class="tablewrap">
       <table>
         <thead><tr>
-          <th class="mm-code-h" data-s="ma_may">Machine code</th>
           <th class="qu-h" id="quTh" hidden><input type="checkbox" id="quAll"></th>
           <th data-s="ten">Machine</th><th data-s="sl">Qty</th><th data-s="noilapdat">Site</th>
           <th data-s="ncc">Supplier</th><th data-s="xuatxu">Origin</th><th data-s="phutrach">Person in charge</th>
@@ -2023,7 +2016,7 @@ let KP = null;
       const it = GN.items[p.value[3]];
       const row = (lbl, m) => `<tr><td style="padding-right:10px;color:${cssv('--muted')}">${lbl}</td><td>${dmD(m.planned)}</td><td>${dmD(m.forecast)}</td><td>${dmD(m.actual)}</td></tr>`;
       const d = it.delay;
-      return `<b>${it.x.ma_may ? it.x.ma_may + ' · ' : ''}${ovEsc(it.x.ten)}</b><br><span style="color:${cssv('--muted')}">${ovEsc(it.x.ncc) || '—'} · ${it.group} · ${ovEsc(it.x.phutrach) || '—'}</span>` +
+      return `<b>${ovEsc(it.x.ten)}</b><br><span style="color:${cssv('--muted')}">${ovEsc(it.x.ncc) || '—'} · ${it.group} · ${ovEsc(it.x.phutrach) || '—'}</span>` +
         `<table style="margin-top:6px;font-size:12px;border-collapse:collapse"><tr style="color:${cssv('--muted')}"><td></td><td>${tr('Planned','Kế hoạch')}</td><td style="padding:0 8px">${tr('Forecast','Dự kiến')}</td><td>${tr('Actual','Thực tế')}</td></tr>` +
         it.milestones.map(m => row(OV_MS[m.milestone], m)).join('') +
         (it.x.venm_tt || it.x.nghiemthu_kh ? row(tr('Installation start', 'Bắt đầu lắp đặt'), { actual: it.x.lapdat_tt }) +
@@ -2245,7 +2238,7 @@ function showMachines(title, rows){
   mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')} · ${(sumV(rows)/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')} · ${tre} ${tr('late','trễ')}`;
   mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(x=>`
     <div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
-      <span class="kn">${x.ma_may ? `<small style="display:inline;color:var(--sky)">${x.ma_may}</small> ` : ''}${x.ten}${x.sl>=2?` <b style="color:var(--sky)">(x${x.sl})</b>`:''}<small>${x.noilapdat} · ${x.ncc} · ${fmtM(x.vnd)} ₫</small></span>
+      <span class="kn">${x.ten}${x.sl>=2?` <b style="color:var(--sky)">(x${x.sl})</b>`:''}<small>${x.noilapdat} · ${x.ncc} · ${fmtM(x.vnd)} ₫</small></span>
       <span class="kv">${fmtD(x.vedukienn)}<br>
         <span class="badge b-${x.status}" style="font-size:10.5px;padding:2px 8px">${LBL[x.status]||'—'}</span>
         <span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}" style="font-size:10.5px;padding:2px 8px">${dgT(x.danhgia)}</span></span>
@@ -2364,7 +2357,7 @@ function initMaps(){
     mk.bindTooltip(`${ctT(name)}: ${rows.length} ${tr('machines','thiết bị')}`,{direction:'top'});
     mk.bindPopup(`<div class="mp-title" style="color:${o.col}">🌍 ${ctT(name)}</div>
       <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')} · ${(v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')}<br>${tr('Suppliers','NCC')}: ${nccs.join(', ')}</div>
-      <div class="mp-list">${rows.map(x=>`<div>${x.ma_may ? `<small>${x.ma_may}</small> ` : ''}${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
+      <div class="mp-list">${rows.map(x=>`<div>${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
       {maxWidth:290});
     if(name!=='Việt Nam'){
       const mid = [(o.c[0]+DEST[0])/2 + Math.abs(o.c[1]-DEST[1])*0.12, (o.c[1]+DEST[1])/2];
@@ -2402,7 +2395,7 @@ function initMaps(){
     mk.bindTooltip(`${ctT(name)}: ${rows.length} ${tr('machines','thiết bị')}`,{direction:'top'});
     mk.bindPopup(`<div class="mp-title">📍 ${name}</div>
       <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')} · ${(v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')}</div>
-      <div class="mp-list">${rows.map(x=>`<div>${x.ma_may ? `<small>${x.ma_may}</small> ` : ''}${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
+      <div class="mp-list">${rows.map(x=>`<div>${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
       {maxWidth:290});
     pts.push(coord);
   });
@@ -2518,7 +2511,7 @@ const READY_S = () => tr({ todo:'To do', in_progress:'In progress', done:'Done',
 const plMissing = (e, file) => { const c = e && e.code, m = String((e && e.message) || '');
   return c === '42P01' || c === 'PGRST205' || /not find|does not exist|schema cache/i.test(m)
     ? tr(`Table not set up yet — run supabase/migrations/${file} in Supabase › SQL Editor.`, `Chưa có bảng — chạy supabase/migrations/${file} trong Supabase › SQL Editor.`) : dbErrText(e); };
-const plName = id => { const x = DATA.find(d => d._id === id); return x ? (x.ma_may ? x.ma_may + ' · ' : '') + unescH(x.ten) : '—'; };
+const plName = id => { const x = DATA.find(d => d._id === id); return x ? unescH(x.ten) : '—'; };
 async function plLoad(){
   const sb = window.__sb; PL.err = {};
   const q = async (k, f) => { if(!sb){ PL.err[k] = { code:'nodb' }; return []; }
@@ -2781,12 +2774,8 @@ function stCell(x){
 (function(){ const b = document.querySelector('#p3 .fbtn[data-f="wait_install"]'); if(b) b.title = tr(
   `Arrived at plant more than ${DM.CFG.installWaitDays} days ago, no installation date yet`,`Về NM quá ${DM.CFG.installWaitDays} ngày, chưa có ngày bắt đầu lắp đặt`); })();
 const INST_LOST = () => tr('This machine has installation / commissioning dates but no actual arrival date at plant','Máy có ngày lắp đặt / nghiệm thu nhưng không có Ngày máy về NM TT');
-/* ô Mã máy: chưa về -> "—"; đã về mà chưa cấp (chờ 🏷) -> "chưa có mã"; có mã nhưng mất ngày về TT -> ⚠ */
+/* Mã máy chỉ hiện trong cửa sổ chi tiết (showDetail), không hiện ở bảng / Tổng quan / Kế hoạch */
 const MC_LOST = () => tr('This machine has a code but lost its actual arrival date','Máy đã có mã nhưng mất ngày về TT');
-function mcCell(x){
-  if(x.ma_may) return x.venm_tt ? x.ma_may : `<span class="mc-lost" title="${MC_LOST()}">⚠ ${x.ma_may}</span>`;
-  return x.venm_tt ? `<span class="muted">${tr('no code','chưa có mã')}</span>` : `<span class="muted" title="${tr('A code is assigned when the machine arrives at the plant','Cấp mã khi máy về NM')}">—</span>`;
-}
 function render(){
   const rows = filtered();
   const PS = LIST_FIT.size();
@@ -2795,7 +2784,6 @@ function render(){
   const view = rows.slice((pageNo-1)*PS, pageNo*PS);
   const qw = !!window.__canWrite;
   tb.innerHTML = view.map((x,i)=>`<tr class="${x.status!=='arrived'&&x.danhgia==='Trễ'?'late-flag':''} slide-in" data-mo="${x._id}" style="--i:${i};cursor:pointer" onclick="showDetail(${DATA.indexOf(x)})" title="${tr('Click to view full machine details','Bấm để xem đầy đủ thông tin thiết bị')}">
-    <td class="mm-code">${mcCell(x)}</td>
     ${qw ? `<td class="qu-c" onclick="event.stopPropagation()"><input type="checkbox" class="qu-ck" data-id="${x._id}"${QU_SEL.has(x._id)?' checked':''} aria-label="${tr('Select for quick update','Chọn để cập nhật nhanh')}"><button type="button" class="qu-btn" title="${tr('⚡ Quick update','⚡ Cập nhật nhanh')}" onclick="quickEdit(${DATA.indexOf(x)})">⚡</button></td>` : ''}
     <td class="name">${x.ten}${x.congsuat?`<small>${x.congsuat}</small>`:''}</td>
     <td>${x.sl}</td><td>${x.noilapdat}</td><td>${x.ncc}</td><td>${ctT(x.xuatxu)}${ptSub(x)}</td>
@@ -2829,7 +2817,7 @@ window.showKPI = kind => {
     mTitle.textContent = T.commissioning + ' · ' + tr('all periods','mọi kỳ');
     mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${dmN(K.installing)} ${tr('installing','đang lắp đặt')} · ⏰ ${dmN(K.waitInstall)} ${tr(`not installed > ${K.waitDays} days`,`chưa lắp đặt quá ${K.waitDays} ngày`)} · ⚠ ${dmN(K.lateAccept)} ${tr('late commissioning','trễ nghiệm thu')}`;
     mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(({x, s})=>`<div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
-      <span class="kn">${x.ma_may ? x.ma_may + ' · ' : ''}${ovEsc(unescH(x.ten))}<small>${ovEsc(unescH(x.phutrach))||'—'} · ${DM.companyCode(x.noilapdat)||ovEsc(unescH(x.noilapdat))} · ${ovEsc(unescH(x.ncc))||'—'}</small></span>
+      <span class="kn">${ovEsc(unescH(x.ten))}<small>${ovEsc(unescH(x.phutrach))||'—'} · ${DM.companyCode(x.noilapdat)||ovEsc(unescH(x.noilapdat))} · ${ovEsc(unescH(x.ncc))||'—'}</small></span>
       <span class="kv">${tr('At plant','Về NM')} ${dmD(x.venm_tt)} · ${tr('Commissioning plan','NT KH')} ${dmD(x.nghiemthu_kh)}<br>${stCell(x)}</span></div>`).join('')}</div>`
       : `<div class="m-ok">${tr('No machines waiting for commissioning.','Không có máy nào chờ nghiệm thu.')}</div>`;
     openM(); return;
@@ -4330,7 +4318,7 @@ const F = { q:'', co:'', area:'', line:'', grp:'', st:'' };
 let sortK = '__tree', sortD = 1, pg = 1, listDrawn = false;
 const LIST_FIT = PF.make(() => c2.querySelector('.tablewrap'), 50, (old, now) => { pg = PF.page(pg, old, now); renderList(); });
 const COLS = [
-  ['machine_code', tr('Code','Mã')], ['name', tr('Machine','Tên máy')], ['company_code', tr('Plant','Nhà máy')],
+  ['name', tr('Machine','Tên máy')], ['company_code', tr('Plant','Nhà máy')],
   ['area_code', tr('Area','Khu vực')], ['line_name', tr('Line','Chuyền')], ['group_name', tr('Group','Nhóm')],
   ['supplier_name', tr('Supplier','Nhà cung cấp')], ['manufacturer', tr('Brand','Thương hiệu')], ['quantity', tr('Qty','SL')],
   [LANG==='vi' ? 'value_vnd' : 'value_usd', tr('Value (USD)','Giá trị (VNĐ)')], ['lifecycle_status', tr('Status','Trạng thái')]];
@@ -4396,7 +4384,6 @@ function renderList(){
   mmTb.innerHTML = view.map((x,i)=>{
     const dep = sortK==='__tree' ? treeIdx.get(x.id)[1] : 0;
     return `<tr class="slide-in${dep?' child':''}" data-mo="${x.id}" style="--i:${i};cursor:pointer" onclick="mmShow('${x.id}')">
-      <td style="white-space:nowrap;color:var(--muted);font-size:12px">${E(x.machine_code)}</td>
       <td class="name" style="padding-left:${10 + dep*18}px">${dep?'<span class="ind">↳</span>':''}${E(x.name)}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${x.model || x.tracking_code ? `<small>${E(x.model || '')}${x.model && x.tracking_code ? ' · ' : ''}${x.tracking_code ? '🔗 ' + E(x.tracking_code) : ''}</small>` : ''}</td>
       <td>${E(x.company_code)}</td><td>${T(x.area_name)}</td><td>${T(x.line_name)}</td><td>${T(x.group_name)}</td>
       <td>${T(x.supplier_name)}</td><td>${T(x.manufacturer)}</td><td>${N(x.quantity || 1)}</td>
