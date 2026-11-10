@@ -598,14 +598,6 @@ td.qu-c input,th.qu-h input{width:16px;height:16px;vertical-align:middle;accent-
 .nbtn2:hover{transform:translateY(-2px)}
 .nbtn2.ghost{background:transparent;color:var(--muted);border:1px solid var(--border);box-shadow:none}
 .nbtn2.ghost:hover{color:var(--txt);border-color:var(--blue)}
-.paste-box{margin-top:14px;background:var(--field);border:1px solid var(--border);border-radius:11px;padding:13px}
-.paste-box h5{font-size:12.5px;color:var(--sky);margin-bottom:7px;font-weight:700;display:flex;align-items:center;gap:6px}
-.paste-box .hint{font-size:11.5px;color:var(--muted);margin-bottom:8px;line-height:1.5}
-.paste-box textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--txt);
-  font-size:12px;padding:8px;font-family:'Consolas',monospace;resize:vertical;white-space:pre}
-.copy-btn{margin-top:8px;padding:6px 15px;border-radius:8px;border:1px solid var(--green);background:rgba(52,211,153,.12);
-  color:var(--green);font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
-.copy-btn:hover{background:rgba(52,211,153,.25)}
 
 /* ===== gantt timeline (Lịch máy về) ===== */
 .gv-btn{padding:5px 10px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--field);color:var(--muted);cursor:pointer;user-select:none}
@@ -1138,7 +1130,7 @@ select.mp-open{border-color:var(--blue)}
   <div class="modal add-modal" style="position:relative">
     <button class="m-close" onclick="closeAdd()">✕</button>
     <h4 id="addTitle">➕ Add new machine</h4>
-    <div class="m-sub">The machine is saved to the app and everyone with the link sees it right away. After saving, you get a data row to paste into Excel (sheet Cập nhật) if you want to keep the Excel file in sync.</div>
+    <div class="m-sub">The machine is saved to the app and everyone with the link sees it right away. Need an Excel file? Use the ⬇️ Excel button.</div>
     <div class="add-grid" id="addGrid">
       <label class="full">Machine code<input id="f_mamay" type="text" readonly tabindex="-1" placeholder="Assigned automatically on save" style="opacity:.75;cursor:not-allowed"></label>
       <label class="full">Machine name *<input id="f_ten" class="req" type="text" placeholder="e.g. Bottle label remover 3 t/h"></label>
@@ -1630,7 +1622,6 @@ async function submitAdd(){
     const cur = window.__editId ? DATA.find(x=>x._id===window.__editId) : null;
     if(val('f_ht')==='domestic' && cur && (cur.tauchay_tt || cur.capcang_tt)){ showNotice({type:'error', title:tr('This machine has port dates','Máy đang có ngày tàu chạy / cập cảng'), sub:tr('Clear the sailing and port arrival dates in ⚡ Quick update before changing it to Domestic.','Xoá ngày tàu chạy và cập cảng ở ⚡ Cập nhật nhanh trước khi đổi sang Trong nước.')}); return; }
   }
-  const tutt = isoToSerial(val('f_tutt'));
   const { xxg, ctu, ctm, dt, lm, dtTT, lmTT, wd, veKH, veNM, dg } = calcDates();
 
   const m = {
@@ -1658,46 +1649,10 @@ async function submitAdd(){
   catch(err){ showNotice({type:'error', title:tr('Could not save the machine','Chưa lưu được máy'), sub:dbErrText(err)}); return; }
   finally{ addSubmit.disabled = false; }
 
-  /* dòng để dán vào sheet "Cập nhật" (đúng thứ tự cột, phân tách bằng Tab)
-     LƯU Ý: cột Q "Ngày dự kiến máy về (KH)" là CÔNG THỨC -> tách làm 2 khối
-     để không ghi đè công thức: khối 1 dán vào A..P, khối 2 dán vào R..U. */
-  const capnhatAP = [
-    ten, m.sl, m.congsuat, m.noilapdat, m.ncc, m.xuatxu, m.vnd, m.usd,
-    isoToDMY(m.duyet), isoToDMY(m.dathang),
-    ctu, isoToDMY(serialToISO(tutt)), dt, dtTT, lm, lmTT
-  ].join('\t');
-  const capnhatRU = [
-    isoToDMY(serialToISO(xxg)), m.sonagyctm, wd, m.giaitrinh
-  ].join('\t');
-
-  addResult.innerHTML = `
-    <div class="paste-box">
-      <h5>✅ ${tr(`${editing?'Saved changes to':'Added'} “${escH(ten)}” in the app`,`Đã ${editing?'lưu thay đổi cho':'thêm'} “${escH(ten)}” trên app`)}</h5>
-      <div class="hint">${tr(`<b>Keep Excel in sync (optional).</b> Open the Excel file, sheet <b>Cập nhật</b>, click the <b>column A cell of ${editing?'this machine’s row':'the next empty row'}</b> and paste (Ctrl+V) the block below (columns A → P):`,`<b>Giữ Excel đồng bộ (tuỳ chọn).</b> Mở file Excel, sheet <b>Cập nhật</b>, bấm ô <b>cột A của ${editing?'dòng của máy này':'dòng trống kế tiếp'}</b> rồi dán (Ctrl+V) khối dưới đây (cột A → P):`)}</div>
-      <textarea id="pasteCN" rows="2" readonly>${capnhatAP.replace(/</g,'&lt;')}</textarea>
-      <button class="copy-btn" onclick="copyBox('pasteCN')">${tr(`📋 Copy block A→P`,`📋 Sao chép khối A→P`)}</button>
-    </div>
-    <div class="paste-box">
-      <h5>${tr(`🧮 Step 2 — column Q is a formula, don't paste into it`,`🧮 Bước 2 — cột Q là công thức, đừng dán vào`)}</h5>
-      <div class="hint">${tr(`Select the <b>Q cell of the row above</b>, copy it and paste into the <b>Q cell of the new row</b> (or drag the fill handle down one row) so Excel calculates <b>Ngày dự kiến máy về (KH)</b> (planned arrival date).`,`Chọn ô <b>Q của dòng ngay trên</b>, copy rồi dán xuống ô <b>Q của dòng mới</b> (hoặc kéo nút vuông góc dưới xuống 1 dòng) để Excel tự tính <b>Ngày dự kiến máy về (KH)</b>.`)}</div>
-    </div>
-    <div class="paste-box">
-      <h5>${tr(`📥 Step 3 — paste the remaining block`,`📥 Bước 3 — dán khối còn lại`)}</h5>
-      <div class="hint">${tr(`Click the <b>column R cell of the new row</b> and paste the block below (columns R → U: ex-works date, manufacturing days (CTM), working day, delay note):`,`Bấm ô <b>cột R của dòng mới</b> rồi dán khối dưới đây (cột R → U: xuất xưởng, số ngày chế tạo máy (CTM), working day, giải trình):`)}</div>
-      <textarea id="pasteCN2" rows="2" readonly>${capnhatRU.replace(/</g,'&lt;')}</textarea>
-      <button class="copy-btn" onclick="copyBox('pasteCN2')">${tr(`📋 Copy block R→U`,`📋 Sao chép khối R→U`)}</button>
-    </div>
-    ${m.phutrach ? `<div class="paste-box">
-      <h5>${tr(`👤 Person in charge (for the Root data sheet)`,`👤 Người phụ trách (cho sheet Root data)`)}</h5>
-      <div class="hint">${tr(`The Root data sheet is hidden. Unhide it, drag the formulas from the row above down to the new row (so they calculate), then type the name below into the <b>“Người phụ trách” column</b> of the new row:`,`Sheet Root data đang ẩn. Bỏ ẩn nó, kéo công thức của dòng ngay trên xuống dòng mới (để tự tính), rồi gõ tên dưới đây vào <b>cột “Người phụ trách”</b> của dòng mới:`)}</div>
-      <textarea id="pastePT" rows="1" readonly>${m.phutrach.replace(/</g,'&lt;')}</textarea>
-      <button class="copy-btn" onclick="copyBox('pastePT')">${tr(`📋 Copy person in charge`,`📋 Sao chép Người phụ trách`)}</button>
-    </div>` : ''}
-    <div class="add-actions" style="margin-top:14px">
-      <button class="nbtn2 ghost" onclick="window.__editId=null;addTitle.textContent=tr('➕ Add new machine','➕ Nhập máy mới');addSubmit.textContent=tr('➕ Add machine','➕ Thêm máy');resetAddForm()">${tr(`Add another machine`,`Nhập máy khác`)}</button>
-      <button class="nbtn2" onclick="location.reload()">${tr(`View on dashboard ✨`,`Xem trên dashboard ✨`)}</button>
-    </div>`;
-  addResult.scrollIntoView({behavior:'smooth', block:'end'});
+  /* lưu xong: đóng form, báo ngắn; bảng đã cập nhật tại chỗ (saveMachine). Cần file Excel thì bấm ⬇️ Excel. */
+  window.__editId = null;
+  closeAdd();
+  quToast('✅ ' + tr(`${editing?'Saved changes to':'Added'} “${escH(ten)}”`,`Đã ${editing?'lưu thay đổi cho':'thêm'} “${escH(ten)}”`));
 }
 
 function resetAddForm(){
@@ -1710,12 +1665,6 @@ function resetAddForm(){
   document.getElementById('f_sl').value='1'; document.getElementById('f_wd').value='no';
   addResult.innerHTML='';
   updCalc();
-}
-function copyBox(id){
-  const ta=document.getElementById(id); ta.select(); ta.setSelectionRange(0,99999);
-  const done=()=>{ const b=event&&event.target; if(b){ const t=b.textContent; b.textContent=tr('✔ Copied','✔ Đã sao chép'); setTimeout(()=>b.textContent=t,1500);} };
-  try{ navigator.clipboard.writeText(ta.value).then(done, ()=>{document.execCommand('copy');done();}); }
-  catch(e){ try{document.execCommand('copy');done();}catch(_){} }
 }
 
 fileUpd.onchange = async e => {
@@ -3105,7 +3054,19 @@ async function saveMachine(m, editId){
     if(error) throw error;
     editId = data && data[0] && data[0].id;
   }
-  if(editId){ csAfter([editId]); if(window.MO) MO.saved(editId); }
+  if(editId){ await refreshOne(editId); csAfter([editId]); if(window.MO) MO.saved(editId); }
+  quAfterSave();
+}
+/* đọc lại 1 máy vừa lưu rồi cập nhật DATA tại chỗ (không tải lại trang) */
+async function refreshOne(id){
+  try{
+    const { data } = await window.__sb.from('machines').select('*').eq('id', id).is('deleted_at', null).maybeSingle();
+    if(!data) return;
+    const o = window.__cleanMachine(await window.__open(data));
+    const x = DATA.find(d=>d._id===id);
+    if(x){ if(o.ten==='' && x.ten) o.ten = x.ten; Object.assign(x, o); setArrival(x); }
+    else DATA.push(setArrival(o));
+  }catch(e){ console.warn('[Lưu máy] chưa đọc lại được', e); }
 }
 /* 🔗 khối "Danh mục MMTB" trong popup chi tiết: đã chuyển (bấm mở hồ sơ) / chưa chuyển + lý do */
 function csBlock(x){
@@ -5246,7 +5207,7 @@ const STATIC_VI = new Map([
   ['Status','Trạng thái'],
   ['Rating','Đánh giá'],
   ['➕ Add new machine','➕ Nhập máy mới'],
-  ['The machine is saved to the app and everyone with the link sees it right away. After saving, you get a data row to paste into Excel (sheet Cập nhật) if you want to keep the Excel file in sync.','Máy được lưu lên app, ai mở link cũng thấy ngay. Sau khi lưu, bạn nhận được dòng dữ liệu để dán vào Excel (sheet Cập nhật) nếu muốn giữ file Excel đồng bộ.'],
+  ['The machine is saved to the app and everyone with the link sees it right away. Need an Excel file? Use the ⬇️ Excel button.','Máy được lưu lên app, ai mở link cũng thấy ngay. Cần file Excel thì bấm nút ⬇️ Excel.'],
   ['Machine name *','Tên máy *'],
   ['e.g. Bottle label remover 3 t/h','VD: Máy tách nhãn chai 3 tấn/h'],
   ['Quantity','Số lượng'],
