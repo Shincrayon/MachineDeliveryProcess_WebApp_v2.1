@@ -15,6 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<script src="chart_theme.js"></script>
 <script src="metrics.js"></script>
 <script src="export.js"></script>
 <script src="catalog_sync.js"></script>
@@ -1684,7 +1685,8 @@ fileUpd.onchange = async e => {
   e.target.value = '';
 };
 
-const C = {arrived:'#34d399', overdue:'#fb923c', soon:'#fbbf24', waiting:'#60a5fa'};
+/* màu trạng thái ngày về: chart_theme.js (VZ) — đọc lúc vẽ để theo chế độ sáng/tối */
+const C = { get arrived(){ return VZ.arrival('arrived'); }, get overdue(){ return VZ.arrival('overdue'); }, get soon(){ return VZ.arrival('soon'); }, get waiting(){ return VZ.arrival('waiting'); } };
 const LBL = tr({arrived:'Arrived', overdue:'⚠ Overdue – unconfirmed', soon:'Arriving soon (≤15 days)', waiting:'Awaiting', unknown:'No date yet'},
   {arrived:'Đã về', overdue:'⚠ Quá hạn – chưa xác nhận', soon:'Sắp về (≤15 ngày)', waiting:'Chờ về', unknown:'Chưa có ngày'});
 const MON = tr(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
@@ -1859,13 +1861,54 @@ let KP = null;
   // chỉ báo tăng/giảm so với 7 ngày trước: ẩn — chưa có dữ liệu lịch sử KPI
   dmKpis.innerHTML = CARDS.map(([k, ic, lbl]) =>
     `<div class="kpi" id="dmK_${k}" onclick="showKPI('${k}')"><span class="ic">${ic}</span>` +
-    `<div class="lbl">${lbl}</div><div class="val" id="dmV_${k}">—</div><div class="note" id="dmN_${k}"></div></div>`).join('');
+    `<div class="lbl">${lbl}</div><div class="val" id="dmV_${k}">—</div><div class="note" id="dmN_${k}"></div><div class="vz" id="dmZ_${k}"></div></div>`).join('');
   const set = (k, acc, val, note) => {
     document.getElementById('dmK_'+k).style.setProperty('--accent', acc);
     document.getElementById('dmV_'+k).textContent = val;
     document.getElementById('dmN_'+k).textContent = note;
   };
   attTitle.textContent = tr('⚠️ Needs attention', '⚠️ Cần chú ý');
+  /* ---- hình nhỏ trong thẻ KPI (chart_theme.js: VZ.spark / segbar / bullet / cols / delta) ----
+     CHỈ HIỂN THỊ: đọc lại dữ liệu đang có, không đổi con số / cách tính của thẻ. */
+  function kpiViz(rows, cm){
+    const t = DM.todayIso(), MS = [];
+    for(let i = 5; i >= 0; i--){ const d = new Date(t + 'T00:00:00'); d.setDate(1); d.setMonth(d.getMonth() - i);
+      const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), end = new Date(y, d.getMonth() + 1, 0);
+      MS.push({ key: y + '-' + m, end: i ? y + '-' + m + '-' + String(end.getDate()).padStart(2, '0') : t, lbl: tr(MON[d.getMonth()] + ' ' + y, 'T' + (+m) + '/' + y) }); }
+    const Z = k => document.getElementById('dmZ_' + k), ar = x => DM.milestones(x)[2], ord = x => DM.milestones(x)[0].actual;
+    // xu hướng 6 tháng: mọi kỳ (chỉ áp bộ lọc công ty / NCC) — bộ lọc tháng/năm chỉ còn 1 tháng thì không vẽ được đường
+    const all = ovRowsAllTime(), per = !!(OVF.m || OVF.y);
+    const cap = `<span class="vz-k" title="${tr('Trend over the last 6 months' + (per ? ', all periods (month/year filter not applied)' : ''), 'Xu hướng 6 tháng gần đây' + (per ? ', mọi kỳ (không áp bộ lọc tháng/năm)' : ''))}">${tr('6 mo', '6 th')}${per ? tr(' · all', ' · mọi kỳ') : ''}</span>`;
+    // 1. máy đang triển khai: số máy chưa về NM tại cuối mỗi tháng (tháng này = hôm nay)
+    const pipeAt = e => all.filter(x => { const a = ar(x).actual, o = ord(x); return (!a || a > e) && (!o || o <= e || e === t); }).length;
+    const pp = MS.map(m => ({ v: pipeAt(m.end), t: m.lbl }));
+    pp.forEach(p => p.t += ': ' + p.v + tr(' machines', ' máy'));
+    Z('pipeline').innerHTML = VZ.spark(pp, VZ.one(), { label: tr('Machines in pipeline, last 6 months (all periods)', 'Máy đang triển khai, 6 tháng gần đây (mọi kỳ)') }) +
+      VZ.delta(pp[5].v, pp[4].v, { neutral: true, same: tr('vs last month', 'so tháng trước'), t: tr('Change vs end of last month', 'Thay đổi so với cuối tháng trước') }) + cap;
+    // 2. tỷ lệ đúng hạn: bullet graph (mục tiêu 80%) + tỷ lệ từng tháng
+    const o = KP.ontime, pc = v => dmN(v * 100) + '%';
+    const om = MS.map(m => { const d = all.map(ar).filter(a => a.actual && a.planned && a.actual.slice(0, 7) === m.key);
+      const v = d.length ? d.filter(a => a.actual <= a.planned).length / d.length : null;
+      return { v, t: m.lbl + ': ' + (v == null ? tr('no arrivals', 'không có máy về') : pc(v) + ' (' + d.filter(a => a.actual <= a.planned).length + '/' + d.length + ')') }; });
+    Z('ontime').innerHTML = VZ.bullet(o.rate, { label: tr('On-time rate vs 80% target', 'Tỷ lệ đúng hạn so với mục tiêu 80%'),
+        t1: tr('Poor: below 60%', 'Kém: dưới 60%'), t2: tr('Needs work: 60–80%', 'Cần cải thiện: 60–80%'), t3: tr('On target: 80% or more', 'Đạt: từ 80%'), tt: tr('Target 80%', 'Mục tiêu 80%') }) +
+      VZ.spark(om, VZ.one(), { min: 0, max: 1, target: VZ.ONTIME.target, label: tr('On-time rate by month', 'Tỷ lệ đúng hạn theo tháng') }) + cap;
+    // 3. đang trễ: chia theo mức trễ
+    const dd = KP.delayed.rows.map(x => DM.delay(x)), sU = dd.filter(d => d.unconfirmed).length, sB = dd.filter(d => !d.unconfirmed && d.days > 14).length;
+    const segD = [{ n: dd.length - sU - sB, c: cssv('--st-warn'), t: tr('Late ≤ 14 days', 'Trễ ≤ 14 ngày') }, { n: sB, c: cssv('--st-bad'), t: tr('Late > 14 days', 'Trễ > 14 ngày') },
+                  { n: sU, c: VZ.arrival('overdue'), t: tr('Overdue – unconfirmed', 'Quá hạn – chưa xác nhận') }];
+    Z('delayed').innerHTML = VZ.segbar(segD, { label: tr('Delayed machines by severity', 'Máy trễ theo mức độ') }) + leg(segD);
+    // 4. về trong 30 ngày: theo tuần
+    const wk = [[0, 7], [8, 14], [15, 21], [22, 30]].map(([a, b], i) => { const n = KP.arriving.rows.filter(x => { const f = ar(x).forecast, dl = DM.days(t, f); return dl >= a && dl <= b; }).length;
+      return { v: n, t: tr(`Week ${i + 1}`, `Tuần ${i + 1}`) + ` (${dmD(DM.addDays(t, a))} – ${dmD(DM.addDays(t, b))}): ${n}` + tr(' machines', ' máy') }; });
+    Z('arriving').innerHTML = VZ.cols(wk, VZ.arrival('soon'), { label: tr('Expected arrivals per week', 'Số máy dự kiến về mỗi tuần') }) + `<span class="vz-k">${tr('4 weeks', '4 tuần')}</span>`;
+    // 5. chờ nghiệm thu: chờ lắp / đang lắp / đang thử nghiệm
+    const cs = cm.rows.map(x => DM.installStatus(x).stage);
+    const segC = [['arrived', tr('Awaiting installation', 'Chờ lắp')], ['installing', tr('Installing', 'Đang lắp')], ['testing', tr('Testing', 'Thử nghiệm')]]
+      .map(([k, l]) => ({ n: cs.filter(s => s === k).length, c: VZ.life(k), t: l }));
+    Z('commissioning').innerHTML = VZ.segbar(segC, { label: tr('Pending commissioning by stage', 'Chờ nghiệm thu theo giai đoạn') }) + leg(segC);
+  }
+  const leg = segs => `<div class="vz-leg">${segs.filter(x => x.n).map(x => `<span><i style="background:${x.c}"></i>${x.t} ${x.n}</span>`).join('')}</div>`;
   function draw(){
     const rows = ovRows(), period = !!(OVF.m || OVF.y);
     KP = DM.kpis(rows, { ontimeWindow: period ? null : 90 });
@@ -1894,6 +1937,7 @@ let KP = null;
          cm.waitInstall ? '⏰ ' + dmN(cm.waitInstall) + tr(` not installed > ${cm.waitDays} days`, ` chưa lắp đặt quá ${cm.waitDays} ngày`) : '',
          cm.lateAccept ? '⚠ ' + dmN(cm.lateAccept) + tr(' late commissioning', ' trễ nghiệm thu') : '',
          tr('all periods', 'mọi kỳ')].filter(Boolean).join(' · '));
+    kpiViz(rows, cm);
 
     const list = DM.attention(rows, 5);
     attSub.textContent = dl.count ? tr(`top ${list.length} of ${dl.count} delayed · by days late`, `${list.length} / ${dl.count} máy trễ nặng nhất · theo số ngày trễ`) : '';
@@ -2052,8 +2096,7 @@ let KP = null;
               axisLabel:{ color:cssv('--txt'), fontSize:12, width: small() ? 110 : 150, overflow:'break' } },
       series:[{ type:'bar', barWidth:'62%', data:FN.map((st, i) => ({
           value:st.available ? pick(st) : 0,
-          itemStyle:{ borderRadius:6, color: !st.available ? cssv('--st-done') : OVF.st === st.key ? cssv('--blue')
-                        : st.key === 'overdue' ? cssv('--st-over') : rgba(cssv('--violet'), 1 - i * .1),
+          itemStyle:{ borderRadius:6, color: !st.available ? cssv('--st-done') : VZ.life(st.key),
                       opacity: OVF.st && DM.STAGES.includes(OVF.st) && OVF.st !== st.key ? .35 : 1 },
           label:{ show:true, position:'right', color:st.available ? cssv('--txt') : cssv('--muted'), fontWeight:600,
                   formatter:() => st.available ? fmtV(pick(st)) : tr('no data', 'chưa có dữ liệu') } })),
@@ -2099,7 +2142,7 @@ let stChart = null;
 /* trễ = ngày về NM (thực tế/dự kiến) muộn hơn ngày về KH, kể cả máy đã về */
 function isLate(x){ return !!(x.vekh && x.vedukienn && x.vedukienn.slice(0,10) > x.vekh.slice(0,10)); }
 const DG = ['Sớm','Đúng tiến độ','Trễ'];
-const DGC = {'Sớm':'#2dd4bf','Đúng tiến độ':'#a78bfa','Trễ':'#f87171'};
+const DGC = { get 'Sớm'(){ return VZ.evalc('Sớm'); }, get 'Đúng tiến độ'(){ return VZ.evalc('Đúng tiến độ'); }, get 'Trễ'(){ return VZ.evalc('Trễ'); } };
 /* giá trị Đánh giá lưu tiếng Việt trong dữ liệu -> khi chọn tiếng Anh thì hiển thị tiếng Anh */
 const DGL = {'Sớm':'Early','Đúng tiến độ':'On time','Trễ':'Late'};
 const dgT = v => (LANG==='en' && DGL[v]) || v || '—';
@@ -2239,7 +2282,12 @@ function drawAnKpis(){
     ['#22d3ee','🌍',tr('Countries of origin','Nước xuất xứ'), org.length, org[0] ? `${ctT(unescH(org[0].k))} ${tr('leads','nhiều nhất')} · ${org[0].n} ${tr('machines','TB')}` : '', null],
     ['#7dd3fc','🔧',tr('Arrived – awaiting install','Đã về – chờ lắp'), wait.length, wl ? `⚠ ${wl} ${tr(`over ${N} days`,`quá ${N} ngày`)}` : tr(`none over ${N} days`,`không máy nào quá ${N} ngày`), ['🔧 '+tr('Arrived – awaiting installation','Đã về – chờ lắp đặt'), wait.map(o=>o.x)]],
     ['#2dd4bf','✅',tr('Commissioned','Đã nghiệm thu'), oper.length, `${pctT(oper.length, arrived.length)} ${tr('of arrived machines','số máy đã về')}`, ['✅ '+tr('Commissioned','Đã nghiệm thu'), oper.map(o=>o.x)]]];
-  anKpis.innerHTML = K.map(([c,ic,l,v,n,go],i)=>`<div class="kpi" data-i="${i}" style="--accent:${c};${go?'':'cursor:default'}"><span class="ic">${ic}</span><div class="lbl">${l}</div><div class="val">${v}</div><div class="note" title="${ovEsc(n)}">${ovEsc(n)}</div></div>`).join('');
+  // hình nhỏ (chỉ hiển thị): máy đã về chia theo giai đoạn
+  const sgA = [['arrived',tr('Awaiting installation','Chờ lắp')],['installing',tr('Installing','Đang lắp')],['testing',tr('Testing','Thử nghiệm')],['in_operation',tr('Commissioned','Đã NT')]]
+    .map(([k,l])=>({ n:arrived.filter(o=>o.s.stage===k).length, c:VZ.life(k), t:l }));
+  const vzA = VZ.segbar(sgA, { label:tr('Arrived machines by stage','Máy đã về theo giai đoạn') }) + `<div class="vz-leg">${sgA.filter(x=>x.n).map(x=>`<span><i style="background:${x.c}"></i>${x.t} ${x.n}</span>`).join('')}</div>`;
+  const VZK = { 3: vzA, 4: VZ.segbar([{ n:oper.length, c:VZ.life('in_operation'), t:tr('Commissioned','Đã nghiệm thu') }, { n:arrived.length - oper.length, c:'rgba(148,163,184,.35)', t:tr('Not yet commissioned','Chưa nghiệm thu') }], { label:tr('Commissioned share of arrived machines','Tỷ lệ đã nghiệm thu trên số máy đã về') }) };
+  anKpis.innerHTML = K.map(([c,ic,l,v,n,go],i)=>`<div class="kpi" data-i="${i}" style="--accent:${c};${go?'':'cursor:default'}"><span class="ic">${ic}</span><div class="lbl">${l}</div><div class="val">${v}</div><div class="note" title="${ovEsc(n)}">${ovEsc(n)}</div>${VZK[i] ? `<div class="vz">${VZK[i]}</div>` : ''}</div>`).join('');
   anKpis.querySelectorAll('.kpi').forEach(k => { const go = K[+k.dataset.i][5]; if(go) k.onclick = () => showMachines(go[0], go[1]); });
 }
 let anNccMode = 'v';
@@ -2276,7 +2324,7 @@ function drawInstallStats(){
   inSub.textContent = tr('average days · all machines that arrived at the plant', 'trung bình số ngày · mọi máy đã về NM');
   // thanh giai đoạn: máy đã về chia theo chờ lắp / đang lắp / đang thử nghiệm / đã nghiệm thu
   const st = DATA.map(x=>({ x, s:DM.installStatus(x) })).filter(o=>o.s.stage);
-  const G = [['arrived','#7dd3fc',tr('Awaiting installation','Chờ lắp đặt')],['installing',cssv('--st-inst'),tr('Installing','Đang lắp đặt')],['testing',cssv('--st-test'),tr('Testing','Đang thử nghiệm')],['in_operation',cssv('--st-oper'),tr('Commissioned','Đã nghiệm thu')]]
+  const G = [['arrived',VZ.life('arrived'),tr('Awaiting installation','Chờ lắp đặt')],['installing',VZ.life('installing'),tr('Installing','Đang lắp đặt')],['testing',VZ.life('testing'),tr('Testing','Đang thử nghiệm')],['in_operation',VZ.life('in_operation'),tr('Commissioned','Đã nghiệm thu')]]
     .map(([k,c,l])=>({ c, l, rows:st.filter(o=>o.s.stage===k).map(o=>o.x) }));
   inFlow.innerHTML = st.length ? `<div class="bar">${G.map((g,i)=>g.rows.length ? `<i data-i="${i}" style="flex:${g.rows.length};background:${g.c}" title="${g.l}: ${g.rows.length}">${g.rows.length}</i>` : '').join('')}</div>
     <div class="dm-legend" style="margin:0">${G.map(g=>`<span><i style="background:${g.c}"></i>${g.l} · <b>${g.rows.length}</b> (${pctT(g.rows.length, st.length)})</span>`).join('')}</div>` : '';
@@ -4086,8 +4134,9 @@ const LCL = tr({planned:'Planned', ordered:'Ordered', manufacturing:'Manufacturi
                installing:'Installing', in_operation:'In operation', idle:'Idle', disposed:'Disposed'},
              {planned:'Kế hoạch', ordered:'Đã đặt hàng', manufacturing:'Đang chế tạo', shipping:'Đang vận chuyển', arrived:'Đã về',
                installing:'Đang lắp đặt', in_operation:'Đang vận hành', idle:'Dừng / dự phòng', disposed:'Thanh lý'});
-const LCC = {planned:'#94a3b8', ordered:'#60a5fa', manufacturing:'#a78bfa', shipping:'#fbbf24', arrived:'#22d3ee',
-             installing:'#f0abfc', in_operation:'#34d399', idle:'#fb923c', disposed:'#f87171'};
+/* màu giai đoạn: chart_theme.js (VZ) — getter để theo chế độ sáng/tối */
+const LCC = Object.fromEntries(['planned','ordered','manufacturing','shipping','arrived','installing','in_operation','idle','disposed'].map(k=>[k, null]));
+Object.keys(LCC).forEach(k => Object.defineProperty(LCC, k, { get: () => VZ.life(k), enumerable: true }));
 const ROLEL = tr({main:'Main machine', auxiliary:'Auxiliary', sub_unit:'Sub-unit'}, {main:'Máy chính', auxiliary:'Máy phụ', sub_unit:'Bộ phận con'});
 const MSL = tr({contract_signed:'Order date', deposit_paid:'Deposit paid', fat:'FAT', shipped:'Shipped', arrived_port:'Arrived at port',
                 customs_cleared:'Customs cleared', arrived_site:'Arrived on site', installed:'Trial run', sat:'Internal acceptance', commissioned:'Supplier acceptance'},
@@ -4108,7 +4157,7 @@ const bigMoney = rows => {
   return LANG==='vi' ? { main: N(vnd/1e9, 1), unit:' tỷ ₫', note:'≈ ' + N(usd/1e6, 2) + ' triệu USD' }
                      : { main: '$' + N(usd/1e6, 2), unit:'M', note:'≈ ' + N(vnd/1e9, 1) + ' B ₫' };
 };
-const badge = s => `<span class="badge" style="background:${LCC[s]}22;color:${LCC[s]}">${LCL[s] || E(s)}</span>`;
+const badge = s => `<span class="badge" style="background:color-mix(in srgb,var(--lc-${s}) 15%,transparent);color:var(--lci-${s})">${LCL[s] || E(s)}</span>`;
 
 /* ----- chỉ mục dữ liệu ----- */
 let byId, kids, msBy, treeIdx;
@@ -4256,8 +4305,8 @@ function drawOverview(){
   }
   updOverview();
 }
-function kpi(accent, ic, lbl, val, note, onclick){
-  return `<div class="kpi" style="--accent:${accent};cursor:pointer" onclick="${onclick}"><span class="ic">${ic}</span><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="note">${note}</div></div>`;
+function kpi(accent, ic, lbl, val, note, onclick, viz){
+  return `<div class="kpi" style="--accent:${accent};cursor:pointer" onclick="${onclick}"><span class="ic">${ic}</span><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="note">${note}</div>${viz ? `<div class="vz">${viz}</div>` : ''}</div>`;
 }
 function updOverview(){
   const rows = MM.machines.filter(x=>!ovCo || x.company_code===ovCo);
@@ -4270,8 +4319,12 @@ function updOverview(){
   mmKpis.innerHTML =
     kpi('var(--sky)', '⚙️', tr('Total equipment','Tổng thiết bị'), N(rows.length), `${N(units)} ${tr('units','máy')} · ${rows.filter(x=>x.role==='sub_unit').length} ${tr('sub-units','bộ phận con')}`, `mmGo({co:${co}})`) +
     kpi('var(--violet)', '💰', tr('Total value','Tổng giá trị'), bm.main + `<small style="font-size:.5em">${bm.unit}</small>`, bm.note, `mmGo({co:${co}})`) +
-    kpi('var(--green)', '✅', tr('In operation','Đang vận hành'), N(op), (rows.length ? Math.round(op/rows.length*100) : 0) + tr('% of equipment','% thiết bị'), `mmGo({co:${co},st:'in_operation'})`) +
-    kpi('var(--amber)', '🛠', tr('Being invested','Đang đầu tư'), N(prog), tr('planned → installing','kế hoạch → lắp đặt'), `mmGo({co:${co},st:'__prog'})`) +
+    kpi('var(--green)', '✅', tr('In operation','Đang vận hành'), N(op), (rows.length ? Math.round(op/rows.length*100) : 0) + tr('% of equipment','% thiết bị'), `mmGo({co:${co},st:'in_operation'})`,
+        VZ.segbar([{ n:op, c:VZ.life('in_operation'), t:LCL.in_operation }, { n:rows.length - op, c:'rgba(148,163,184,.35)', t:tr('Other statuses','Trạng thái khác') }], { label:tr('Share of equipment in operation','Tỷ lệ thiết bị đang vận hành') })) +
+    kpi('var(--amber)', '🛠', tr('Being invested','Đang đầu tư'), N(prog), tr('planned → installing','kế hoạch → lắp đặt'), `mmGo({co:${co},st:'__prog'})`,
+        (()=>{ const sg = LC.slice(0, LC.indexOf('in_operation')).map(k=>({ n:rows.filter(x=>x.lifecycle_status===k).length, c:VZ.life(k), t:LCL[k] }));
+               return VZ.segbar(sg, { label:tr('Equipment being invested, by stage','Thiết bị đang đầu tư theo giai đoạn') }) +
+                 `<div class="vz-leg">${sg.filter(x=>x.n).map(x=>`<span><i style="background:${x.c}"></i>${x.t} ${x.n}</span>`).join('')}</div>`; })()) +
     kpi('var(--blue)', '🏭', tr('Production lines','Chuyền sản xuất'), N(lines), tr('lines in the catalog','chuyền trong danh mục'), `mmGo({co:${co}})`) +
     kpi('var(--red)', '🤝', tr('Suppliers','Nhà cung cấp'), N(sups), tr('suppliers with machines','NCC có máy'), `mmGo({co:${co}})`);
 
@@ -4283,7 +4336,7 @@ function updOverview(){
 
   const byCo = group(x=>x.company_code, valOf).sort((a,b)=>b[1]-a[1]);
   const cntCo = new Map(group(x=>x.company_code, ()=>1));
-  make('mmChCo', { type:'bar', data:{ labels:byCo.map(r=>r[0]), datasets:[{ data:byCo.map(r=>+r[1].toFixed(2)), backgroundColor:CHART_COLS, borderRadius:6 }] },
+  make('mmChCo', { type:'bar', data:{ labels:byCo.map(r=>r[0]), datasets:[{ data:byCo.map(r=>+r[1].toFixed(2)), backgroundColor:VZ.one(), borderRadius:6, maxBarThickness:46 }] },
     options:{ plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => `${N(c.parsed.y, 2)} ${vUnit} · ${cntCo.get(c.label)} ${tr('machines','thiết bị')}`, title: c => coName(c[0].label) } } },
       scales:{ y:{ grid, title:{ display:true, text:vUnit } }, x:{ grid:{display:false} } } } });
 
@@ -4292,11 +4345,11 @@ function updOverview(){
     options:{ cutout:'58%', plugins:{ legend:{ position:'right', labels:{ usePointStyle:true, font:{size:11.5} } } } } });
 
   const byGr = group(x=>x.group_name || tr('Other','Khác'), ()=>1).sort((a,b)=>b[1]-a[1]);
-  make('mmChGr', { type:'doughnut', data:{ labels:byGr.map(r=>r[0]), datasets:[{ data:byGr.map(r=>r[1]), backgroundColor:CHART_COLS, borderColor:()=>cssv('--panel'), borderWidth:3 }] },
+  make('mmChGr', { type:'doughnut', data:{ labels:byGr.map(r=>r[0]), datasets:[{ data:byGr.map(r=>r[1]), backgroundColor:byGr.map((r,i)=>VZ.cat(i)), borderColor:()=>cssv('--panel'), borderWidth:3 }] },
     options:{ cutout:'58%', plugins:{ legend:{ position:'right', labels:{ usePointStyle:true, font:{size:11.5} } } } } });
 
   const bySp = group(x=>x.supplier_name || '', valOf).filter(r=>r[0] && r[1] > 0).sort((a,b)=>b[1]-a[1]).slice(0, 10);
-  make('mmChSp', { type:'bar', data:{ labels:bySp.map(r=>r[0]), datasets:[{ data:bySp.map(r=>+r[1].toFixed(2)), backgroundColor:'#fbbf24cc', borderRadius:5 }] },
+  make('mmChSp', { type:'bar', data:{ labels:bySp.map(r=>r[0]), datasets:[{ data:bySp.map(r=>+r[1].toFixed(2)), backgroundColor:VZ.one(), borderRadius:5, maxBarThickness:26 }] },
     options:{ indexAxis:'y', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => `${N(c.parsed.x, 2)} ${vUnit}` } } },
       scales:{ x:{ grid, title:{ display:true, text:vUnit } }, y:{ grid:{display:false}, ticks:{ font:{size:11} } } } } });
 }

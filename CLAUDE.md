@@ -157,6 +157,18 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Bảng Danh sách: cột "Thương hiệu / NCC" (`thCell`): thương hiệu ở trên, NCC dòng nhỏ dưới (user chọn 2026-11-10); máy chưa có thương hiệu thì chỉ NCC như cũ. Cột vẫn sắp theo NCC. Có trong form Sửa (ô chọn, gợi ý thêm thương hiệu bên Danh mục), chi tiết máy, tìm kiếm, Excel (cột trước "Nhà cung cấp"; file không có cột thì giữ giá trị).
 - Đồng bộ Danh mục: `thuong_hieu` ↔ `manufacturer`, quy tắc giống model (Danh mục trống thì điền, khác thì vào ⚖️ Lệch). Máy đã liên kết mà Tiến độ trống: admin bấm 🔗 Danh mục › 🏷 Điền thương hiệu từ Danh mục (`csBrand`, ghi bằng `writeTrack`). Migration không điền dữ liệu cũ (giá trị Danh mục đã mã hoá). Test: `e2e_brand_test.py`.
 
+## 🎨 Màu dùng chung + thẻ KPI có hình nhỏ (`chart_theme.js`, window.VZ) — CHỈ HIỂN THỊ
+- User yêu cầu: tối ưu giao diện KHÔNG được đụng dữ liệu, KHÔNG đổi logic tính toán; đổi màu/bố cục thì hỏi ý kiến.
+- Bảng màu từ skill dataviz (8 màu chuẩn, bước riêng cho sáng/tối), thứ tự vòng đời đã chạy validate_palette.js cả 2 chế độ:
+  đặt hàng/chế tạo tím · vận chuyển ngọc · quá hạn cam · đã về xanh dương · lắp đặt vàng · thử nghiệm hồng · vận hành xanh lá; đỏ = Trễ.
+  Trạng thái ngày về: chờ về tím, sắp về ngọc, quá hạn cam, đã về xanh dương (cùng màu giai đoạn tương ứng).
+- `VZ.life(k)` / `VZ.lifeInk(k)` / `VZ.arrival(k)` / `VZ.evalc(k)` / `VZ.cat(i)` / `VZ.one()` — đọc lúc vẽ (theo chế độ).
+  CSS `--lc-*`, `--lci-*` (chữ), `--ar-*`; các biến cũ `--st-inst/--st-test/--st-oper/--st-over` được đặt lại theo bảng này.
+  `const C` (trạng thái ngày về), `DGC` (đánh giá), `LCC` (Danh mục) là getter gọi VZ.
+- Hình nhỏ: `VZ.spark`, `VZ.segbar`, `VZ.bullet` (mục tiêu đúng hạn 80%, vùng <60 / 60–80 / ≥80 — cùng ngưỡng tô màu cũ),
+  `VZ.cols`, `VZ.delta`. Tổng quan Tiến độ: `kpiViz()` — xu hướng 6 tháng dùng `ovRowsAllTime()` (mọi kỳ, có ghi "mọi kỳ").
+  Con số trên thẻ giữ nguyên (`DM.kpis`). Test: `e2e_ui_theme_test.py`.
+
 ## 🧩 Sắp xếp — Danh mục MMTB (`arrange.js`, trang `#c4`, không cần migration)
 - Cấu trúc: Nhà máy → Chuyền (`production_lines`) → ⭐ máy chính (`role=main`) / ◇ máy phụ (`auxiliary`) → ↳ máy con (`sub_unit`, có `parent_machine_id`).
   Chuyền trọn gói = 1 máy chính mang tên chuyền + máy con; chuyền ghép = nhiều máy chính/phụ. Thiết bị dùng chung xếp vào chuyền
