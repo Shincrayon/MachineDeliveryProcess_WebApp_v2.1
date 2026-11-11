@@ -18,6 +18,7 @@
 <script src="metrics.js"></script>
 <script src="export.js"></script>
 <script src="catalog_sync.js"></script>
+<script src="arrange.js"></script>
 <script src="name_std.js"></script>
 <script src="motion.js"></script>
 <script src="multi_pick.js"></script>
@@ -976,6 +977,7 @@ select.mp-open{border-color:var(--blue)}
   <div class="tabs">
     <button class="tab mod-mmtb" data-p="c1">📊 Overview</button>
     <button class="tab mod-mmtb" data-p="c2">📋 Machines</button>
+    <button class="tab mod-mmtb" data-p="c4">🧩 Arrange</button>
     <button class="tab mod-mmtb" data-p="c3">📚 Library</button>
     <button class="tab mod-delivery active" data-p="p1">📊 Overview</button>
     <button class="tab mod-delivery" data-p="p2">📈 Analytics</button>
@@ -1004,6 +1006,7 @@ select.mp-open{border-color:var(--blue)}
   <!-- ============ DANH MỤC MMTB: nội dung do mmtbSrc vẽ ============ -->
   <div class="page" id="c1"></div>
   <div class="page" id="c2"></div>
+  <div class="page" id="c4"></div>
   <div class="page" id="c3"></div>
 
   <!-- ============ PAGE 1: TỔNG QUAN ============ -->
@@ -4603,6 +4606,8 @@ const errText = e => (e && e.code==='23505') ? tr('This machine code already exi
   : (e && e.code==='23514') ? tr('Some values are not allowed (check quantity, materials and parent machine).','Có giá trị không hợp lệ (kiểm tra số lượng, vật liệu, máy cha).')
   : dbErrText(e);
 window.__mmReload = () => reload();      // catalog_sync.js: vẽ lại Danh mục sau khi đồng bộ
+/* arrange.js (🧩 Sắp xếp) đọc dữ liệu + hàm dùng chung qua đây */
+window.__mmCtx = () => ({ MM, canW, reload, badge, mmShow: window.mmShow, emptyHTML, lcl: LCL, lcc: LCC });
 async function reload(){
   const fresh = window.__loadMmtb ? await window.__loadMmtb() : null;
   if(fresh && !fresh.err){ MM = fresh; window.__MMTB = MM; }
@@ -4610,6 +4615,7 @@ async function reload(){
   if(ovDrawn) updOverview();
   listDrawn = false; if(document.getElementById('c2').classList.contains('active')) drawList();
   if(document.getElementById('c3').classList.contains('active')) drawLibrary();
+  if(document.getElementById('c4').classList.contains('active') && window.ARR) ARR.draw();
 }
 async function save(){
   const val = id => (document.getElementById(id).value || '').trim();
@@ -5111,6 +5117,7 @@ showPage = function(id){
   if(id==='c1') drawOverview();
   if(id==='c2') drawList();
   if(id==='c3') drawLibrary();
+  if(window.ARR){ if(id==='c4') ARR.draw(); else ARR.leave(); }
 };
 function setMod(m){
   document.body.dataset.mod = m;
@@ -5146,6 +5153,7 @@ const STATIC_VI = new Map([
   ['Machine delivery tracking','Theo dõi tiến độ máy về'],
   ['Add a machine to the catalog','Thêm máy vào Danh mục MMTB'],
   ['📚 Library','📚 Thư viện'],
+  ['🧩 Arrange','🧩 Sắp xếp'],
   ['📊 Overview','📊 Tổng quan'],
   ['📈 Analytics','📈 Phân tích'],
   ['🏅 Evaluation','🏅 Đánh giá'],

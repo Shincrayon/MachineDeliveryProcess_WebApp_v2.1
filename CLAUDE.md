@@ -157,6 +157,21 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Bảng Danh sách: cột "Thương hiệu / NCC" (`thCell`): thương hiệu ở trên, NCC dòng nhỏ dưới (user chọn 2026-11-10); máy chưa có thương hiệu thì chỉ NCC như cũ. Cột vẫn sắp theo NCC. Có trong form Sửa (ô chọn, gợi ý thêm thương hiệu bên Danh mục), chi tiết máy, tìm kiếm, Excel (cột trước "Nhà cung cấp"; file không có cột thì giữ giá trị).
 - Đồng bộ Danh mục: `thuong_hieu` ↔ `manufacturer`, quy tắc giống model (Danh mục trống thì điền, khác thì vào ⚖️ Lệch). Máy đã liên kết mà Tiến độ trống: admin bấm 🔗 Danh mục › 🏷 Điền thương hiệu từ Danh mục (`csBrand`, ghi bằng `writeTrack`). Migration không điền dữ liệu cũ (giá trị Danh mục đã mã hoá). Test: `e2e_brand_test.py`.
 
+## 🧩 Sắp xếp — Danh mục MMTB (`arrange.js`, trang `#c4`, không cần migration)
+- Cấu trúc: Nhà máy → Chuyền (`production_lines`) → ⭐ máy chính (`role=main`) / ◇ máy phụ (`auxiliary`) → ↳ máy con (`sub_unit`, có `parent_machine_id`).
+  Chuyền trọn gói = 1 máy chính mang tên chuyền + máy con; chuyền ghép = nhiều máy chính/phụ. Thiết bị dùng chung xếp vào chuyền
+  **Phụ trợ** (mã `PHUTRO`, mỗi nhà máy 1 chuyền, tạo bằng nút ＋ — tên chuyền mã hoá qua `__seal('production_lines')`).
+- Chỉ ghi `line_id, area_id, parent_machine_id, role, sort_order` (không nằm trong sec → không cần __seal), từng máy, chống ghi đè bằng `version`.
+- Chuyển 1 máy = cả nhánh con đi theo (cùng chuyền); xưởng lấy theo `production_lines.area_id`, chuyền chưa gắn xưởng thì giữ xưởng cũ.
+  Máy con đưa ra chuyền → `auxiliary` (chuyền chưa có máy chính thì `main`); gỡ ra → về "Chưa xếp" (line_id null).
+  Chặn vòng tròn cha-con và khác nhà máy. ⚠ Cần xem lại: máy con khác chuyền máy cha (có nút sửa), máy cha khác nhà máy, chuyền chưa có máy chính.
+- Thao tác: tick + 📦 Đưa vào… (chuyền / làm máy con / đặt vai trò / gỡ ra), kéo-thả trên máy tính, ▲▼, ↩ Hoàn tác (9 giây).
+  Giao diện: thanh tiến độ "Đã xếp x / y máy", thẻ chuyền viền màu theo xưởng (Phụ trợ màu ngọc) + đếm ⭐◇↳ + thanh trạng thái nhỏ,
+  cây có đường nối (ul.ar-kids), hộp chờ xếp có lọc + "Chọn tất cả máy đang lọc", thanh nổi có nút nhanh ⭐ / 📥, vùng thả có nhãn,
+  dòng vừa xếp nháy 1 lần. Trạng thái chỉ là chấm màu (chữ chỉ hiện khi khác "Đang vận hành"); nhãn/màu lấy từ `__mmCtx().lcl/lcc`.
+  Điện thoại: 2 tab Cây chuyền / Chưa xếp. mmtbSrc đưa ngữ cảnh qua `window.__mmCtx()`; viewer không thấy tab (không có trong VIEW_TABS).
+- Test: `e2e_arrange_test.py`.
+
 ## Ô chọn trong form + Nhà máy lấy từ thư viện (migration 14)
 - `combo.js` (`CB.make`): ô chữ có danh sách xổ, gõ không dấu để lọc, vẫn gõ được giá trị mới; gần giống giá trị đã có thì nhắc "Có phải … không?", không chặn. Danh sách lấy từ dữ liệu đã giải mã trong trình duyệt, không có bảng riêng: giá trị tự mất khi không còn máy nào dùng. Dùng cho `f_pt`, `f_xx`, `f_th` (thêm thương hiệu Danh mục), `f_ncc` (thêm thư viện NCC), `m_origin`, `m_brand`, `m_eng`, `m_mgr`, `m_capu`.
 - `f_nld` (Nơi lắp đặt) là `<select>`, chỉ chọn nhà máy đang hoạt động trong thư viện (`siteFill`). Giá trị lưu vẫn là chữ: cách ghi nhiều máy của công ty đó đang dùng, công ty chưa có máy thì lưu mã. Máy đang ghi cách khác / nơi lạ giữ nguyên khi mở Sửa. Nạp Excel không qua ô này.
