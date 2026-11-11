@@ -168,6 +168,11 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Hình nhỏ: `VZ.spark`, `VZ.segbar`, `VZ.bullet` (mục tiêu đúng hạn 80%, vùng <60 / 60–80 / ≥80 — cùng ngưỡng tô màu cũ),
   `VZ.cols`, `VZ.delta`. Tổng quan Tiến độ: `kpiViz()` — xu hướng 6 tháng dùng `ovRowsAllTime()` (mọi kỳ, có ghi "mọi kỳ").
   Con số trên thẻ giữ nguyên (`DM.kpis`). Test: `e2e_ui_theme_test.py`.
+- Tổng quan Danh mục (bước C, `drawOverview/updOverview`, ECharts — không còn Chart.js ở trang này):
+  thanh **Vòng đời** (đoạn theo thứ tự LC, bấm → `mmGo({co,st})`) · **treemap** Nhà máy → Chuyền → Máy (`#mmTm`, giá trị / số máy,
+  1 tông xanh dương `VZ.seq` theo giá trị — không dùng màu trạng thái; lọc 1 nhà máy thì cấp 1 là chuyền; bấm máy → `mmShow`) ·
+  **Top 10 NCC** + **Nhóm** (7 nhóm + "Khác") thanh ngang 1 màu. Đổi sáng/tối: `setTheme` phát sự kiện `themechange` để vẽ lại.
+  Test: `e2e_catalog_overview_test.py`, `onescreen_mmtb_check.py`.
 
 ## 🧩 Sắp xếp — Danh mục MMTB (`arrange.js`, trang `#c4`, không cần migration)
 - Cấu trúc: Nhà máy → Chuyền (`production_lines`) → ⭐ máy chính (`role=main`) / ◇ máy phụ (`auxiliary`) → ↳ máy con (`sub_unit`, có `parent_machine_id`).

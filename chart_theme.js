@@ -66,6 +66,9 @@ const VZ = {
   evalc: k => hex(EVAL[k] || 'gray'),
   cat: i => hex(CAT[i % CAT.length]),         // chỉ dùng khi ≤ 8 nhóm; nhóm thứ 9+ gộp "Khác"
   one: () => hex('blue'),                     // biểu đồ 1 chuỗi: 1 màu
+  /* thang 1 tông xanh dương (palette.md sequential): t = 0 lớn nhất (nổi nhất) → 1 nhỏ nhất. Chữ trắng đọc được trên mọi bước dùng ở đây. */
+  seq: t => { const L = ['#184f95','#1c5cab','#256abf','#2a78d6','#3987e5'], D = ['#5598e7','#3987e5','#2a78d6','#256abf','#1c5cab'];
+    const a = mode() === 'light' ? L : D; return a[Math.round(Math.max(0, Math.min(1, t)) * (a.length - 1))]; },
   fam: f => hex(f), famInk: f => ink(f),
   // ngưỡng tỷ lệ đúng hạn: < 60% xấu · 60–80% cần cải thiện · ≥ 80% đạt (mục tiêu)
   ONTIME: { bad: .6, target: .8 }
