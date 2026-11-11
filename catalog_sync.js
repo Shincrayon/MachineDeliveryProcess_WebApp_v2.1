@@ -6,9 +6,9 @@
    Quy tắc (CS.plan):
    · Chỉ máy có Mã máy (ma_may). Chưa liên kết + đã có Ngày nghiệm thu TT -> tạo hồ sơ mới (mã tạm theo quy tắc Danh mục,
      needs_info = "Cần bổ sung"); chưa liên kết + chưa nghiệm thu -> chưa chuyển.
-   · Trạng thái theo DM.installStatus: về NM -> arrived · lắp đặt / chạy thử -> installing · nghiệm thu -> in_operation
+   · Trạng thái theo DM.installStatus: về NM -> arrived · lắp đặt / đang thử nghiệm -> installing · nghiệm thu -> in_operation
      (commissioned_date = nghiemthu_tt). Không bao giờ hạ trạng thái bên Danh mục.
-   · Mốc delivery_milestones: arrived_site = venm_tt · installed (vận hành thử) = chaythu_tt · commissioned = nghiemthu_tt.
+   · Mốc delivery_milestones: arrived_site = venm_tt · installed (vận hành thử) = chaythu_tt (chỉ khi ≤ hôm nay) · commissioned = nghiemthu_tt.
    · Trường chung (model, serial, xuất xứ, thương hiệu, công suất, hợp đồng, NCC, công ty): Danh mục trống -> điền; khác -> "lệch", không ghi.
      Tên máy chỉ dùng khi tạo mới. KHÔNG BAO GIỜ ghi: khu vực, chuyền, máy cha, vai trò, vật liệu, mã tài sản, mã máy đã có,
      ghi chú, kỹ sư, người quản lý. NCC: khớp tên đã bỏ dấu, không tự tạo NCC mới.
@@ -63,7 +63,9 @@ function want(x, C){
            capacity: cap, contract: vnd > 0 ? { currency:'VND', amount: vnd } : usd > 0 ? { currency:'USD', amount: usd } : null, vnd, usd };
 }
 /* trạng thái Danh mục muốn có (null = chưa về NM -> không đổi) */
-const target = x => DM.installStatus(x).stage;
+const target = x => { const st = DM.installStatus(x).stage; return st === 'testing' ? 'installing' : st; };   // Danh mục không có 'testing'
+/* ngày cho mốc Danh mục; chạy thử ở tương lai chỉ là kế hoạch -> chưa ghi mốc vận hành thử */
+const msDay = (x, k) => { const d = iso(x[k]); return d && k === 'chaythu_tt' && d > DM.todayIso() ? null : d; };
 const FIELD_L = () => ({ company: L('Company','Công ty'), supplier: L('Supplier','Nhà cung cấp'), model: 'Model', serial_number: L('Serial number','Số serial'),
   origin: L('Origin','Xuất xứ'), manufacturer: L('Brand','Thương hiệu'), capacity: L('Capacity','Công suất'), contract: L('Contract value','Giá trị hợp đồng'),
   commissioned_date: L('Commissioning date','Ngày nghiệm thu'), 'ms:arrived_site': L('Milestone: arrival at plant','Mốc: về nhà máy'),
@@ -92,7 +94,7 @@ function plan(x, C){
     ['model','serial_number','origin','manufacturer'].forEach(k => { if(w[k]) s[k] = w[k]; });
     if(w.capacity){ s.capacity_value = w.capacity.value; if(w.capacity.unit) s.capacity_unit = w.capacity.unit; }
     if(w.contract){ s.contract_currency = w.contract.currency; s.contract_amount = w.contract.amount; }
-    p.ms = MS_MAP.filter(([, k]) => x[k]).map(([m, k]) => ({ milestone: m, actual_date: iso(x[k]), exists: false }));
+    p.ms = MS_MAP.filter(([, k]) => msDay(x, k)).map(([m, k]) => ({ milestone: m, actual_date: msDay(x, k), exists: false }));
     return p;
   }
   p.cat = cat;
@@ -131,7 +133,7 @@ function plan(x, C){
   if(st && LCO.indexOf(st) > LCO.indexOf(cat.lifecycle_status)) s.lifecycle_status = st;
   const have = C.ms.get(cat.id) || {};
   MS_MAP.forEach(([m, k]) => {
-    const d = iso(x[k]); if(!d) return;
+    const d = msDay(x, k); if(!d) return;
     const e = have[m];
     if(!e || !e.actual_date) p.ms.push({ milestone: m, actual_date: d, exists: !!e });
     else if(iso(e.actual_date) !== d) cf('ms:' + m, fmtDate(d), fmtDate(e.actual_date), d, iso(e.actual_date));

@@ -155,6 +155,7 @@ tbody tr:hover{background:rgba(96,165,250,.07)}
 .fbtn.active.o{background:var(--st-over);border-color:var(--st-over);color:#1a0f05}
 /* lắp đặt – nghiệm thu (DM.installStatus) */
 .b-installing{background:color-mix(in srgb,var(--st-inst) 14%,transparent);color:var(--st-inst)}
+.b-testing{background:color-mix(in srgb,var(--st-test) 14%,transparent);color:var(--st-test)}
 .b-in_operation{background:color-mix(in srgb,var(--st-oper) 14%,transparent);color:var(--st-oper)}
 .b-wait_install{background:color-mix(in srgb,var(--st-warn) 14%,transparent);color:var(--st-warn);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--st-warn) 40%,transparent)}
 .b-late_accept{background:color-mix(in srgb,var(--st-bad) 14%,transparent);color:var(--st-bad);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--st-bad) 40%,transparent)}
@@ -162,6 +163,7 @@ tbody tr:hover{background:rgba(96,165,250,.07)}
 .badge.sm::before{width:5px;height:5px}
 .st-cell{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
 .fbtn.active.ins{background:var(--st-inst);border-color:var(--st-inst);color:#1b0b24}
+.fbtn.active.tst{background:var(--st-test);border-color:var(--st-test);color:#04122b}
 .fbtn.active.op{background:var(--st-oper);border-color:var(--st-oper);color:#04201c}
 .fbtn.active.w{background:var(--st-warn);border-color:var(--st-warn);color:#1f1503}
 .qu-ld.qu-lock{opacity:.45;pointer-events:none}
@@ -273,6 +275,10 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 .dt-grid .dt-i.hl{background:rgba(96,165,250,.09)}
 .dt-note{margin-top:2px;font-size:11.5px;color:var(--muted);line-height:1.5}
 .money{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+/* số tiền căn phải (cả tiêu đề cột) */
+.money,thead th[data-s="vnd"],thead th[data-s="usd"],thead th[data-ms^="value_"]{text-align:right}
+/* cột ngày căn giữa */
+#tb td.dt,thead th[data-s="dathang"],thead th[data-s="vekh"],thead th[data-s="vedukienn"]{text-align:center}
 .gt{max-width:230px;font-size:12px;color:var(--amber);line-height:1.4}
 
 /* ===== Bảng điểm nhà cung cấp ===== */
@@ -720,8 +726,8 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 [data-theme="light"] .app-banner,
 [data-theme="light"] .leaflet-popup-content-wrapper,[data-theme="light"] .leaflet-popup-tip{box-shadow:0 8px 24px rgba(15,23,42,.15)}
 /* ===== Dashboard Tiến độ máy về: màu trạng thái thống nhất ===== */
-:root{--st-ok:#34d399; --st-warn:#fbbf24; --st-bad:#f87171; --st-done:#94a3b8; --st-over:#fb923c; --st-inst:#c084fc; --st-oper:#2dd4bf}
-:root[data-theme="light"]{--st-ok:#059669; --st-warn:#b45309; --st-bad:#dc2626; --st-done:#64748b; --st-over:#c2410c; --st-inst:#9333ea; --st-oper:#0f766e}
+:root{--st-ok:#34d399; --st-warn:#fbbf24; --st-bad:#f87171; --st-done:#94a3b8; --st-over:#fb923c; --st-inst:#c084fc; --st-test:#60a5fa; --st-oper:#2dd4bf}
+:root[data-theme="light"]{--st-ok:#059669; --st-warn:#b45309; --st-bad:#dc2626; --st-done:#64748b; --st-over:#c2410c; --st-inst:#9333ea; --st-test:#2563eb; --st-oper:#0f766e}
 .dm-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
 .dm-filters select,.dm-filters button{padding:7px 10px;font-size:13px;font-weight:600;border-radius:9px;border:1px solid var(--border);
   background:var(--field);color:var(--txt);outline:none;cursor:pointer;max-width:100%}
@@ -1080,6 +1086,7 @@ select.mp-open{border-color:var(--blue)}
       <button class="fbtn" data-f="waiting">⏳ Awaiting</button>
       <button class="fbtn o" data-f="overdue">⚠ Overdue – unconfirmed</button>
       <button class="fbtn ins" data-f="installing">🔧 Installing</button>
+      <button class="fbtn tst" data-f="testing">🧪 Testing</button>
       <button class="fbtn op" data-f="in_operation">🏁 Commissioned</button>
       <button class="fbtn w" data-f="wait_install">⏰ Arrived – not installed</button>
       <button class="fbtn r" data-f="late_accept">⚠ Late commissioning</button>
@@ -1785,9 +1792,9 @@ const ovLabel = () => {
 const mpMonth = (sel, title) => MP.make(sel, { cols:4, title, short: v => tr(MON[+v-1], String(+v)), unit: tr('months','tháng'), done: tr('Done','Xong') });
 const mpYear  = (sel, title) => MP.make(sel, { cols:3, title, unit: tr('years','năm'), done: tr('Done','Xong') });
 const OV_LC = tr({planned:'Not yet ordered', manufacturing:'Manufacturing', shipping:'Shipping', arrived:'Arrived', delayed:'Delayed', overdue:'⚠ Overdue – unconfirmed',
-                  installing:'Installing', in_operation:'Commissioned / in operation', wait_install:'⏰ Arrived – not installed', late_accept:'⚠ Late commissioning'},
+                  installing:'Installing', testing:'🧪 Testing', in_operation:'Commissioned / in operation', wait_install:'⏰ Arrived – not installed', late_accept:'⚠ Late commissioning'},
               {planned:'Chưa đặt hàng', manufacturing:'Đang chế tạo', shipping:'Đang vận chuyển', arrived:'Đã về', delayed:'Đang trễ', overdue:'⚠ Quá hạn – chưa xác nhận',
-                  installing:'Đang lắp đặt', in_operation:'Đã nghiệm thu / vận hành', wait_install:'⏰ Đã về – chưa lắp đặt', late_accept:'⚠ Trễ nghiệm thu'});
+                  installing:'Đang lắp đặt', testing:'🧪 Đang thử nghiệm', in_operation:'Đã nghiệm thu / vận hành', wait_install:'⏰ Đã về – chưa lắp đặt', late_accept:'⚠ Trễ nghiệm thu'});
 const OV_MS = tr({contract_signed:'Contract signed', shipped:'Ex-works / shipped', arrived_site:'Arrival at site'},
                {contract_signed:'Ký hợp đồng', shipped:'Xuất xưởng', arrived_site:'Về nhà máy'});
 const dmD = s => s ? s.split('-').reverse().join('/') : '—';
@@ -1879,7 +1886,8 @@ let KP = null;
     // chờ nghiệm thu là tồn đọng hiện tại: tính trên mọi máy đã về theo công ty / NCC, bỏ qua tháng / năm
     const cm = KP.commissioning = DM.kpis(ovRowsAllTime()).commissioning;
     set('commissioning', !cm.count ? 'var(--st-ok)' : cm.lateAccept ? 'var(--st-bad)' : cm.waitInstall ? 'var(--st-warn)' : 'var(--st-inst)', dmN(cm.count),
-        [tr('arrived, not yet commissioned', 'đã về, chưa nghiệm thu') + (cm.installing ? ' · ' + dmN(cm.installing) + tr(' installing', ' đang lắp đặt') : ''),
+        [tr('arrived, not yet commissioned', 'đã về, chưa nghiệm thu') + (cm.installing ? ' · ' + dmN(cm.installing) + tr(' installing', ' đang lắp đặt') : '')
+         + (cm.testing ? ' · ' + dmN(cm.testing) + tr(' testing', ' đang thử nghiệm') : ''),
          cm.waitInstall ? '⏰ ' + dmN(cm.waitInstall) + tr(` not installed > ${cm.waitDays} days`, ` chưa lắp đặt quá ${cm.waitDays} ngày`) : '',
          cm.lateAccept ? '⚠ ' + dmN(cm.lateAccept) + tr(' late commissioning', ' trễ nghiệm thu') : '',
          tr('all periods', 'mọi kỳ')].filter(Boolean).join(' · '));
@@ -1980,7 +1988,7 @@ let KP = null;
         `<table style="margin-top:6px;font-size:12px;border-collapse:collapse"><tr style="color:${cssv('--muted')}"><td></td><td>${tr('Planned','Kế hoạch')}</td><td style="padding:0 8px">${tr('Forecast','Dự kiến')}</td><td>${tr('Actual','Thực tế')}</td></tr>` +
         it.milestones.map(m => row(OV_MS[m.milestone], m)).join('') +
         (it.x.venm_tt || it.x.nghiemthu_kh ? row(tr('Installation start', 'Bắt đầu lắp đặt'), { actual: it.x.lapdat_tt }) +
-          row(tr('Test run', 'Chạy thử'), { actual: it.x.chaythu_tt }) +
+          row(tr('Test run', 'Chạy thử'), it.inst.trialPlan ? { planned: it.x.chaythu_tt } : { actual: it.x.chaythu_tt }) +
           row(tr('Commissioning', 'Nghiệm thu'), { planned: it.x.nghiemthu_kh, actual: it.x.nghiemthu_tt }) : '') + `</table>` +
         (it.inst.lateAccept ? `<div style="margin-top:6px;color:${C.bad};font-weight:700">⚠ ${tr('Commissioning late','Trễ nghiệm thu')} +${it.inst.lateDays} ${tr('days','ngày')}</div>` : '') +
         (it.inst.waitInstall ? `<div style="margin-top:6px;color:${C.warn};font-weight:700">⏰ ${tr(`Arrived ${it.inst.waitDays} days ago, not installed`,`Đã về ${it.inst.waitDays} ngày, chưa lắp đặt`)}</div>` : '') +
@@ -2020,8 +2028,8 @@ let KP = null;
   /* ---- 2.2 Phễu vòng đời ---- */
   const fn = echarts.init(fnChart);
   let fnMode = 'count', FN = null;
-  const FNL = tr({ planned:'Not yet ordered', manufacturing:'Ordered / manufacturing', shipping:'Shipping', overdue:'⚠ Overdue – unconfirmed', arrived:'Arrived', installing:'Installing', in_operation:'In operation' },
-                 { planned:'Chưa đặt hàng', manufacturing:'Đã đặt / đang chế tạo', shipping:'Đang vận chuyển', overdue:'⚠ Quá hạn – chưa xác nhận', arrived:'Đã về', installing:'Đang lắp đặt', in_operation:'Đang vận hành' });
+  const FNL = tr({ planned:'Not yet ordered', manufacturing:'Ordered / manufacturing', shipping:'Shipping', overdue:'⚠ Overdue – unconfirmed', arrived:'Arrived', installing:'Installing', testing:'Testing', in_operation:'In operation' },
+                 { planned:'Chưa đặt hàng', manufacturing:'Đã đặt / đang chế tạo', shipping:'Đang vận chuyển', overdue:'⚠ Quá hạn – chưa xác nhận', arrived:'Đã về', installing:'Đang lắp đặt', testing:'Đang thử nghiệm', in_operation:'Đang vận hành' });
   fnTitle.textContent = tr('🔻 Lifecycle', '🔻 Vòng đời');
   fnCnt.textContent = tr('Machines', 'Số máy'); fnVal.textContent = tr('VND', 'VNĐ');
   const setMode = m => { fnMode = m; fnCnt.classList.toggle('on', m === 'count'); fnVal.classList.toggle('on', m === 'vnd'); drawFunnel(); };
@@ -2255,17 +2263,17 @@ function drawAnalytics(){ drawAnKpis(); drawAnNcc(); drawAnGeo(); drawInstallSta
 /* ===== ⏱ Về NM → nghiệm thu theo công ty / NCC (metrics.js: DM.installStats) — mọi máy đã về, không theo bộ lọc ===== */
 function drawInstallStats(){
   const D = v => v == null ? '—' : dmN(v, 1);
-  const H = tr(['Arrived','Commissioned','Arrival → commissioning','Wait for installation','Installation → commissioning','Installing',`Not installed > ${DM.CFG.installWaitDays} d`,'Late commissioning'],
-               ['Đã về','Đã NT','Về NM → NT','Chờ lắp đặt','Lắp đặt → NT','Đang lắp',`Chưa lắp > ${DM.CFG.installWaitDays} ngày`,'Trễ NT']);
+  const H = tr(['Arrived','Commissioned','Arrival → commissioning','Wait for installation','Installation → commissioning','Installing','Testing',`Not installed > ${DM.CFG.installWaitDays} d`,'Late commissioning'],
+               ['Đã về','Đã NT','Về NM → NT','Chờ lắp đặt','Lắp đặt → NT','Đang lắp','Thử nghiệm',`Chưa lắp > ${DM.CFG.installWaitDays} ngày`,'Trễ NT']);
   const tbl = (first, list) => !list.length ? `<div class="dm-empty">${tr('No machine has arrived at the plant yet.','Chưa có máy nào về NM.')}</div>`
     : `<table><thead><tr><th>${first}</th>${H.map((h,i)=>`<th${i>=2 && i<=4 ? ` title="${tr('average days','trung bình số ngày')}"` : ''}>${h}</th>`).join('')}</tr></thead><tbody>${list.map(r=>
       `<tr><td>${ovEsc(unescH(r.name)) || '—'}</td><td>${r.arrived}</td><td>${r.accepted}</td><td><b>${D(r.avgToAccept)}</b></td><td>${D(r.avgWait)}</td><td>${D(r.avgInstall)}</td>
-        <td>${r.installing || ''}</td><td class="${r.waitInstall ? 'w' : ''}">${r.waitInstall || ''}</td><td class="${r.lateAccept ? 'b' : ''}">${r.lateAccept || ''}</td></tr>`).join('')}</tbody></table>`;
+        <td>${r.installing || ''}</td><td>${r.testing || ''}</td><td class="${r.waitInstall ? 'w' : ''}">${r.waitInstall || ''}</td><td class="${r.lateAccept ? 'b' : ''}">${r.lateAccept || ''}</td></tr>`).join('')}</tbody></table>`;
   inTitle.textContent = tr('⏱ Arrival at plant → commissioning', '⏱ Về NM → nghiệm thu');
   inSub.textContent = tr('average days · all machines that arrived at the plant', 'trung bình số ngày · mọi máy đã về NM');
-  // thanh giai đoạn: máy đã về chia theo chờ lắp / đang lắp / đã nghiệm thu
+  // thanh giai đoạn: máy đã về chia theo chờ lắp / đang lắp / đang thử nghiệm / đã nghiệm thu
   const st = DATA.map(x=>({ x, s:DM.installStatus(x) })).filter(o=>o.s.stage);
-  const G = [['arrived','#7dd3fc',tr('Awaiting installation','Chờ lắp đặt')],['installing',cssv('--st-inst'),tr('Installing','Đang lắp đặt')],['in_operation',cssv('--st-oper'),tr('Commissioned','Đã nghiệm thu')]]
+  const G = [['arrived','#7dd3fc',tr('Awaiting installation','Chờ lắp đặt')],['installing',cssv('--st-inst'),tr('Installing','Đang lắp đặt')],['testing',cssv('--st-test'),tr('Testing','Đang thử nghiệm')],['in_operation',cssv('--st-oper'),tr('Commissioned','Đã nghiệm thu')]]
     .map(([k,c,l])=>({ c, l, rows:st.filter(o=>o.s.stage===k).map(o=>o.x) }));
   inFlow.innerHTML = st.length ? `<div class="bar">${G.map((g,i)=>g.rows.length ? `<i data-i="${i}" style="flex:${g.rows.length};background:${g.c}" title="${g.l}: ${g.rows.length}">${g.rows.length}</i>` : '').join('')}</div>
     <div class="dm-legend" style="margin:0">${G.map(g=>`<span><i style="background:${g.c}"></i>${g.l} · <b>${g.rows.length}</b> (${pctT(g.rows.length, st.length)})</span>`).join('')}</div>` : '';
@@ -2720,12 +2728,13 @@ function filtered(){
 
 /* ô Trạng thái: trạng thái ngày về (x.status); máy đã về đang lắp đặt / đã nghiệm thu thì hiện giai đoạn đó,
    kèm badge nhỏ cho cảnh báo chờ lắp đặt / trễ nghiệm thu (DM.installStatus) */
-const INST_FILTERS = ['installing','in_operation'].concat(DM.ALERTS);
-const ILBL = tr({installing:'Installing', in_operation:'Commissioned', wait_install:'Arrived – not installed', late_accept:'Late commissioning'},
-                {installing:'Đang lắp đặt', in_operation:'Đã nghiệm thu', wait_install:'Đã về – chưa lắp đặt', late_accept:'Trễ nghiệm thu'});
+const INST_FILTERS = ['installing','testing','in_operation'].concat(DM.ALERTS);
+const ILBL = tr({installing:'Installing', testing:'Testing', in_operation:'Commissioned', wait_install:'Arrived – not installed', late_accept:'Late commissioning'},
+                {installing:'Đang lắp đặt', testing:'Đang thử nghiệm', in_operation:'Đã nghiệm thu', wait_install:'Đã về – chưa lắp đặt', late_accept:'Trễ nghiệm thu'});
+const INST_STAGE = s => s.stage==='installing' || s.stage==='testing' || s.stage==='in_operation';
 function stCell(x){
-  const s = DM.installStatus(x), main = s.stage==='installing' || s.stage==='in_operation'
-    ? `<span class="badge b-${s.stage}">${ILBL[s.stage]}</span>` : `<span class="badge b-${x.status}">${LBL[x.status]}</span>`;
+  const s = DM.installStatus(x), main = INST_STAGE(s)
+    ? `<span class="badge b-${s.stage}"${s.trialPlan ? ` title="${tr(`Test run planned ${fmtD(x.chaythu_tt)}`,`Kế hoạch chạy thử ${fmtD(x.chaythu_tt)}`)}"` : ''}>${ILBL[s.stage]}</span>` : `<span class="badge b-${x.status}">${LBL[x.status]}</span>`;
   const al = (s.waitInstall ? `<span class="badge sm b-wait_install" title="${tr(`Arrived ${s.waitDays} days ago, no installation date yet`,`Về ${s.waitDays} ngày, chưa có ngày lắp đặt`)}">⏰ ${ILBL.wait_install}</span>` : '')
            + (s.lateAccept ? `<span class="badge sm b-late_accept" title="${tr(`Planned commissioning ${fmtD(x.nghiemthu_kh)}`,`Nghiệm thu KH ${fmtD(x.nghiemthu_kh)}`)}">⚠ ${ILBL.late_accept} +${s.lateDays}${tr('d',' ngày')}</span>` : '')
            + (s.lost ? `<span class="badge sm b-overdue" title="${INST_LOST()}">⚠ ${tr('no arrival date','mất ngày về')}</span>` : '');
@@ -2751,7 +2760,7 @@ function render(){
     <td>${x.phutrach||'—'}</td>
     <td class="money">${fmtM(x.vnd)} ₫</td>
     <td class="money" style="color:var(--sky)">${fmtU(x.usd)}$</td>
-    <td>${fmtD(x.dathang)}</td><td>${fmtD(x.vekh)}</td><td><b>${fmtD(x.vedukienn)}</b>${x.vedukienn ? (x.venm_tt ? `<small class="nm-kind tt">${tr('Arrived at plant','Đã về NM')}</small>` : `<small class="nm-kind">${tr('Expected at plant','Dự kiến về NM')}</small>`) : ''}</td>
+    <td class="dt">${fmtD(x.dathang)}</td><td class="dt">${fmtD(x.vekh)}</td><td class="dt"><b>${fmtD(x.vedukienn)}</b>${x.vedukienn ? (x.venm_tt ? `<small class="nm-kind tt">${tr('Arrived at plant','Đã về NM')}</small>` : `<small class="nm-kind">${tr('Expected at plant','Dự kiến về NM')}</small>`) : ''}</td>
     <td>${stCell(x)}</td>
     <td><span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}">${dgT(x.danhgia)}${x.giaitrinh?' 📝':''}</span></td></tr>`).join('');
   const val = rows.reduce((s,x)=>s+x.vnd,0), usd = rows.reduce((s,x)=>s+x.usd,0);
@@ -2776,7 +2785,7 @@ window.showKPI = kind => {
     const rk = s => s.lateAccept ? 2e6 + s.lateDays : s.waitInstall ? 1e6 + s.waitDays : 0;
     const rows = K.rows.map(x=>({ x, s:DM.installStatus(x) })).sort((a,b)=> rk(b.s) - rk(a.s) || String(a.x.venm_tt).localeCompare(String(b.x.venm_tt)));
     mTitle.textContent = T.commissioning + ' · ' + tr('all periods','mọi kỳ');
-    mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${dmN(K.installing)} ${tr('installing','đang lắp đặt')} · ⏰ ${dmN(K.waitInstall)} ${tr(`not installed > ${K.waitDays} days`,`chưa lắp đặt quá ${K.waitDays} ngày`)} · ⚠ ${dmN(K.lateAccept)} ${tr('late commissioning','trễ nghiệm thu')}`;
+    mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${dmN(K.installing)} ${tr('installing','đang lắp đặt')} · 🧪 ${dmN(K.testing)} ${tr('testing','đang thử nghiệm')} · ⏰ ${dmN(K.waitInstall)} ${tr(`not installed > ${K.waitDays} days`,`chưa lắp đặt quá ${K.waitDays} ngày`)} · ⚠ ${dmN(K.lateAccept)} ${tr('late commissioning','trễ nghiệm thu')}`;
     mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(({x, s})=>`<div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
       <span class="kn">${ovEsc(unescH(x.ten))}<small>${ovEsc(unescH(x.phutrach))||'—'} · ${DM.companyCode(x.noilapdat)||ovEsc(unescH(x.noilapdat))} · ${ovEsc(unescH(x.ncc))||'—'}</small></span>
       <span class="kv">${tr('At plant','Về NM')} ${dmD(x.venm_tt)} · ${tr('Commissioning plan','NT KH')} ${dmD(x.nghiemthu_kh)}<br>${stCell(x)}</span></div>`).join('')}</div>`
@@ -2803,8 +2812,8 @@ window.showKPI = kind => {
 /* ===== thanh mốc đầu popup chi tiết (DM.track): tự lấp đầy tới mốc xa nhất đã đạt ===== */
 function msTrack(x){
   const t = DM.track(x), n = t.steps.length;
-  const L = tr({ordered:'Ordered', shipped:'Ex-works', port:'At port', arrived:'At plant', installing:'Installing', commissioned:'Commissioned'},
-               {ordered:'Đặt hàng', shipped:'Xuất xưởng', port:'Cập cảng', arrived:'Về NM', installing:'Lắp đặt', commissioned:'Nghiệm thu'});
+  const L = tr({ordered:'Ordered', shipped:'Ex-works', port:'At port', arrived:'At plant', installing:'Installing', testing:'Test run', commissioned:'Commissioned'},
+               {ordered:'Đặt hàng', shipped:'Xuất xưởng', port:'Cập cảng', arrived:'Về NM', installing:'Lắp đặt', testing:'Chạy thử', commissioned:'Nghiệm thu'});
   const next = t.steps.findIndex(s => !s.done && !s.skip);
   return `<div class="ms-track" style="--p:${Math.max(0, t.reached) / (n - 1)}" aria-label="${tr('Milestones','Các mốc')}"><span class="ms-line"></span>${t.reached > 0 ? '<span class="ms-fill"></span>' : ''}` +
     t.steps.map((s, i) => `<div class="ms-step${s.done ? ' done' : ''}${s.skip ? ' skip' : ''}${s.warn ? ' warn' : ''}${i === next ? ' next' : ''}" style="--k:${i}">` +
@@ -2825,7 +2834,7 @@ window.showDetail = i => {
   const ins = DM.installStatus(x);
 
   mTitle.textContent = (x.ma_may ? x.ma_may + ' · ' : '') + unescH(x.ten);
-  mSub.innerHTML = `<span class="badge b-${ins.stage==='installing'||ins.stage==='in_operation' ? ins.stage : x.status}" style="font-size:10.5px;padding:2px 8px">${ins.stage==='installing'||ins.stage==='in_operation' ? ILBL[ins.stage] : LBL[x.status]||tr('Unknown','Chưa xác định')}</span>
+  mSub.innerHTML = `<span class="badge b-${INST_STAGE(ins) ? ins.stage : x.status}" style="font-size:10.5px;padding:2px 8px">${INST_STAGE(ins) ? ILBL[ins.stage] : LBL[x.status]||tr('Unknown','Chưa xác định')}</span>
     &nbsp;${tr('Rating','Đánh giá')}: <b style="color:${dgColor}">${dgT(x.danhgia)}</b>
     &nbsp;·&nbsp; ${x.daysleft==null ? tr('no arrival date yet','chưa có ngày về')
       : x.status==='arrived' ? tr(`arrived ${Math.abs(x.daysleft)} days ago`,`đã về ${Math.abs(x.daysleft)} ngày trước`)
@@ -2877,7 +2886,7 @@ window.showDetail = i => {
         : `<span style="color:var(--muted)">${tr('— tracked after the machine arrives at the plant','— theo dõi sau khi máy về NM')}</span>` + (ins.lost ? `<br><small style="color:var(--st-over)">⚠ ${INST_LOST()}</small>` : ''), 'full'),
       it(tr('Commissioning, plan','Ngày nghiệm thu KH'), fmtD(x.nghiemthu_kh)),
       it(tr('Installation start (actual)','Ngày bắt đầu lắp đặt TT'), fmtD(x.lapdat_tt)),
-      it(tr('Test run (actual)','Ngày chạy thử TT'), fmtD(x.chaythu_tt)),
+      it(tr('Test run (actual)','Ngày chạy thử TT'), fmtD(x.chaythu_tt) + (ins.trialPlan ? ` <small style="color:var(--muted)">${tr('(planned — after today)','(kế hoạch — sau hôm nay)')}</small>` : '')),
       it(tr('Commissioning (actual)','Ngày nghiệm thu TT'), `<b>${fmtD(x.nghiemthu_tt)}</b>`,'hl'),
       it(ins.open ? tr('Waiting for installation (so far)','Đã chờ lắp đặt (tới hôm nay)') : tr('Waiting for installation','Số ngày chờ lắp đặt'), Dy(ins.waitDays)),
       it(tr('Installation → commissioning','Lắp đặt → nghiệm thu'), Dy(ins.installDays)),
@@ -5181,6 +5190,7 @@ const STATIC_VI = new Map([
   ['⏳ Awaiting','⏳ Chờ về'],
   ['⚠ Overdue – unconfirmed','⚠ Quá hạn – chưa xác nhận'],
   ['🔧 Installing','🔧 Đang lắp đặt'],
+  ['🧪 Testing','🧪 Đang thử nghiệm'],
   ['🏁 Commissioned','🏁 Đã nghiệm thu'],
   ['⏰ Arrived – not installed','⏰ Đã về – chưa lắp đặt'],
   ['⚠ Late commissioning','⚠ Trễ nghiệm thu'],

@@ -90,7 +90,8 @@
   const ms = (x, name) => DM.milestones(x).find(m => m.milestone === name);
 
   /* ---------- lắp đặt – nghiệm thu (sau khi về NM; migrations/20261031_09) ----------
-     stage: 'in_operation' có nghiemthu_tt · 'installing' có lapdat_tt hoặc chaythu_tt, chưa nghiệm thu
+     stage: 'in_operation' có nghiemthu_tt · 'testing' có chaythu_tt ≤ hôm nay, chưa nghiệm thu
+            'installing' có lapdat_tt, hoặc chaythu_tt ở tương lai (= kế hoạch chạy thử, trialPlan), chưa nghiệm thu
             'arrived' đã về, chưa có ngày lắp đặt nào · null chưa về (venm_tt trống)
      waitInstall: đã về, chưa có ngày lắp đặt nào, quá DM.CFG.installWaitDays ngày kể từ venm_tt
      lateAccept:  có nghiemthu_kh, hôm nay > nghiemthu_kh, chưa có nghiemthu_tt (lateDays = hôm nay − KH)
@@ -101,12 +102,12 @@
   DM.installStatus = x => {
     const t = DM.todayIso(), ve = iso(x && x.venm_tt), ld = iso(x && x.lapdat_tt), ct = iso(x && x.chaythu_tt),
           nt = iso(x && x.nghiemthu_tt), kh = iso(x && x.nghiemthu_kh);
-    const o = { stage: null, waitInstall: false, lateAccept: false, lateDays: null, lost: false,
+    const o = { stage: null, trialPlan: !!(ct && ct > t), waitInstall: false, lateAccept: false, lateDays: null, lost: false,
                 waitDays: null, open: false, installDays: null, toAcceptDays: null, acceptDelay: null };
     if (ld && nt) o.installDays = DM.days(ld, nt);
     if (kh && nt) o.acceptDelay = DM.days(kh, nt);
     if (!ve) { o.lost = !!(ld || ct || nt); return o; }
-    o.stage = nt ? 'in_operation' : (ld || ct) ? 'installing' : 'arrived';
+    o.stage = nt ? 'in_operation' : (ct && ct <= t) ? 'testing' : (ld || ct) ? 'installing' : 'arrived';
     if (ld) o.waitDays = DM.days(ve, ld);
     else if (o.stage === 'arrived') { o.waitDays = DM.days(ve, t); o.open = true; }
     if (nt) o.toAcceptDays = DM.days(ve, nt);
@@ -133,12 +134,13 @@
      reached = chỉ số mốc xa nhất đã đạt (-1 = chưa mốc nào); mốc trước đó mà trống = skip (thiếu ngày, không chặn thanh).
      warn = mốc về NM khi máy quá ngày dự kiến mà chưa xác nhận về. date = ngày thực tế, hoặc ngày dự kiến khi chưa đạt.
      Máy Trong nước: không có mốc cập cảng (trừ khi đã lỡ nhập ngày cập cảng). */
-  DM.TRACK = ['ordered', 'shipped', 'port', 'arrived', 'installing', 'commissioned'];
+  DM.TRACK = ['ordered', 'shipped', 'port', 'arrived', 'installing', 'testing', 'commissioned'];
   DM.track = x => {
     const m = DM.milestones(x), ve = m[2].actual;
+    const ct = iso(x.chaythu_tt), ctDone = ct && ct <= DM.todayIso() ? ct : null;   // chạy thử ở tương lai = kế hoạch
     const act = [m[0].actual, m[1].actual, iso(x.capcang_tt), ve,
-                 ve ? (iso(x.lapdat_tt) || iso(x.chaythu_tt)) : null, ve ? iso(x.nghiemthu_tt) : null];
-    const fc = [null, m[1].forecast, null, m[2].forecast, null, iso(x.nghiemthu_kh)];
+                 ve ? (iso(x.lapdat_tt) || ctDone) : null, ve ? ctDone : null, ve ? iso(x.nghiemthu_tt) : null];
+    const fc = [null, m[1].forecast, null, m[2].forecast, null, ctDone ? null : ct, iso(x.nghiemthu_kh)];
     const reached = act.reduce((r, d, i) => d ? i : r, -1);
     const overdue = DM.arrivalStatus(x).status === 'overdue';
     const steps = DM.TRACK.map((key, i) => ({ key, done: !!act[i], actual: !!act[i], date: act[i] || fc[i] || null,
@@ -148,8 +150,8 @@
   };
 
   /* ---------- trạng thái vòng đời suy từ ngày ---------- */
-  DM.LIFECYCLE = ['planned', 'manufacturing', 'shipping', 'arrived', 'installing', 'in_operation'];
-  DM.AFTER_ARRIVAL = ['arrived', 'installing', 'in_operation'];
+  DM.LIFECYCLE = ['planned', 'manufacturing', 'shipping', 'arrived', 'installing', 'testing', 'in_operation'];
+  DM.AFTER_ARRIVAL = ['arrived', 'installing', 'testing', 'in_operation'];
   DM.lifecycle = x => {
     const m = DM.milestones(x);
     if (m[2].actual) return DM.installStatus(x).stage;
@@ -159,7 +161,7 @@
   };
   /* giai đoạn để hiển thị (phễu, bộ lọc trạng thái): như lifecycle, nhưng máy quá ngày dự kiến mà chưa xác nhận
      về là 'overdue' — không để máy quá hạn 600 ngày nằm ở "đang chế tạo" / "đang vận chuyển" */
-  DM.STAGES = ['planned', 'manufacturing', 'shipping', 'overdue', 'arrived', 'installing', 'in_operation'];
+  DM.STAGES = ['planned', 'manufacturing', 'shipping', 'overdue', 'arrived', 'installing', 'testing', 'in_operation'];
   DM.stage = x => DM.arrivalStatus(x).status === 'overdue' ? 'overdue' : DM.lifecycle(x);
 
   /* ---------- trễ ----------
@@ -253,7 +255,7 @@
     // 5. quá ngày dự kiến mà chưa xác nhận ngày về NM TT (không vào tỷ lệ đúng hạn cho tới khi xác nhận)
     const unconf = rows.filter(x => DM.arrivalStatus(x).status === 'overdue');
     // 6. chờ nghiệm thu: đã về NM, chưa có ngày nghiệm thu TT
-    const comm = rows.map(x => ({ x, s: DM.installStatus(x) })).filter(o => o.s.stage === 'arrived' || o.s.stage === 'installing');
+    const comm = rows.map(x => ({ x, s: DM.installStatus(x) })).filter(o => o.s.stage === 'arrived' || o.s.stage === 'installing' || o.s.stage === 'testing');
 
     return {
       pipeline:  { rows: pipe, count: pipe.length, vnd: pipe.reduce((s, x) => s + (+x.vnd || 0), 0),
@@ -266,6 +268,7 @@
       unconfirmed: { rows: unconf, count: unconf.length },
       commissioning: { rows: comm.map(o => o.x), count: comm.length,
                        installing: comm.filter(o => o.s.stage === 'installing').length,
+                       testing: comm.filter(o => o.s.stage === 'testing').length,
                        waitInstall: comm.filter(o => o.s.waitInstall).length,
                        lateAccept: comm.filter(o => o.s.lateAccept).length, waitDays: DM.CFG.installWaitDays }
     };
@@ -293,12 +296,12 @@
       const end = a.actual || a.forecast;
       if (!c.actual || (!end && !a.planned)) return null;
       const s = DM.installStatus(x), t = DM.todayIso(), nt = iso(x.nghiemthu_tt), kh = iso(x.nghiemthu_kh);
-      if (from && a.actual && s.stage !== 'installing' && (nt || a.actual) < from) return null;
+      if (from && a.actual && s.stage !== 'installing' && s.stage !== 'testing' && (nt || a.actual) < from) return null;
       let inst = null;
       if (a.actual) {
         if (nt) inst = { end: nt, kind: 'actual' };
         else if (kh) inst = kh < t ? { end: t, kind: 'late' } : { end: kh, kind: 'plan' };
-        else if (s.stage === 'installing') inst = { end: t, kind: 'open' };
+        else if (s.stage === 'installing' || s.stage === 'testing') inst = { end: t, kind: 'open' };
         if (inst) Object.assign(inst, { start: a.actual, planEnd: kh });
       }
       return { x, group: DM.companyCode(x.noilapdat) || 'Other', start: c.actual,
@@ -321,6 +324,7 @@
     { key: 'overdue',       states: ['overdue'] },     // quá ngày dự kiến, chưa xác nhận về
     { key: 'arrived',       states: ['arrived'] },
     { key: 'installing',    states: ['installing'] },
+    { key: 'testing',       states: ['testing'] },
     { key: 'in_operation',  states: ['in_operation'] }
   ];
   DM.funnel = rows => DM.FUNNEL.map(st => {
@@ -334,7 +338,7 @@
        avgToAccept  trung bình (nghiệm thu TT − về NM TT) của máy đã nghiệm thu
        avgWait      trung bình (bắt đầu lắp đặt TT − về NM TT) của máy đã có ngày lắp đặt
        avgInstall   trung bình (nghiệm thu TT − bắt đầu lắp đặt TT)
-       installing / waitInstall / lateAccept: số máy đang lắp đặt / quá N ngày chưa lắp / trễ nghiệm thu.
+       installing / testing / waitInstall / lateAccept: số máy đang lắp đặt / đang thử nghiệm / quá N ngày chưa lắp / trễ nghiệm thu.
      Xếp theo số máy đã nghiệm thu, số máy đã về, rồi tên. */
   DM.installStats = (rows, keyOf) => {
     const avg = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : null;
@@ -346,7 +350,7 @@
                avgToAccept: avg(acc.map(s => s.toAcceptDays)),
                avgWait: avg(g.filter(s => !s.open && s.waitDays != null).map(s => s.waitDays)),
                avgInstall: avg(g.filter(s => s.installDays != null).map(s => s.installDays)),
-               installing: g.filter(s => s.stage === 'installing').length,
+               installing: g.filter(s => s.stage === 'installing').length, testing: g.filter(s => s.stage === 'testing').length,
                waitInstall: g.filter(s => s.waitInstall).length, lateAccept: g.filter(s => s.lateAccept).length };
     }).sort((a, b) => (b.accepted - a.accepted) || (b.arrived - a.arrived) || a.name.localeCompare(b.name));
   };

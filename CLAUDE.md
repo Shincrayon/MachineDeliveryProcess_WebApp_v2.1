@@ -33,7 +33,12 @@ file không có cột "ID hệ thống" khi app đã có dữ liệu → chặn.
 | `ghichu_ld` | Ghi chú lắp đặt | ⚡ Cập nhật nhanh — **mã hoá trong `sec`** cùng giải trình |
 
 - Trạng thái + cảnh báo chỉ tính ở `DM.installStatus` (metrics.js); `x.status` vẫn là trạng thái ngày về (`DM.arrivalStatus`), không đổi.
-  `installing` = đã về + có ngày lắp đặt hoặc chạy thử, chưa nghiệm thu · `in_operation` = đã về + có ngày nghiệm thu TT.
+  `installing` = đã về + có ngày lắp đặt (hoặc chỉ có Ngày chạy thử TT ở tương lai), chưa nghiệm thu
+  · `testing` (🧪 Đang thử nghiệm) = đã về + Ngày chạy thử TT ≤ hôm nay, chưa nghiệm thu
+  · `in_operation` = đã về + có ngày nghiệm thu TT.
+  Ngày chạy thử TT > hôm nay chỉ là kế hoạch: `s.trialPlan = true`, máy vẫn `installing`, chi tiết ghi "(kế hoạch — sau hôm nay)",
+  thanh mốc hiện "(dk)", không ghi mốc `installed` sang Danh mục. `testing` là bậc riêng ở mọi nơi (lọc Danh sách, Tổng quan, phễu,
+  Phân tích, xuất file); riêng Danh mục không có `testing` nên đồng bộ thành `installing`. Test: `e2e_trial_test.py`.
   Cảnh báo: `wait_install` (về > `APP_CONFIG.INSTALL_WAIT_DAYS` ngày — mặc định 30 trong config.js — chưa có ngày lắp đặt nào),
   `late_accept` (quá Ngày nghiệm thu KH, chưa nghiệm thu). Có ngày lắp đặt mà mất `venm_tt` → không tính giai đoạn, cảnh báo ⚠.
 - Không nằm trong `REC_KEYS` (form Sửa không ghi đè). `ghichu_ld` nằm trong `SEC.machines.f`: mọi chỗ mã hoá lại `sec`
@@ -52,7 +57,8 @@ File Excel xuất trước bản này vẫn nạp lại được — dữ liệu
   Hàng chờ / lệch không có bảng riêng: tính lại mỗi lần bằng `CS.planAll` (so 2 bên sau giải mã).
 - Điều kiện: có `ma_may`. Chưa liên kết + có `nghiemthu_tt` → tạo hồ sơ mới (mã tạm `tempCode`, `code_temp`, `needs_info`,
   `source_ref = "Từ Tiến độ máy về · <ma_may>"`); không xác định công ty (KXD) → không tạo.
-- Trạng thái: về NM → `arrived` · lắp đặt / chạy thử → `installing` · nghiệm thu → `in_operation` + `commissioned_date`.
+- Trạng thái: về NM → `arrived` · lắp đặt / đang thử nghiệm (`testing`) → `installing` · nghiệm thu → `in_operation` + `commissioned_date`.
+  Mốc `installed` = chaythu_tt chỉ khi ≤ hôm nay.
   Không bao giờ hạ trạng thái. Mốc `delivery_milestones`: arrived_site = venm_tt, installed = chaythu_tt, commissioned = nghiemthu_tt.
 - Trường chung (model, serial, xuất xứ, công suất, hợp đồng, NCC, công ty, ngày nghiệm thu, mốc): Danh mục trống → điền; khác → "lệch",
   không ghi (admin chọn giữ bên nào ở ⚖️ Lệch dữ liệu; "Giữ Danh mục" ghi ngược về Tiến độ).
