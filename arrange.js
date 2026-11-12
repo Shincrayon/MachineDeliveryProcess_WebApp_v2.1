@@ -55,6 +55,7 @@ const css = `
 #c4 .ar-lt{min-width:0;flex:1}
 #c4 .ar-lt b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #c4 .ar-lt small{color:var(--muted);font-size:11.5px}
+#c4 .ar-lt small.ar-ln{display:block;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #c4 .ar-cnt{display:flex;gap:5px;flex:none}
 #c4 .ar-cnt i{font-style:normal;font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(148,163,184,.1)}
 #c4 .ar-cnt .m{color:var(--ar-main)} #c4 .ar-cnt .a{color:var(--ar-aux)} #c4 .ar-cnt .s{color:var(--ar-sub)}
@@ -238,7 +239,7 @@ function lineHTML(M, l, can){
   return `<div class="ar-line${op ? ' open' : ''}" data-line="${l.id}" style="--ac:${ac}" data-dl="${L('Drop into', 'Thả vào')} ${E(l.name)}">
     <div class="ar-lh" data-tog="${l.id}">
       <span class="ar-lic">${util ? '🔌' : '⛓'}</span>
-      <span class="ar-lt"><b>${E(l.name)}</b><small>${area ? E(area.name) + ' · ' : ''}${all.length} ${L('machines', 'máy')}</small></span>
+      <span class="ar-lt"><b>${E(l.name)}</b><small>${area ? E(area.name) + ' · ' : ''}${all.length} ${L('machines', 'máy')}</small>${l.notes ? `<small class="ar-ln" title="${E(l.notes)}">ⓘ ${E(l.notes)}</small>` : ''}</span>
       ${all.length ? `<span class="ar-cnt">${nM ? `<i class="m" title="${ROLE_T().main}">⭐ ${nM}</i>` : ''}${nA ? `<i class="a" title="${ROLE_T().auxiliary}">◇ ${nA}</i>` : ''}${nS ? `<i class="s" title="${ROLE_T().sub_unit}">↳ ${nS}</i>` : ''}</span><span class="ar-mini">${mini}</span>` : ''}
       ${noMain ? `<span class="ar-lw" title="${L('No main machine', 'Chưa có máy chính')}">⚠</span>` : ''}
       <span class="ar-chev">▸</span>
@@ -375,7 +376,7 @@ function dialog(M){
     <span class="hd"><span class="big">${ic}</span><span><b>${t}</b>${d ? `<small>${d}</small>` : ''}</span></span>${extra}</label>`;
   mBody.innerHTML = `<div class="ar-dlg">
     ${opt('line', '⛓', L('A production line', 'Vào một chuyền'), L('becomes a top-level machine', 'thành máy cấp đầu của chuyền'),
-      `<select id="arLine">${M.lines.map(l => `<option value="${l.id}">${l.code === UTIL_CODE ? '🔌 ' : '⛓ '}${E(l.name)}</option>`).join('')}</select>`, true)}
+      `<select id="arLine">${M.lines.map(l => `<option value="${l.id}" title="${E(l.notes || '')}">${l.code === UTIL_CODE ? '🔌 ' : '⛓ '}${E(window.__lineLbl ? window.__lineLbl(l) : l.name)}</option>`).join('')}</select>`, true)}
     ${opt('parent', '↳', L('Sub-unit of a machine', 'Làm máy con của…'), L('follows that machine\'s line', 'đi theo chuyền của máy đó'),
       `<input type="text" id="arPq" placeholder="${L('Search name / model…', 'Gõ tìm tên / model…')}"><div class="pk" id="arPk"></div>`)}
     <div class="row3">

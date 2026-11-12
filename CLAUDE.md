@@ -194,6 +194,23 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
   đang xem bản đồ thì `#p2.an-mapmode` giữ chiều cao cũ. Thẻ "Giá trị theo NCC" dùng `--vz-one` (xanh dương 1 màu, biến của chart_theme.js).
 - Đổi sáng/tối (`themechange`): vẽ lại `OV_HOOKS` (Tổng quan, Phân tích), Kế hoạch (`plDrawMta/Cash/Look`), ma trận NCC, Tổng quan Danh mục.
 
+## ⛓ Ghi chú chuyền (migration 19) + 🎲 mã ngẫu nhiên
+- `production_lines.notes` (`supabase/migrations/20261112_19_line_notes.sql`): loader dò cột (`select('notes')`) TRƯỚC khi giải mã chuyền; có cột thì
+  `SEC.production_lines.f` thêm `notes` (mã hoá cùng tên chuyền) và `MM.hasLineNotes = true`. Chưa chạy 19: ô Ghi chú ẩn (`need:` trong LIB.lines), app chạy như cũ.
+- Hiện ghi chú khi chọn chuyền: `lineLbl(l)` = "Tên — ghi chú (≤40 ký tự)" (window.__lineLbl) ở ô Chuyền form máy, ô lọc Danh sách, hộp Đưa vào… (arrange.js);
+  dòng ⓘ dưới tên chuyền ở 🧩 Sắp xếp; rê chuột ô Chuyền ở Danh sách / treemap. `x.line_notes` gắn vào máy trong deriveMmtb.
+- Mã ngẫu nhiên `randCode(prefix, used)` = `<mã nhà máy>-XXXX` (bảng `CODE_ABC`, bỏ 0 O 1 I L), không trùng: Thư viện Nhà xưởng / Chuyền (`gen:1` → nút 🎲,
+  thêm mới tự điền, đổi nhà máy đổi tiền tố nếu chưa sửa tay, Sửa không tự đổi) và **mã tạm máy Danh mục** (`tempCode`, cả catalog_sync qua `__tempCode`).
+  `RANDOM_FMT` nhận cả mã tạm cũ 9 số lẫn dạng mới 4 ký tự (không mã nào bị đổi tự động). Test: `e2e_line_notes_test.py`.
+
+## 📋 Nhân bản máy (2 phân hệ)
+- Form ➕ Thêm có ô "Sao chép từ máy có sẵn…" (`clonePicker(host, list, onPick, onClear, srcTitle)` trong mainSrc, dùng chung; tìm không dấu, ↑↓ Enter);
+  chi tiết máy có nút 📋 Nhân bản (`cloneMachine(i)` / `mmClone(id)`). Form Sửa không có ô này. Lưu vẫn qua đường Thêm máy (mã hoá, kiểm tra như cũ).
+- Tiến độ (`fillFromClone`): chép tên, phụ trách, SL, công suất, thương hiệu, NCC, xuất xứ, model, đơn giá, hình thức mua, số ngày KH (ctu/đi tàu/lãnh máy/CTM),
+  working day; để trống mã máy, serial, mọi ngày, TG đi tàu/lãnh máy TT, giải trình. Ô Nơi lắp đặt tô viền nhắc (`cloneHl`).
+- Danh mục (`openForm(x, true)`): chép mọi trường form trừ mã (cấp mã tạm mới), serial, máy cha, ngày duyệt, ngày NT, mốc, ghi chú, cần bổ sung; trạng thái Kế hoạch.
+- Test: `e2e_clone_test.py`. Kèm sửa: `.add-grid` cột `minmax(0,1fr)` để form không tràn ngang trên điện thoại.
+
 ## 🧩 Sắp xếp — Danh mục MMTB (`arrange.js`, trang `#c4`, không cần migration)
 - Cấu trúc: Nhà máy → Chuyền (`production_lines`) → ⭐ máy chính (`role=main`) / ◇ máy phụ (`auxiliary`) → ↳ máy con (`sub_unit`, có `parent_machine_id`).
   Chuyền trọn gói = 1 máy chính mang tên chuyền + máy con; chuyền ghép = nhiều máy chính/phụ. Thiết bị dùng chung xếp vào chuyền
