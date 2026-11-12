@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Machine Delivery Tracker</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -112,6 +111,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:
 
 .grid2{display:grid;grid-template-columns:5fr 7fr;gap:12px}
 .grid4{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ec-fill{width:100%;height:100%}
 /* chênh lệch sớm/trễ (thẻ Cần chú ý): thanh 2 chiều quanh 0 — đỏ trễ, xanh lá sớm; đặc = đã về, viền = dự kiến */
 .var-h{display:grid;grid-template-columns:minmax(120px,32%) 1fr;font-size:11px;color:var(--muted);margin:0 0 4px}
 .var-h span:nth-child(1){grid-column:2;grid-row:1;justify-self:start}.var-h span:nth-child(2){grid-column:2;grid-row:1;justify-self:center}.var-h span:nth-child(3){grid-column:2;grid-row:1;justify-self:end}
@@ -405,7 +405,9 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
   #p2 .an-kpis .kpi{padding:9px 14px}
   #p2 .an-kpis .kpi .val{font-size:24px;margin-top:1px}
   #p2 .an-kpis .kpi .note{margin-top:1px}
-  #p2 .an-grid{flex:1.15 1 0;min-height:0;gap:10px}
+  #p2 .an-grid{flex:0 1 auto;max-height:58%;min-height:0;gap:10px}          /* cao vừa nội dung, dư chỗ nhường bảng dưới */
+  #p2.an-mapmode .an-grid{flex:1.15 1 0;max-height:none}                       /* đang xem bản đồ: giữ chiều cao cũ */
+  #p2 .an-inst{min-height:180px}
   #p2 .an-grid>.card{align-self:stretch}
   #p2 .an-inst{flex:1 1 0;margin:0}
   #p2 .card,#p4 .card{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding:11px 14px;margin:0}
@@ -831,14 +833,19 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 .dm-att td small{display:block;color:var(--muted);font-size:11.5px;font-weight:400}
 .sev{display:inline-block;padding:2px 10px;border-radius:999px;font-weight:800;font-size:12.5px;border:1.5px solid currentColor;white-space:nowrap}
 .sev-ok{color:var(--st-ok)} .sev-warn{color:var(--st-warn)} .sev-bad{color:var(--st-bad)} .sev-done{color:var(--st-done)}
-.dm-empty{padding:18px 6px;color:var(--st-ok);font-weight:600}
+.dm-empty,.dm-hint{display:flex;align-items:flex-start;gap:10px;margin:8px 0;padding:14px 16px;border:1.5px dashed var(--border);border-radius:12px;font-size:13px;line-height:1.45}
+.dm-empty{color:var(--st-ok);font-weight:600;background:color-mix(in srgb,var(--st-ok) 5%,transparent)}
+.dm-hint{color:var(--muted)}
+.dm-hint::before{content:'📭';font-size:17px;line-height:1.1;flex:none}
+.dm-hint[hidden],.dm-empty[hidden]{display:none}
+.dm-hint b,.dm-hint .act{color:var(--txt);font-weight:700}
 @media(max-width:1180px){.dm-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .dm-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:-2px 0 10px}
 .dm-legend i{display:inline-block;width:20px;height:9px;border-radius:3px;vertical-align:-1px;margin-right:5px}
 .dm-legend i.fc{background:transparent!important;border:1.5px dashed var(--muted)}
 .dm-legend i.ov{background:rgba(251,146,60,.15)!important;border:1.5px dashed var(--st-over)}
 .dm-gwrap{max-height:560px;overflow-y:auto;overflow-x:hidden}
-.dm-hint{color:var(--muted);padding:16px 4px;font-size:13px}
+
 .ov-top{margin-bottom:12px}
 .ov-top .dm-filters{margin:0;flex:0 1 auto}
 .ov-top .dm-link{margin-left:0}
@@ -1113,7 +1120,7 @@ select.mp-open{border-color:var(--blue)}
       <div class="ov-sub">
         <div class="card ov-fn" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="fnTitle"></span><span class="sel"><span class="gv-btn on" id="fnCnt"></span><span class="gv-btn" id="fnVal"></span></span></h3><div id="fnChart"></div></div>
         <div class="card ov-ms" style="--accent:#60a5fa"><h3><span class="dot"></span><span id="msTitle"></span><span class="sel"><span class="gv-btn on" id="msMon"></span><span class="gv-btn" id="msSt"></span></span></h3>
-          <div class="chartbox" id="boxMon"><canvas id="chMonth"></canvas></div><div class="chartbox" id="boxSt" style="display:none"><canvas id="chStatus"></canvas></div></div>
+          <div class="chartbox" id="boxMon"><div id="chMonth" class="ec-fill"></div></div><div class="chartbox" id="boxSt" style="display:none"><div id="chStatus" class="ec-fill"></div></div></div>
       </div>
     </div>
   </div>
@@ -1122,7 +1129,7 @@ select.mp-open{border-color:var(--blue)}
   <div class="page" id="p2">
     <div class="kpis an-kpis" id="anKpis"></div>
     <div class="an-grid">
-      <div class="card" style="--accent:#a78bfa"><h3><span class="dot"></span><span id="anNccT"></span><span class="sel"><span class="gv-btn on" id="anNccV"></span><span class="gv-btn" id="anNccN"></span></span></h3>
+      <div class="card" style="--accent:var(--vz-one)"><h3><span class="dot"></span><span id="anNccT"></span><span class="sel"><span class="gv-btn on" id="anNccV"></span><span class="gv-btn" id="anNccN"></span></span></h3>
         <div class="hb" id="anNcc"></div></div>
       <div class="card" style="--accent:#22d3ee"><h3><span class="dot"></span><span id="anGeoT"></span><span class="sel"><span class="gv-btn on" id="anListBtn"></span><span class="gv-btn" id="anMapBtn"></span></span></h3>
         <div class="an-geo" id="anGeo"><div><div class="an-cap" id="anOrgT"></div><div class="hb" id="anOrigin"></div></div>
@@ -1778,10 +1785,7 @@ const CTRY = {'Trung Quốc':'China','Việt Nam':'Vietnam','Áo':'Austria','Đ�
   'Nhật Bản':'Japan','Hàn Quốc':'South Korea','Ý':'Italy','Mỹ':'USA','Thái Lan':'Thailand','Ấn Độ':'India','Pháp':'France',
   'Thụy Sĩ':'Switzerland','Hà Lan':'Netherlands','Anh':'UK','Tây Ban Nha':'Spain','Đan Mạch':'Denmark','Bỉ':'Belgium'};
 const ctT = v => (LANG==='en' && CTRY[v]) || v;
-Chart.defaults.color = cssv('--muted');
-Chart.defaults.borderColor = 'rgba(148,163,184,.1)';
-Chart.defaults.font.family = "'Segoe UI',system-ui,sans-serif";
-Chart.defaults.maintainAspectRatio = false;
+/* biểu đồ: chỉ ECharts (Chart.js đã gỡ — bước E) */
 
 /* ===== tab navigation, lazy chart init ===== */
 const inited = {};
@@ -1796,10 +1800,7 @@ function showPage(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.p===id));
   if(!inited[id]){ inited[id]=true; if(id==='p1') initP1(); if(id==='p2') initP2(); if(id==='p4') initP4(); if(id==='p5') initP5(); }
   else {
-    document.querySelectorAll('#'+id+' canvas').forEach(cv=>{
-      const ch = Chart.getChart(cv);
-      if(ch){ ch.reset(); ch.update(); }
-    });
+    document.querySelectorAll('#'+id+' [_echarts_instance_]').forEach(el=>{ const c = echarts.getInstanceByDom(el); if(c) c.resize(); });
   }
 }
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showPage(t.dataset.p));
@@ -1966,7 +1967,7 @@ let KP = null;
     const late = it.filter(o => o.v > 0), mx = Math.max(1, ...it.map(o => Math.abs(o.v)));
     attSub.textContent = it.length ? tr(`${it.length} machines · ${it.length - late.length} on time / early · ${late.length} late` + (late.length ? ` · avg +${dmN(late.reduce((s, o) => s + o.v, 0) / late.length, 0)} d` : '') + (noPlan.length ? ` · ${noPlan.length} without plan date` : ''),
       `${it.length} máy · ${it.length - late.length} đúng/sớm · ${late.length} trễ` + (late.length ? ` · trễ TB +${dmN(late.reduce((s, o) => s + o.v, 0) / late.length, 0)} ngày` : '') + (noPlan.length ? ` · ${noPlan.length} thiếu ngày KH` : '')) : '';
-    if(!it.length){ attBox.innerHTML = `<div class="dm-empty">${tr('No machines with a planned arrival date in this filter.', 'Không có máy nào có ngày về theo KH trong bộ lọc này.')}</div>`; return; }
+    if(!it.length){ attBox.innerHTML = `<div class="dm-hint">${tr('No machines with a planned arrival date in this filter — add <span class="act">Planned arrival</span> in the machine form, or widen the filter.', 'Không có máy nào có ngày về theo KH trong bộ lọc này — nhập <span class="act">Ngày về theo KH</span> ở form Sửa máy, hoặc nới bộ lọc.')}</div>`; return; }
     const K = tr({ act:'arrived', fc:'expected', over:'overdue – unconfirmed' }, { act:'đã về', fc:'dự kiến', over:'quá hạn – chưa xác nhận' });
     attBox.innerHTML = `<div class="var-h"><span>◀ ${tr('early', 'sớm')}</span><span>${tr('days vs planned arrival', 'ngày so với ngày về theo KH')}</span><span>${tr('late', 'trễ')} ▶</span></div>
       <div class="var-list">${it.map(o => { const w = Math.abs(o.v) / mx * 40, cls = (o.v > 0 ? 'late' : 'early') + ' ' + o.kind;
@@ -2022,7 +2023,7 @@ let KP = null;
     KP = DM.kpis(rows, { ontimeWindow: period ? null : 90 });
     const o = KP.ontime, dl = KP.delayed;
     set('pipeline', 'var(--sky)', dmN(KP.pipeline.count),
-        dmN(KP.pipeline.vnd) + ' ₫ · ' + tr('not yet arrived at site', 'chưa về nhà máy') +
+        VZ.money(KP.pipeline.vnd) + ' · ' + tr('not yet arrived at site', 'chưa về nhà máy') +
         (KP.pipeline.overdue ? ' · ' + tr('incl. ⚠ ', 'trong đó ⚠ ') + dmN(KP.pipeline.overdue) + tr(' overdue, unconfirmed', ' quá hạn chưa xác nhận') : ''));
     set('ontime', o.rate == null ? 'var(--st-done)' : o.rate >= .8 ? 'var(--st-ok)' : o.rate >= .6 ? 'var(--st-warn)' : 'var(--st-bad)',
         o.rate == null ? '—' : dmN(o.rate * 100) + '%',
@@ -2193,7 +2194,7 @@ let KP = null;
   const setMode = m => { fnMode = m; fnCnt.classList.toggle('on', m === 'count'); fnVal.classList.toggle('on', m === 'vnd'); drawFunnel(); };
   fnCnt.onclick = () => setMode('count'); fnVal.onclick = () => setMode('vnd');
   // thẻ hẹp: giá trị gọn (tỷ ₫), đầy đủ nằm trong tooltip
-  const fmtV = v => fnMode !== 'vnd' ? dmN(v) : small() ? dmN(v / 1e9, 1) + tr(' B ₫', ' tỷ ₫') : dmN(v) + ' ₫';
+  const fmtV = v => fnMode !== 'vnd' ? dmN(v) : small() ? VZ.money(v) : dmN(v) + ' ₫';
   function drawFunnel(){
     FN = DM.funnel(DM.filter(DATA, Object.assign(ovFilter(), { st:'' })));   // phễu bỏ qua bộ lọc trạng thái
     const pick = st => fnMode === 'vnd' ? st.vnd : st.count;
@@ -2223,7 +2224,7 @@ let KP = null;
     fSt.value = OVF.st === st.key ? '' : st.key; fSt.onchange();
   });
 
-  /* thẻ bên cạnh: lịch máy về theo tháng / trạng thái thiết bị (Chart.js, vẽ ở initP1) */
+  /* thẻ bên cạnh: lịch máy về theo tháng / trạng thái thiết bị (ECharts, vẽ ở initP1) */
   msMon.textContent = '▮'; msSt.textContent = '◔';
   msMon.title = tr('Arrivals by month', 'Máy về theo tháng'); msSt.title = tr('Equipment status', 'Trạng thái thiết bị');
   const msSet = m => {
@@ -2232,7 +2233,7 @@ let KP = null;
     msTitle.textContent = st ? tr('📊 Equipment status', '📊 Trạng thái thiết bị') : tr('📊 Arrivals by month', '📊 Máy về theo tháng');
     msMon.classList.toggle('on', !st); msSt.classList.toggle('on', st);
     boxMon.style.display = st ? 'none' : ''; boxSt.style.display = st ? '' : 'none';
-    const c = window.Chart && Chart.getChart(st ? chStatus : chMonth); if(c) c.resize();
+    const c = echarts.getInstanceByDom(st ? chStatus : chMonth); if(c) c.resize();
   };
   msMon.onclick = () => msSet('mon'); msSt.onclick = () => msSet('st');
   setTimeout(() => { let m = 'mon'; try{ m = localStorage.getItem('tdmv_msview') || 'mon'; }catch(e){} msSet(m); });
@@ -2249,7 +2250,6 @@ let KP = null;
 })();
 
 /* ===== page 1 charts ===== */
-let stChart = null;
 /* trễ = ngày về NM (thực tế/dự kiến) muộn hơn ngày về KH, kể cả máy đã về */
 function isLate(x){ return !!(x.vekh && x.vedukienn && x.vedukienn.slice(0,10) > x.vekh.slice(0,10)); }
 const DG = ['Sớm','Đúng tiến độ','Trễ'];
@@ -2268,43 +2268,28 @@ function statusRings(){
   }));
   return {outer, inner, innerLbl, innerCol, total: rows.length};
 }
+/* Trạng thái thiết bị: thanh ngang theo trạng thái ngày về, chia đoạn theo đánh giá (thay biểu đồ tròn 2 vòng — cùng số liệu statusRings) */
+const ecTip = () => ({ backgroundColor:cssv('--panel2'), borderColor:cssv('--border'), textStyle:{ color:cssv('--txt'), fontSize:12 }, extraCssText:'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3)' });
+const ecOf = el => echarts.getInstanceByDom(el) || echarts.init(el);
 function updateStatusChart(){
-  const r = statusRings();
-  stChart.data.datasets[0].data = r.outer;
-  stChart.data.datasets[1].data = r.inner;
-  stChart.data.datasets[1].customLabels = r.innerLbl;
-  stChart.options.plugins.title.text = r.total + tr(' machines',' thiết bị');
-  stChart.update();
+  const r = statusRings(), rows = ovRows(), mu = cssv('--muted');
+  const seg = (g, i) => STS.map(st => r.inner[STS.indexOf(st) * DG.length + i]);
+  const other = STS.map((st, k) => r.outer[k] - DG.reduce((a, g, i) => a + r.inner[k * DG.length + i], 0));
+  const c = ecOf(chStatus);
+  c.setOption({ aria:{ enabled:true, label:{ description:tr(`Equipment status: ${r.total} machines`, `Trạng thái thiết bị: ${r.total} thiết bị`) } },
+    title:{ text:r.total + tr(' machines', ' thiết bị'), left:'center', top:0, textStyle:{ color:cssv('--txt'), fontSize:12.5, fontWeight:600 } },
+    legend:{ bottom:0, textStyle:{ color:mu, fontSize:11 }, itemWidth:12, itemHeight:8 },
+    grid:{ left:6, right:30, top:28, bottom:chStatus.clientWidth < 420 ? 50 : 30, containLabel:true },
+    tooltip:Object.assign(ecTip(), { trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => `<b>${ps[0].name}</b> · ${r.outer[ps[0].dataIndex]} ${tr('machines', 'thiết bị')}<br>` + ps.filter(p => p.value).map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b>`).join('<br>') }),
+    xAxis:{ type:'value', minInterval:1, show:false },
+    yAxis:{ type:'category', inverse:true, data:STS.map(s => LBL[s]), axisTick:{ show:false }, axisLine:{ show:false },
+      axisLabel:{ color:cssv('--txt'), fontSize:12, formatter:(v, i) => `${v}  {n|${r.outer[i]}}`, rich:{ n:{ color:mu, fontWeight:700 } } } },
+    series: DG.map((g, i) => ({ name:dgT(g), type:'bar', stack:'s', barMaxWidth:26, data:seg(g, i), itemStyle:{ color:DGC[g], borderColor:cssv('--panel'), borderWidth:1 } }))
+      .concat([{ name:tr('Not rated', 'Chưa đánh giá'), type:'bar', stack:'s', barMaxWidth:26, data:other, itemStyle:{ color:'rgba(148,163,184,.4)', borderColor:cssv('--panel'), borderWidth:1, borderRadius:[0, 4, 4, 0] } }])
+  }, true);
 }
 function initP1(){
-  const r0 = statusRings();
-  stChart = new Chart(chStatus,{type:'doughnut',data:{
-    labels:STS.map(s=>LBL[s]),
-    datasets:[
-      {data:r0.outer, backgroundColor:STS.map(s=>C[s]),
-       borderColor:()=>cssv('--panel'),borderWidth:3, weight:1.1,
-       hoverOffset:22, hoverBorderColor:'#fff', hoverBorderWidth:3},
-      {data:r0.inner, customLabels:r0.innerLbl, backgroundColor:r0.innerCol,
-       borderColor:()=>cssv('--panel'),borderWidth:2, weight:0.75,
-       hoverOffset:14, hoverBorderColor:'#fff', hoverBorderWidth:2.5}
-    ]},
-    options:{cutout:'45%',
-      interaction:{mode:'nearest'},
-      onHover:(e,els,chart)=>{chart.canvas.style.filter = els.length? 'drop-shadow(0 0 14px rgba(125,211,252,.45))':'none';
-        chart.canvas.style.transition='filter .25s';},
-      transitions:{active:{animation:{duration:350,easing:'easeOutBack'}}},
-      plugins:{
-      legend:{position:'bottom',labels:{padding:10,usePointStyle:true,font:{size:11.5},
-        generateLabels: chart => [
-          ...STS.map(s=>({text:LBL[s], fillStyle:C[s], strokeStyle:'transparent', pointStyle:'circle', fontColor:cssv('--muted')})),
-          ...DG.map(g=>({text:'◦ '+dgT(g), fillStyle:DGC[g], strokeStyle:'transparent', pointStyle:'rectRounded', fontColor:cssv('--muted')}))
-        ]}},
-      tooltip:{callbacks:{label: ctx => {
-        const lbl = ctx.dataset.customLabels ? ctx.dataset.customLabels[ctx.dataIndex] : ctx.label;
-        return lbl+': '+ctx.parsed+tr(' machines',' thiết bị');
-      }}},
-      title:{display:true,text:r0.total+tr(' machines',' thiết bị'),font:{size:12.5},padding:{bottom:4}}},
-      animation:{animateRotate:true,duration:1200}}});
+  updateStatusChart();
   OV_HOOKS.push(updateStatusChart);
   /* biểu đồ tháng: chọn năm -> 12 tháng của (các) năm đó (không chọn năm -> mọi tháng có dữ liệu);
      chọn tháng -> làm nổi các cột của (các) tháng đó, cột khác mờ */
@@ -2322,36 +2307,28 @@ function initP1(){
       late: keys.map(k=>inM(k).filter(x=>x.danhgia==='Trễ').length),
       dim: keys.map(k=>ms.length>0 && !ms.includes(k.slice(5,7)))};
   }
-  const fade = (col, md) => md.dim.map(d => d ? col+'40' : col);
-  const md0 = monthData();
-  const mChart = new Chart(chMonth,{type:'bar',data:{labels:md0.labels,datasets:[
-    {type:'line',label:tr('Late','Trễ'),data:md0.late,borderColor:'#f87171',backgroundColor:'#f87171',
-     pointBackgroundColor:'#f87171',pointRadius:4,pointHoverRadius:6,borderWidth:2.5,tension:.35,order:0},
-    {label:LBL.arrived,data:md0.arr,backgroundColor:fade(C.arrived,md0),borderRadius:5,stack:'s',order:1},
-    {label:LBL.overdue,data:md0.over,backgroundColor:fade(C.overdue,md0),borderRadius:5,stack:'s',order:1},
-    {label:LBL.soon,data:md0.soon,backgroundColor:fade(C.soon,md0),borderRadius:5,stack:'s',order:1},
-    {label:LBL.waiting,data:md0.wait,backgroundColor:fade(C.waiting,md0),borderRadius:5,stack:'s',order:1}]},
-    options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true,
-        /* màu chú thích luôn đậm, kể cả khi cột tháng đầu đang mờ */
-        generateLabels: ch => Chart.defaults.plugins.legend.labels.generateLabels(ch)
-          .map((l,i)=>({...l, fillStyle:['#f87171',C.arrived,C.overdue,C.soon,C.waiting][i]}))}},
-      tooltip:{callbacks:{label: ctx => ctx.dataset.label+': '+ctx.parsed.y+tr(' machines',' thiết bị')}}},
-      scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{stepSize:1}}}}});
-  OV_HOOKS.push(()=>{
-    const md = monthData();
-    mChart.data.labels = md.labels;
-    mChart.data.datasets[0].data = md.late;
-    [['arr',C.arrived],['over',C.overdue],['soon',C.soon],['wait',C.waiting]].forEach(([k,col],i)=>{
-      mChart.data.datasets[i+1].data = md[k];
-      mChart.data.datasets[i+1].backgroundColor = fade(col, md);
-    });
-    mChart.update();
-  });
+  /* Máy về theo tháng (ECharts): cột chồng theo trạng thái ngày về + đường "Trễ" — 1 trục số máy */
+  const drawMonth = () => {
+    const md = monthData(), mu = cssv('--muted'), c = ecOf(chMonth);
+    const bar = (k, s) => ({ name:LBL[s], type:'bar', stack:'s', barMaxWidth:30, itemStyle:{ color:C[s] },
+      data:md[k].map((v, i) => ({ value:v, itemStyle:{ opacity:md.dim[i] ? .25 : 1, borderRadius:2 } })) });
+    c.setOption({ aria:{ enabled:true, label:{ description:tr('Machines arriving per month, by arrival status, with late machines as a line', 'Số máy về mỗi tháng theo trạng thái ngày về, đường đỏ là số máy trễ') } },
+      legend:{ bottom:0, textStyle:{ color:mu, fontSize:11 }, itemWidth:12, itemHeight:8 },
+      grid:{ left:6, right:8, top:10, bottom:chMonth.clientWidth < 420 ? 58 : 36, containLabel:true },
+      tooltip:Object.assign(ecTip(), { trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => `<b>${ps[0].name}</b><br>` + ps.filter(p => p.value).map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b> ${tr('machines', 'thiết bị')}`).join('<br>') }),
+      xAxis:{ type:'category', data:md.labels, axisTick:{ show:false }, axisLabel:{ color:mu, fontSize:11 }, axisLine:{ lineStyle:{ color:'rgba(148,163,184,.3)' } } },
+      yAxis:{ type:'value', minInterval:1, axisLabel:{ color:mu, fontSize:10.5 }, splitLine:{ lineStyle:{ color:'rgba(148,163,184,.1)' } } },
+      series:[bar('arr', 'arrived'), bar('over', 'overdue'), bar('soon', 'soon'), bar('wait', 'waiting'),
+        { name:tr('Late', 'Trễ'), type:'line', smooth:.35, symbol:'circle', symbolSize:7, data:md.late, z:5,
+          lineStyle:{ width:2.5, color:VZ.evalc('Trễ') }, itemStyle:{ color:VZ.evalc('Trễ'), borderColor:cssv('--panel'), borderWidth:1.5 } }] }, true);
+  };
+  drawMonth(); OV_HOOKS.push(drawMonth);
+  new ResizeObserver(() => [chMonth, chStatus].forEach(el => { const c = echarts.getInstanceByDom(el); if(c) c.resize(); })).observe(document.querySelector('#p1 .ov-ms'));
 }
 
 /* ===== page 2: phân tích — dòng chỉ số · thanh xếp hạng NCC / xuất xứ / nơi lắp đặt · bản đồ chỉ vẽ khi bấm 🗺 ===== */
 const sumV = rows => rows.reduce((s,x)=>s+(x.vnd||0),0);
-const tyT = v => (v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})+tr(' B',' tỷ');
+const tyT = v => VZ.money(v);      // tiền rút gọn chung (chart_theme.js)
 const pctT = (a,b) => b ? Math.round(a/b*100)+'%' : '—';
 const groupRows = (rows, key) => { const o = new Map(); rows.forEach(x=>{ const k = x[key] || ''; if(!o.has(k)) o.set(k, []); o.get(k).push(x); });
   return [...o].map(([k, r]) => ({ k, rows:r, n:r.length, v:sumV(r) })); };
@@ -2360,7 +2337,7 @@ function showMachines(title, rows){
   rows = [...rows].sort((a,b)=>{ const d=(PRIO[a.status]??9)-(PRIO[b.status]??9); if(d) return d; return (a.vedukienn??'')>(b.vedukienn??'')?1:-1; });
   const units = rows.reduce((s,x)=>s+x.sl,0), tre = rows.filter(x=>x.danhgia==='Trễ').length;
   mTitle.textContent = title;
-  mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')} · ${(sumV(rows)/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')} · ${tre} ${tr('late','trễ')}`;
+  mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')} · ${VZ.money(sumV(rows))} · ${tre} ${tr('late','trễ')}`;
   mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(x=>`
     <div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
       <span class="kn">${x.ten}${x.sl>=2?` <b style="color:var(--sky)">(x${x.sl})</b>`:''}<small>${x.noilapdat} · ${x.ncc} · ${fmtM(x.vnd)} ₫</small></span>
@@ -2378,7 +2355,7 @@ function hbars(el, items, icon){
       <span class="hb-l" title="${ovEsc(it.label)}">${ovEsc(it.label)}</span>
       <span class="hb-t">${(it.segs || [[it.val]]).filter(s=>s[0]).map(([v,c])=>`<i style="width:${v/max*100}%${c?';background:'+c:''}"></i>`).join('')}</span>
       <span class="hb-v">${it.txt}${it.sub?`<small>${it.sub}</small>`:''}</span></div>`).join('')
-    : `<div class="dm-hint">${tr('No data yet.','Chưa có dữ liệu.')}</div>`;
+    : `<div class="dm-hint">${tr('No data in this view — try clearing some filters.','Chưa có dữ liệu trong góc nhìn này — thử bỏ bớt bộ lọc.')}</div>`;
   el.querySelectorAll('.hb-row').forEach(r => r.onclick = () => { const it = items[+r.dataset.i]; showMachines(icon+' '+it.label, it.rows); });
 }
 function drawAnKpis(){
@@ -2427,7 +2404,7 @@ function drawInstallStats(){
   const D = v => v == null ? '—' : dmN(v, 1);
   const H = tr(['Arrived','Commissioned','Arrival → commissioning','Wait for installation','Installation → commissioning','Installing','Testing',`Not installed > ${DM.CFG.installWaitDays} d`,'Late commissioning'],
                ['Đã về','Đã NT','Về NM → NT','Chờ lắp đặt','Lắp đặt → NT','Đang lắp','Thử nghiệm',`Chưa lắp > ${DM.CFG.installWaitDays} ngày`,'Trễ NT']);
-  const tbl = (first, list) => !list.length ? `<div class="dm-empty">${tr('No machine has arrived at the plant yet.','Chưa có máy nào về NM.')}</div>`
+  const tbl = (first, list) => !list.length ? `<div class="dm-hint">${tr('No machine has arrived at the plant yet — enter <span class="act">Actual arrival at plant</span> with ⚡ Quick update.','Chưa có máy nào về NM — nhập <span class="act">Ngày máy về NM TT</span> bằng ⚡ Cập nhật nhanh.')}</div>`
     : `<table><thead><tr><th>${first}</th>${H.map((h,i)=>`<th${i>=2 && i<=4 ? ` title="${tr('average days','trung bình số ngày')}"` : ''}>${h}</th>`).join('')}</tr></thead><tbody>${list.map(r=>
       `<tr><td>${ovEsc(unescH(r.name)) || '—'}</td><td>${r.arrived}</td><td>${r.accepted}</td><td><b>${D(r.avgToAccept)}</b></td><td>${D(r.avgWait)}</td><td>${D(r.avgInstall)}</td>
         <td>${r.installing || ''}</td><td>${r.testing || ''}</td><td class="${r.waitInstall ? 'w' : ''}">${r.waitInstall || ''}</td><td class="${r.lateAccept ? 'b' : ''}">${r.lateAccept || ''}</td></tr>`).join('')}</tbody></table>`;
@@ -2452,7 +2429,7 @@ function initP2(){
   // Danh sách | 🗺 Bản đồ: bản đồ thay chỗ danh sách trong cùng thẻ; chỉ vẽ lần đầu bấm
   let mapsOn = false;
   anListBtn.textContent = tr('List','Danh sách'); anMapBtn.textContent = tr('🗺 Map','🗺 Bản đồ');
-  const geoView = map => { anMaps.hidden = !map; anGeo.hidden = map; anMapBtn.classList.toggle('on', map); anListBtn.classList.toggle('on', !map);
+  const geoView = map => { anMaps.hidden = !map; anGeo.hidden = map; document.getElementById('p2').classList.toggle('an-mapmode', map); anMapBtn.classList.toggle('on', map); anListBtn.classList.toggle('on', !map);
     if(map && !mapsOn){ mapsOn = true; initMaps(); } };
   anListBtn.onclick = () => geoView(false); anMapBtn.onclick = () => geoView(true);
   // ⏱ 1 bảng: Theo công ty | Theo NCC
@@ -2486,7 +2463,7 @@ function initMaps(){
     const mk = L.circleMarker(o.c,{radius:r,color:o.col,weight:2,fillColor:o.col,fillOpacity:.4}).addTo(mo);
     mk.bindTooltip(`${ctT(name)}: ${rows.length} ${tr('machines','thiết bị')}`,{direction:'top'});
     mk.bindPopup(`<div class="mp-title" style="color:${o.col}">🌍 ${ctT(name)}</div>
-      <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')} · ${(v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')}<br>${tr('Suppliers','NCC')}: ${nccs.join(', ')}</div>
+      <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')} · ${VZ.money(v)}<br>${tr('Suppliers','NCC')}: ${nccs.join(', ')}</div>
       <div class="mp-list">${rows.map(x=>`<div>${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
       {maxWidth:290});
     if(name!=='Việt Nam'){
@@ -2524,7 +2501,7 @@ function initMaps(){
     }
     mk.bindTooltip(`${ctT(name)}: ${rows.length} ${tr('machines','thiết bị')}`,{direction:'top'});
     mk.bindPopup(`<div class="mp-title">📍 ${name}</div>
-      <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')} · ${(v/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')}</div>
+      <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')} · ${VZ.money(v)}</div>
       <div class="mp-list">${rows.map(x=>`<div>${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
       {maxWidth:290});
     pts.push(coord);
@@ -2554,7 +2531,7 @@ function buildEval(){
     return {n, rows, total:rows.length, units:rows.reduce((s,x)=>s+x.sl,0),
       vnd:sumV(rows), tre, pend, ontime:(rows.length-tre)/rows.length};
   });
-  if(!picStats.length){ picTable.innerHTML = '<div class="dm-hint">'+tr('No data for this period.','Không có dữ liệu trong kỳ này.')+'</div>'; return; }
+  if(!picStats.length){ picTable.innerHTML = '<div class="dm-hint">'+tr('No data for this period — pick another month / year, or <span class="act">All</span>.','Không có dữ liệu trong kỳ này — chọn Tháng / Năm khác, hoặc <span class="act">Tất cả</span>.')+'</div>'; return; }
   const maxT = Math.max(...picStats.map(s=>s.total)), maxV = Math.max(...picStats.map(s=>s.vnd)) || 1;
   const scored = picStats.map(s=>{
     const pOn = s.ontime*W.ontime, pMay = s.total/maxT*W.may, pVal = s.vnd/maxV*W.val;
@@ -2651,7 +2628,7 @@ document.addEventListener('themechange', () => {
   if(inited.p5){ try{ plDrawMta(); plDrawCash(); plDrawLook(); }catch(e){} }
 });
 function renderScTable(){
-  if(!SC.length){ scTable.innerHTML = `<div class="dm-hint">${tr('No supplier data for this period.', 'Không có dữ liệu NCC trong kỳ này.')}</div>`; return; }
+  if(!SC.length){ scTable.innerHTML = `<div class="dm-hint">${tr('No supplier data for this period — pick another month / year, or <span class="act">All</span>.', 'Không có dữ liệu NCC trong kỳ này — chọn Tháng / Năm khác, hoặc <span class="act">Tất cả</span>.')}</div>`; return; }
   const cols = SC_COLS(), d = v => v == null ? '—' : dmN(v, 0);
   const val = (r, k) => k === 'grade' ? (r.grade ? GR_RANK[r.grade] : null) : r[k];
   const worst = (a, b) => ((val(a,'grade') ?? 9) - (val(b,'grade') ?? 9)) || ((a.onTimePct ?? 2) - (b.onTimePct ?? 2)) ||
@@ -2710,7 +2687,7 @@ async function plLoad(){
 const plTip = () => ({ backgroundColor:cssv('--panel2'), borderColor:cssv('--border'), textStyle:{ color:cssv('--txt'), fontSize:12 }, confine:true,
   extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:10px' });
 const plEc = (k, el) => PL.ec[k] || (PL.ec[k] = echarts.init(el));
-const plB = v => dmN(v / 1e9, 1) + tr(' B', ' tỷ');
+const plB = v => VZ.money(v);      // tiền rút gọn chung (chart_theme.js)
 
 /* 5.1 MTA */
 function plDefaultSel(){
@@ -2764,7 +2741,7 @@ function plPicker(){
     return `<label class="${off ? 'off' : ''}" data-q="${ovEsc((x.ten + ' ' + (x.ncc || '')).toLowerCase())}"><input type="checkbox" value="${x._id}"${on ? ' checked' : ''}${off ? ' disabled' : ''}>
       <span>${ovEsc(x.ten)}<small>${DM.companyCode(x.noilapdat) || ovEsc(x.noilapdat)} · ${x.vedukienn >= t ? tr('forecast ', 'dự kiến ') : tr('arrived ', 'đã về ')}${dmD(x.vedukienn)}</small></span></label>`; };
   plPick.innerHTML = `<input type="search" placeholder="${tr('Search machine…', 'Tìm máy…')}">` + (list.map(row).join('') ||
-    `<div class="dm-hint">${tr('No forecast history yet.', 'Chưa có lịch sử ngày dự kiến.')}</div>`);
+    `<div class="dm-hint">${tr('No forecast history yet — it is recorded automatically each time the expected arrival date changes.', 'Chưa có lịch sử ngày dự kiến — app tự ghi lại mỗi lần đổi Ngày dự kiến về NM.')}</div>`);
   const sq = plPick.querySelector('input[type=search]');
   sq.oninput = () => { const v = sq.value.trim().toLowerCase(); plPick.querySelectorAll('label').forEach(l => { l.style.display = !v || l.dataset.q.includes(v) ? '' : 'none'; }); };
   plPick.querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = () => {
@@ -3062,7 +3039,7 @@ function render(){
     <td>${stCell(x)}</td>
     <td><span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}">${dgT(x.danhgia)}${x.giaitrinh?' 📝':''}</span></td></tr>`).join('');
   const val = rows.reduce((s,x)=>s+x.vnd,0), usd = rows.reduce((s,x)=>s+x.usd,0);
-  cnt.textContent = `${rows.length} ${tr('machines','thiết bị')} · ${tr('Total','Tổng')}: ${(val/1e9).toLocaleString(NUMLOC,{maximumFractionDigits:1})} ${tr('B ₫','tỷ ₫')} ≈ ${fmtU(usd)}$ · ${tr('Page','Trang')} ${pageNo}/${nPages}`;
+  cnt.textContent = `${rows.length} ${tr('machines','thiết bị')} · ${tr('Total','Tổng')}: ${VZ.money(val)} ≈ ${VZ.money(usd, 'USD')} · ${tr('Page','Trang')} ${pageNo}/${nPages}`;
   // pager
   let html = `<button class="pbtn" ${pageNo===1?'disabled':''} onclick="goPage(${pageNo-1})">‹</button>`;
   for(let i=1;i<=nPages;i++){
@@ -4197,7 +4174,7 @@ window.showPayments = async (i, editId) => {
         <td style="${p.paid_date ? 'color:var(--st-ok);font-weight:700' : ''}">${p.paid_date ? '✓ ' + dmD(p.paid_date) : '—'}</td><td>${money(p.paid_amount, p.currency)}</td>
         ${canW ? `<td class="act"><button title="${tr('Edit','Sửa')}" onclick="showPayments(${i},'${p.id}')">✏️</button><button title="${tr('Delete','Xoá')}" data-del="${p.id}">🗑</button></td>` : ''}</tr>`;
     }).join('') + '</tbody></table></div>'
-    : `<div class="dm-hint">${tr('No payment schedule yet for this machine.', 'Máy này chưa có lịch thanh toán.')}</div>`;
+    : `<div class="dm-hint">${tr('No payment schedule yet for this machine — add one with <span class="act">➕ Add installment</span> below.', 'Máy này chưa có lịch thanh toán — thêm ở mục <span class="act">➕ Thêm đợt thanh toán</span> bên dưới.')}</div>`;
   const opt = (o, v) => Object.entries(o).map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${l}</option>`).join('');
   const nextNo = pays.reduce((m, p) => Math.max(m, p.installment_no), 0) + 1;
   const f = ed || { installment_no: nextNo, kind: pays.length ? 'other' : 'deposit', currency: 'VND' };
@@ -4401,8 +4378,8 @@ const money = x => LANG==='vi'
   : (x.value_usd != null ? '$' + N(x.value_usd) : '—');
 const bigMoney = rows => {
   const vnd = rows.reduce((s,x)=>s + (+x.value_vnd || 0), 0), usd = rows.reduce((s,x)=>s + (+x.value_usd || 0), 0);
-  return LANG==='vi' ? { main: N(vnd/1e9, 1), unit:' tỷ ₫', note:'≈ ' + N(usd/1e6, 2) + ' triệu USD' }
-                     : { main: '$' + N(usd/1e6, 2), unit:'M', note:'≈ ' + N(vnd/1e9, 1) + ' B ₫' };
+  return LANG==='vi' ? { main: N(vnd/1e9, 1), unit:' tỷ ₫', note:'≈ ' + VZ.money(usd, 'USD') }
+                     : { main: '$' + N(usd/1e6, 2), unit:'M', note:'≈ ' + VZ.money(vnd) };
 };
 const badge = s => `<span class="badge" style="background:color-mix(in srgb,var(--lc-${s}) 15%,transparent);color:var(--lci-${s})">${LCL[s] || E(s)}</span>`;
 
@@ -4583,7 +4560,7 @@ function updOverview(){
 
   /* ---- biểu đồ (ECharts, màu chart_theme.js) — CHỈ HIỂN THỊ, số liệu như cũ ---- */
   const valOf = x => LANG==='vi' ? (+x.value_vnd || 0) : (+x.value_usd || 0);
-  const vTxt = v => LANG==='vi' ? N(v/1e9, v >= 1e10 ? 0 : 1) + ' tỷ ₫' : '$' + N(v/1e6, v >= 1e7 ? 0 : 2) + 'M';
+  const vTxt = v => LANG==='vi' ? VZ.money(v) : VZ.money(v, 'USD');      // tiền rút gọn chung (chart_theme.js)
   const ink = { txt:cssv('--txt'), muted:cssv('--muted'), panel:cssv('--panel'), border:cssv('--border') };
   const tip = () => ({ backgroundColor:cssv('--panel2'), borderColor:ink.border, textStyle:{ color:ink.txt, fontSize:12 }, extraCssText:'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3)' });
   const chart = id => { const el = document.getElementById(id); return echarts.getInstanceByDom(el) || echarts.init(el); };
@@ -5640,7 +5617,6 @@ function setTheme(light){
   try{ localStorage.setItem('tdmv_theme', light ? 'light' : 'dark'); }catch(e){}
   btnTheme.textContent = light ? '🌙' : '☀️';
   btnTheme.title = light ? tr('Switch to dark theme','Chuyển sang giao diện tối') : tr('Switch to light theme','Chuyển sang giao diện sáng');
-  if(window.Chart){ Chart.defaults.color = cssv('--muted'); Object.values(Chart.instances).forEach(c=>c.update('none')); }
   document.dispatchEvent(new Event('themechange')); }
 setTheme(isLight());
 btnTheme.onclick = ()=> setTheme(!isLight());

@@ -186,6 +186,12 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - 📊 Tổng quan — thẻ **Cần chú ý**: nút `Danh sách | Chênh lệch` (`ATT_MODE`, bước D4, `attVariance(rows)`): thanh 2 chiều quanh 0 theo IBCS,
   đã về = ngày về TT − KH (đặc), chưa về = dự kiến − KH (viền), quá hạn chưa xác nhận = `DM.delay().days` (sọc ⚠); đỏ trễ / xanh sớm;
   xếp trễ nhất → sớm nhất, máy thiếu ngày KH đếm riêng, bấm → `showDetail`. Test: phần [2b] `e2e_ui_theme_test.py`.
+- Bước E (hoàn thiện): **đã gỡ Chart.js** — toàn app chỉ ECharts. "Máy về theo tháng" (`drawMonth` trong initP1) = cột chồng 4 trạng thái + đường Trễ, 1 trục;
+  "Trạng thái thiết bị" (`updateStatusChart`) = thanh ngang theo trạng thái ngày về, chia đoạn theo đánh giá (+ "Chưa đánh giá"), cùng số `statusRings()`.
+  Tiền rút gọn dùng chung **`VZ.money(v, cur)`**: ≥1 tỷ "12,3 tỷ ₫" (≥10 tỷ không lẻ), ≥1 triệu "850 tr ₫", USD "$1,25M"/"$850K" — `tyT`, `plB`, `vTxt` gọi nó;
+  bảng chi tiết vẫn số đầy đủ. Mọi ECharts tự bật `aria` (chart_theme.js bọc echarts.init); motion.js tắt hiệu ứng khi "giảm chuyển động".
+  Trạng thái trống: `.dm-hint` (📭 + câu có gợi ý việc cần làm) / `.dm-empty` (ổn, xanh). Phân tích: hàng NCC/Xuất xứ cao vừa nội dung (`max-height:58%`),
+  đang xem bản đồ thì `#p2.an-mapmode` giữ chiều cao cũ. Thẻ "Giá trị theo NCC" dùng `--vz-one` (xanh dương 1 màu, biến của chart_theme.js).
 - Đổi sáng/tối (`themechange`): vẽ lại `OV_HOOKS` (Tổng quan, Phân tích), Kế hoạch (`plDrawMta/Cash/Look`), ma trận NCC, Tổng quan Danh mục.
 
 ## 🧩 Sắp xếp — Danh mục MMTB (`arrange.js`, trang `#c4`, không cần migration)

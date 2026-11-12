@@ -40,6 +40,7 @@ function css(){
     Object.keys(LIFE).forEach(k => { v.push(`--lc-${k}:${HEX[m][LIFE[k]]}`, `--lci-${k}:${INK[m][LIFE[k]]}`); });
     Object.keys(ARRIVAL).forEach(k => { v.push(`--ar-${k}:${HEX[m][ARRIVAL[k]]}`, `--ari-${k}:${INK[m][ARRIVAL[k]]}`); });
     // biến cũ của app: giữ tên, đổi màu theo bảng mới
+    v.push(`--vz-one:${HEX[m].blue}`);                  // biểu đồ 1 chuỗi: 1 màu xanh dương
     v.push(`--st-inst:${INK[m].yellow}`, `--st-test:${INK[m].magenta}`, `--st-oper:${INK[m].green}`, `--st-over:${INK[m].orange}`);
     return v.join(';');
   };
@@ -70,6 +71,14 @@ const VZ = {
   seq: t => { const L = ['#184f95','#1c5cab','#256abf','#2a78d6','#3987e5'], D = ['#5598e7','#3987e5','#2a78d6','#256abf','#1c5cab'];
     const a = mode() === 'light' ? L : D; return a[Math.round(Math.max(0, Math.min(1, t)) * (a.length - 1))]; },
   fam: f => hex(f), famInk: f => ink(f),
+  /* tiền rút gọn dùng chung (thẻ KPI, nhãn biểu đồ, chú thích) — bảng chi tiết vẫn giữ số đầy đủ.
+     VND: ≥ 1 tỷ → "12,3 tỷ ₫" (≥ 10 tỷ không lẻ) · ≥ 1 triệu → "850 tr ₫" · nhỏ hơn → đủ số. USD: "$1,25M" / "$850K". */
+  money: (v, cur) => { v = +v || 0; const vi = (typeof LANG === 'undefined' ? 'vi' : LANG) === 'vi', loc = typeof NUMLOC === 'undefined' ? 'vi-VN' : NUMLOC;
+    const n = (x, d) => x.toLocaleString(loc, { maximumFractionDigits: d }), a = Math.abs(v);
+    if(cur === 'USD') return a >= 1e6 ? '$' + n(v / 1e6, 2) + 'M' : a >= 1e3 ? '$' + n(v / 1e3, 0) + 'K' : '$' + n(v, 0);
+    if(a >= 1e9) return n(v / 1e9, a >= 1e10 ? 0 : 1) + (vi ? ' tỷ ₫' : ' B ₫');
+    if(a >= 1e6) return n(v / 1e6, 0) + (vi ? ' tr ₫' : ' M ₫');
+    return n(v, 0) + ' ₫'; },
   // ngưỡng tỷ lệ đúng hạn: < 60% xấu · 60–80% cần cải thiện · ≥ 80% đạt (mục tiêu)
   ONTIME: { bad: .6, target: .8 }
 };
@@ -155,5 +164,13 @@ st2.textContent = `
 .vz-leg i{width:8px;height:8px;border-radius:2px;display:inline-block}`;
 if(document.body) document.body.appendChild(st2); else document.addEventListener('DOMContentLoaded', () => document.body.appendChild(st2));
 
+/* trợ năng: mọi biểu đồ ECharts có mô tả cho trình đọc màn hình (ECharts tự sinh từ dữ liệu) nếu biểu đồ chưa tự khai báo */
+if(window.echarts && echarts.init && !echarts.__vzAria){
+  const init0 = echarts.init;
+  echarts.init = function(){ const ch = init0.apply(this, arguments), set0 = ch.setOption;
+    ch.setOption = function(opt){ if(opt && typeof opt === 'object' && opt.series && !('aria' in opt)) opt.aria = { enabled: true }; return set0.apply(this, arguments); };
+    return ch; };
+  echarts.__vzAria = true;
+}
 window.VZ = VZ;
 })();
