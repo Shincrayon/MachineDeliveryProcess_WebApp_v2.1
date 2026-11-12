@@ -180,6 +180,12 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - 📅 Kế hoạch — **Lịch nhiệt 90 ngày** (bước D2, `plDrawCal(L)` gọi trong `plDrawLook`, `#plCal`): cột = tuần, hàng = thứ, ô = số máy dự kiến về NM
   (cùng danh sách `DM.lookahead`), màu `VZ.seq` (đậm/nổi = nhiều máy), viền đỏ = ngày có máy `o.red`, chấm = hôm nay, hàng cuối = tổng tuần;
   bấm ô → cuộn tới thẻ máy (`.pl-m[data-mid]`, nháy sáng). Test: phần [1b] trong `e2e_planning_test.py`.
+- 📅 Kế hoạch — **Dòng tiền** (bước D3): nút `Theo tháng | Luỹ kế (đường S)` (`PL.cmode`). Theo tháng = cột 5 loại đợt, 1 trục (bỏ đường luỹ kế trục phải).
+  Đường S (`plSCurve / plDrawScurve`, 6 tháng trước → 12 tháng tới): Kế hoạch luỹ kế (planned_date, không có thì ngày mốc như DM.cashflow),
+  Thực tế đã trả luỹ kế (paid_date; paid_amount trống = đủ số tiền đợt), Dự báo = đã trả + cumulative của `DM.cashflow` (không đổi). Test: phần [3] `e2e_planning_test.py`.
+- 📊 Tổng quan — thẻ **Cần chú ý**: nút `Danh sách | Chênh lệch` (`ATT_MODE`, bước D4, `attVariance(rows)`): thanh 2 chiều quanh 0 theo IBCS,
+  đã về = ngày về TT − KH (đặc), chưa về = dự kiến − KH (viền), quá hạn chưa xác nhận = `DM.delay().days` (sọc ⚠); đỏ trễ / xanh sớm;
+  xếp trễ nhất → sớm nhất, máy thiếu ngày KH đếm riêng, bấm → `showDetail`. Test: phần [2b] `e2e_ui_theme_test.py`.
 - Đổi sáng/tối (`themechange`): vẽ lại `OV_HOOKS` (Tổng quan, Phân tích), Kế hoạch (`plDrawMta/Cash/Look`), ma trận NCC, Tổng quan Danh mục.
 
 ## 🧩 Sắp xếp — Danh mục MMTB (`arrange.js`, trang `#c4`, không cần migration)

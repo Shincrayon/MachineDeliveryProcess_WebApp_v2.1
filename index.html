@@ -112,6 +112,26 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:
 
 .grid2{display:grid;grid-template-columns:5fr 7fr;gap:12px}
 .grid4{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* chênh lệch sớm/trễ (thẻ Cần chú ý): thanh 2 chiều quanh 0 — đỏ trễ, xanh lá sớm; đặc = đã về, viền = dự kiến */
+.var-h{display:grid;grid-template-columns:minmax(120px,32%) 1fr;font-size:11px;color:var(--muted);margin:0 0 4px}
+.var-h span:nth-child(1){grid-column:2;grid-row:1;justify-self:start}.var-h span:nth-child(2){grid-column:2;grid-row:1;justify-self:center}.var-h span:nth-child(3){grid-column:2;grid-row:1;justify-self:end}
+.var-list{display:flex;flex-direction:column}
+.var-r{display:grid;grid-template-columns:minmax(120px,32%) 1fr;gap:10px;align-items:center;padding:4px 2px;border-bottom:1px solid var(--border);cursor:pointer}
+.var-r:hover{background:rgba(148,163,184,.06)}
+.var-r .nm{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.var-r .nm small{display:block;font-size:10.5px;font-weight:500;color:var(--muted)}
+.var-t{position:relative;height:16px}
+.var-t .z{position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--muted);opacity:.6}
+.var-t .b{position:absolute;top:2px;height:12px;border-radius:3px}
+.var-t .b.late.act,.var-t .b.late.over{background:var(--st-bad)} .var-t .b.early.act{background:var(--st-ok)}
+.var-t .b.late.fc{background:color-mix(in srgb,var(--st-bad) 12%,transparent);box-shadow:inset 0 0 0 1.5px var(--st-bad)}
+.var-t .b.early.fc{background:color-mix(in srgb,var(--st-ok) 12%,transparent);box-shadow:inset 0 0 0 1.5px var(--st-ok)}
+.var-t .b.over{background:repeating-linear-gradient(135deg,var(--st-bad) 0 5px,color-mix(in srgb,var(--st-bad) 55%,transparent) 5px 8px)}
+.var-t b{position:absolute;top:0;font-size:11px;line-height:16px;white-space:nowrap}
+.var-t b.late{color:var(--st-bad)} .var-t b.early{color:var(--st-ok)}
+.var-leg{display:flex;flex-wrap:wrap;gap:3px 14px;font-size:11px;color:var(--muted);margin-top:6px}
+.var-leg i{display:inline-block;width:14px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.var-leg i.early.act{background:var(--st-ok)} .var-leg i.late.act{background:var(--st-bad)} .var-leg i.late.fc{box-shadow:inset 0 0 0 1.5px var(--st-bad)}
 /* Tổng quan Danh mục: thanh vòng đời + treemap (trái, 2 hàng) + 2 thanh ngang (phải) */
 .mm-ov{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:12px}
 .mm-ov .mm-tm{grid-row:1 / span 2}
@@ -1089,7 +1109,7 @@ select.mp-open{border-color:var(--blue)}
     <div class="ov-main">
       <div class="card ov-gantt" style="--accent:var(--blue)"><h3><span class="dot"></span><span id="gnTitle"></span><small id="gnSub"></small><span class="sel"><span class="gv-btn" id="gnAll"></span></span></h3>
         <div class="dm-legend" id="gnLegend"></div><div class="dm-gwrap"><div id="gnChart"></div></div><div id="gnEmpty" class="dm-hint" hidden></div></div>
-      <div class="card dm-att ov-att" style="--accent:var(--st-bad)"><h3><span class="dot"></span><span id="attTitle"></span><small id="attSub"></small></h3><div id="attBox"></div></div>
+      <div class="card dm-att ov-att" style="--accent:var(--st-bad)"><h3><span class="dot"></span><span id="attTitle"></span><small id="attSub"></small><span class="sel"><span class="gv-btn on" id="attModeL"></span><span class="gv-btn" id="attModeV"></span></span></h3><div id="attBox"></div></div>
       <div class="ov-sub">
         <div class="card ov-fn" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="fnTitle"></span><span class="sel"><span class="gv-btn on" id="fnCnt"></span><span class="gv-btn" id="fnVal"></span></span></h3><div id="fnChart"></div></div>
         <div class="card ov-ms" style="--accent:#60a5fa"><h3><span class="dot"></span><span id="msTitle"></span><span class="sel"><span class="gv-btn on" id="msMon"></span><span class="gv-btn" id="msSt"></span></span></h3>
@@ -1134,7 +1154,8 @@ select.mp-open{border-color:var(--blue)}
       <div class="card pl-mta" style="--accent:var(--blue)"><h3><span class="dot"></span><span id="plMtaT"></span><small id="plMtaS"></small><span class="sel"><button class="gv-btn" id="plPickBtn"></button></span></h3>
         <div class="pl-pick" id="plPick" hidden></div>
         <div id="plMta"></div><div class="dm-hint" id="plMtaE" hidden></div><div class="pl-note" id="plMtaN"></div></div>
-      <div class="card pl-cash" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="plCashT"></span><small id="plCashS"></small></h3>
+      <div class="card pl-cash" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="plCashT"></span><small id="plCashS"></small>
+        <span class="sel"><span class="gv-btn on" id="plCmM"></span><span class="gv-btn" id="plCmS"></span></span></h3>
         <div id="plCash"></div><div class="dm-hint" id="plCashE" hidden></div><div class="pl-due" id="plDue"></div></div>
       <div class="card pl-look" style="--accent:var(--st-warn)"><h3><span class="dot"></span><span id="plLookT"></span><small id="plLookS"></small></h3>
         <div class="pl-cal" id="plCal"></div><div class="dm-legend" id="plLookL"></div><div class="pl-list" id="plLook"></div></div>
@@ -1929,6 +1950,32 @@ let KP = null;
     document.getElementById('dmN_'+k).textContent = note;
   };
   attTitle.textContent = tr('⚠️ Needs attention', '⚠️ Cần chú ý');
+  let ATT_MODE = 'l';
+  attModeL.onclick = () => { ATT_MODE = 'l'; draw(); }; attModeV.onclick = () => { ATT_MODE = 'v'; draw(); };
+  /* Chênh lệch sớm/trễ từng máy so với ngày về NM theo KH (IBCS: thanh 2 chiều quanh 0) — CHỈ HIỂN THỊ.
+     Đã về: ngày về TT − KH (tô đặc) · chưa về: ngày dự kiến − KH (chỉ viền) · quá hạn chưa xác nhận: số ngày trễ của DM.delay (⚠).
+     Máy thiếu ngày KH không vẽ (đếm riêng). Xanh lá = sớm / đúng hạn, đỏ = trễ. */
+  function attVariance(rows){
+    const it = [], noPlan = [];
+    rows.forEach(x => { const m = DM.milestones(x)[2]; if(!m.planned){ if(m.actual || m.forecast) noPlan.push(x); return; }
+      const st = DM.arrivalStatus(x).status, d = DM.delay(x);
+      const v = m.actual ? DM.days(m.planned, m.actual) : st === 'overdue' && d && d.unconfirmed ? d.days : m.forecast ? DM.days(m.planned, m.forecast) : null;
+      if(v == null) return;
+      it.push({ x, v, kind: m.actual ? 'act' : st === 'overdue' ? 'over' : 'fc', plan: m.planned, date: m.actual || m.forecast }); });
+    it.sort((a, b) => b.v - a.v || String(a.x.ten).localeCompare(String(b.x.ten)));
+    const late = it.filter(o => o.v > 0), mx = Math.max(1, ...it.map(o => Math.abs(o.v)));
+    attSub.textContent = it.length ? tr(`${it.length} machines · ${it.length - late.length} on time / early · ${late.length} late` + (late.length ? ` · avg +${dmN(late.reduce((s, o) => s + o.v, 0) / late.length, 0)} d` : '') + (noPlan.length ? ` · ${noPlan.length} without plan date` : ''),
+      `${it.length} máy · ${it.length - late.length} đúng/sớm · ${late.length} trễ` + (late.length ? ` · trễ TB +${dmN(late.reduce((s, o) => s + o.v, 0) / late.length, 0)} ngày` : '') + (noPlan.length ? ` · ${noPlan.length} thiếu ngày KH` : '')) : '';
+    if(!it.length){ attBox.innerHTML = `<div class="dm-empty">${tr('No machines with a planned arrival date in this filter.', 'Không có máy nào có ngày về theo KH trong bộ lọc này.')}</div>`; return; }
+    const K = tr({ act:'arrived', fc:'expected', over:'overdue – unconfirmed' }, { act:'đã về', fc:'dự kiến', over:'quá hạn – chưa xác nhận' });
+    attBox.innerHTML = `<div class="var-h"><span>◀ ${tr('early', 'sớm')}</span><span>${tr('days vs planned arrival', 'ngày so với ngày về theo KH')}</span><span>${tr('late', 'trễ')} ▶</span></div>
+      <div class="var-list">${it.map(o => { const w = Math.abs(o.v) / mx * 40, cls = (o.v > 0 ? 'late' : 'early') + ' ' + o.kind;
+        const tip = `${unescH(o.x.ten)} · ${K[o.kind]} ${dmD(o.date)} · ${tr('plan', 'KH')} ${dmD(o.plan)} · ` + (o.v > 0 ? tr('late', 'trễ') + ` ${o.v} ${tr('d', 'ngày')}` : o.v < 0 ? tr('early', 'sớm') + ` ${-o.v} ${tr('d', 'ngày')}` : tr('on time', 'đúng hạn'));
+        return `<div class="var-r" onclick="showDetail(${DATA.indexOf(o.x)})" title="${ovEsc(tip)}"><span class="nm">${ovEsc(o.x.ten)}<small>${DM.companyCode(o.x.noilapdat) || ovEsc(o.x.noilapdat) || ''} · ${K[o.kind]}</small></span>
+          <span class="var-t"><i class="z"></i><i class="b ${cls}" style="${o.v > 0 ? 'left:50%' : 'right:50%'};width:${o.v ? Math.max(w, .8) : 0}%"></i>
+          <b class="${o.v > 0 ? 'late' : 'early'}" style="${o.v > 0 ? `left:calc(50% + ${w}% + 4px)` : `right:calc(50% + ${w}% + 4px)`}">${o.kind === 'over' ? '⚠ ' : ''}${o.v > 0 ? '+' : ''}${o.v}</b></span></div>`; }).join('')}</div>
+      <div class="var-leg"><span><i class="early act"></i>${tr('arrived early / on time', 'đã về sớm / đúng hạn')}</span><span><i class="late act"></i>${tr('arrived late', 'đã về trễ')}</span><span><i class="late fc"></i>${tr('not arrived (outline = expected)', 'chưa về (viền = dự kiến)')}</span><span>⚠ ${tr('overdue – unconfirmed', 'quá hạn – chưa xác nhận')}</span></div>`;
+  }
   /* ---- hình nhỏ trong thẻ KPI (chart_theme.js: VZ.spark / segbar / bullet / cols / delta) ----
      CHỈ HIỂN THỊ: đọc lại dữ liệu đang có, không đổi con số / cách tính của thẻ. */
   function kpiViz(rows, cm){
@@ -2000,6 +2047,9 @@ let KP = null;
          tr('all periods', 'mọi kỳ')].filter(Boolean).join(' · '));
     kpiViz(rows, cm);
 
+    attModeL.textContent = tr('List', 'Danh sách'); attModeV.textContent = tr('Variance', 'Chênh lệch');
+    attModeL.classList.toggle('on', ATT_MODE !== 'v'); attModeV.classList.toggle('on', ATT_MODE === 'v');
+    if(ATT_MODE === 'v'){ attVariance(rows); return; }
     const list = DM.attention(rows, 5);
     attSub.textContent = dl.count ? tr(`top ${list.length} of ${dl.count} delayed · by days late`, `${list.length} / ${dl.count} máy trễ nặng nhất · theo số ngày trễ`) : '';
     if(!list.length){
@@ -2640,7 +2690,7 @@ function renderScTable(){
 }
 
 /* ===== tab 📅 Kế hoạch: MTA · dòng tiền 12 tháng · lookahead 90 ngày (số liệu: metrics.js) ===== */
-const PL = { hist:[], pays:[], ready:[], rates:{}, err:{}, sel:null, ec:{} };
+const PL = { hist:[], pays:[], ready:[], rates:{}, err:{}, sel:null, ec:{}, cmode:'m' };
 const READY_L = () => tr({ foundation:'🧱 Foundation', power_supply:'⚡ Power', lifting:'🏗 Lifting', installer:'👷 Installer', utilities:'💧 Air / water' },
                          { foundation:'🧱 Móng máy', power_supply:'⚡ Nguồn điện', lifting:'🏗 Cẩu / nâng hạ', installer:'👷 Đội lắp đặt', utilities:'💧 Khí / nước' });
 const READY_S = () => tr({ todo:'To do', in_progress:'In progress', done:'Done', na:'Not needed' }, { todo:'Chưa làm', in_progress:'Đang làm', done:'Xong', na:'Không cần' });
@@ -2725,7 +2775,11 @@ function plPicker(){
 
 /* 5.2 dòng tiền */
 function plDrawCash(){
-  plCashT.textContent = tr('💰 Cash-flow forecast — next 12 months', '💰 Dự báo dòng tiền — 12 tháng tới');
+  const sMode = PL.cmode === 's';
+  plCashT.textContent = sMode ? tr('💰 Cash flow — cumulative (S-curve)', '💰 Dòng tiền — luỹ kế (đường cong S)') : tr('💰 Cash-flow forecast — next 12 months', '💰 Dự báo dòng tiền — 12 tháng tới');
+  plCmM.textContent = tr('Monthly', 'Theo tháng'); plCmS.textContent = tr('Cumulative (S)', 'Luỹ kế (đường S)');
+  plCmM.classList.toggle('on', !sMode); plCmS.classList.toggle('on', sMode);
+  plCmM.onclick = () => { PL.cmode = 'm'; plDrawCash(); }; plCmS.onclick = () => { PL.cmode = 's'; plDrawCash(); };
   if(PL.err.pays){ plCash.style.display = 'none'; plDue.innerHTML = ''; plCashE.hidden = false; plCashE.textContent = plMissing(PL.err.pays, '20261030_02_payment_schedule.sql'); return; }
   const byId = Object.fromEntries(DATA.map(x => [x._id, x]));
   const C = DM.cashflow(PL.pays, byId, PL.rates, { months: 12 });
@@ -2735,7 +2789,7 @@ function plDrawCash(){
     (C.overdue.count ? ` · <b style="color:var(--st-bad)">${C.overdue.count} ${tr('overdue', 'quá hạn')} (${dmN(C.overdue.vnd)} ₫)</b>` : '') +
     (C.unscheduled.length ? ` · ${C.unscheduled.length} ${tr('without date / rate', 'thiếu ngày / tỷ giá')}` : '') : '';
   plCashS.title = plCashS.textContent;
-  const has = PL.pays.length && (total || C.overdue.count || C.due30.length);
+  const has = PL.pays.length && (sMode || total || C.overdue.count || C.due30.length);
   plCashE.hidden = !!has; plCash.style.display = has ? '' : 'none';
   if(!has){ if(PL.ec.cash) PL.ec.cash.clear(); plDue.innerHTML = '';
     plCashE.textContent = PL.pays.length ? tr('No unpaid installments with a due date in the next 12 months.', 'Không có đợt chưa trả nào đến hạn trong 12 tháng tới.')
@@ -2750,17 +2804,57 @@ function plDrawCash(){
     tooltip:Object.assign(plTip(), { trigger:'axis', axisPointer:{ type:'shadow' }, formatter: ps => `<b>${ps[0].name}</b><br>` +
       ps.filter(p => p.value).map(p => `${p.marker}${p.seriesName}: <b>${dmN(p.value)} ₫</b>`).join('<br>') }),
     xAxis:{ type:'category', data:C.months.map(m => ml(m.month)), axisLabel:{ color:cssv('--muted'), fontSize:11 }, axisLine:{ lineStyle:{ color:cssv('--border') } } },
-    yAxis:[{ type:'value', axisLabel:{ color:cssv('--muted'), fontSize:10.5, formatter:plB }, splitLine:{ lineStyle:{ color:cssv('--border') } } },
-           { type:'value', axisLabel:{ color:cssv('--muted'), fontSize:10.5, formatter:plB }, splitLine:{ show:false } }],
+    yAxis:{ type:'value', axisLabel:{ color:cssv('--muted'), fontSize:10.5, formatter:plB }, splitLine:{ lineStyle:{ color:cssv('--border') } } },
     series: DM.PAY_KINDS.map(k => ({ name:K[k], type:'bar', stack:'pay', barMaxWidth:28, itemStyle:{ color:KC[k], borderRadius:2 }, data:C.months.map(m => m[k]) }))
-      .concat([{ name:tr('Cumulative', 'Luỹ kế'), type:'line', yAxisIndex:1, symbol:'circle', symbolSize:5, smooth:.25,
-                 lineStyle:{ width:2, color:cssv('--txt') }, itemStyle:{ color:cssv('--txt') }, data:C.months.map(m => m.cumulative) }])
   }, true);
+  if(sMode) plDrawScurve(ec, byId, C, ml);
   const rows = C.due30;
   plDue.innerHTML = `<table><thead><tr><th>${tr('Due in 30 days', 'Đến hạn 30 ngày')}</th><th>${tr('Machine', 'Máy')}</th><th>${tr('Installment', 'Đợt')}</th><th class="r">VNĐ</th></tr></thead><tbody>` +
     (rows.length ? rows.map(i => `<tr class="${i.due < DM.todayIso() ? 'od' : ''}"><td>${dmD(i.due)}${i.due < DM.todayIso() ? ' ⚠' : ''}</td><td class="nm">${ovEsc(i.x ? i.x.ten : '—')}</td>` +
       `<td>#${i.p.installment_no} · ${K[i.kind] || i.kind}</td><td class="r">${dmN(i.vnd)}</td></tr>`).join('')
       : `<tr><td colspan="4" style="color:var(--muted)">${tr('Nothing due in the next 30 days.', 'Không có đợt nào đến hạn trong 30 ngày tới.')}</td></tr>`) + '</tbody></table>';
+}
+
+/* Đường cong S (CHỈ HIỂN THỊ, đọc lịch thanh toán đã có): 6 tháng trước → 12 tháng tới, 1 trục (₫).
+   Kế hoạch luỹ kế = mọi đợt theo ngày kế hoạch (planned_date, không có thì ngày của mốc gắn kèm — như DM.cashflow);
+   Thực tế đã trả luỹ kế = các đợt đã trả theo ngày trả (paid_date; số tiền trả nếu có, không thì số tiền đợt);
+   Dự báo = đã trả đến hôm nay + các đợt chưa trả cộng dần theo hạn (đúng số của DM.cashflow, gồm cả đợt quá hạn). */
+function plSCurve(byId, C){
+  const t = DM.todayIso(), cur = t.slice(0, 7);
+  const months = []; { const d = new Date(t.slice(0, 8) + '01T00:00:00'); d.setMonth(d.getMonth() - 6);
+    for(let i = 0; i < 18; i++){ months.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')); d.setMonth(d.getMonth() + 1); } }
+  const due = p => (p.planned_date ? String(p.planned_date).slice(0, 10) : '') || DM.msDate(byId[p.machine_id], p.linked_milestone);
+  const plan = PL.pays.map(p => ({ d: due(p), v: DM.payVnd(p, byId[p.machine_id], PL.rates) })).filter(o => o.d && o.v != null);
+  const paid = PL.pays.filter(p => p.paid_date).map(p => ({ d: String(p.paid_date).slice(0, 10),
+    v: p.paid_amount != null && p.paid_amount !== '' ? DM.payVnd(Object.assign({}, p, { amount: p.paid_amount, percent: null }), byId[p.machine_id], PL.rates) : DM.payVnd(p, byId[p.machine_id], PL.rates) })).filter(o => o.v != null);
+  const upTo = (list, m) => list.filter(o => o.d.slice(0, 7) <= m).reduce((a, o) => a + o.v, 0);
+  const paidNow = paid.filter(o => o.d <= t).reduce((a, o) => a + o.v, 0), planNow = plan.filter(o => o.d <= t).reduce((a, o) => a + o.v, 0);
+  const ci = months.indexOf(cur), fc = Object.fromEntries(C.months.map(m => [m.month, m.cumulative]));
+  return { months, ci, paidNow, planNow,
+    plan: months.map(m => upTo(plan, m)),
+    actual: months.map((m, i) => i < ci ? upTo(paid, m) : i === ci ? paidNow : null),
+    forecast: months.map((m, i) => i < ci ? null : fc[m] != null ? paidNow + fc[m] : null) };
+}
+function plDrawScurve(ec, byId, C, ml){
+  const S = plSCurve(byId, C), gap = S.paidNow - S.planNow, one = VZ.one(), mu = cssv('--muted');
+  const gapTxt = !S.planNow && !S.paidNow ? '' : ` · ${tr('paid', 'đã chi')} <b>${plB(S.paidNow)}</b> / <b>${plB(S.planNow)}</b> ${tr('planned to date', 'theo kế hoạch đến hôm nay')}` +
+    (Math.abs(gap) < 1 ? '' : gap < 0 ? ` · <b style="color:var(--st-warn)">${tr('behind', 'chậm')} ${plB(-gap)}</b>` : ` · <b style="color:var(--sky)">${tr('ahead', 'vượt')} ${plB(gap)}</b>`);
+  plCashS.innerHTML = `${tr('VND', 'VNĐ')} · ${tr('6 months back → 12 ahead', '6 tháng trước → 12 tháng tới')}` + gapTxt;
+  plCashS.title = plCashS.textContent;
+  ec.setOption({
+    textStyle:{ color:mu, fontFamily:'Segoe UI, system-ui, sans-serif' },
+    legend:{ top:0, textStyle:{ color:mu, fontSize:11 }, itemWidth:18, itemHeight:8 },
+    grid:{ left:6, right:10, top:28, bottom:2, containLabel:true },
+    tooltip:Object.assign(plTip(), { trigger:'axis', formatter: ps => `<b>${ps[0].name}</b><br>` + ps.filter(p => p.value != null).map(p => `${p.marker}${p.seriesName}: <b>${dmN(p.value)} ₫</b>`).join('<br>') }),
+    xAxis:{ type:'category', boundaryGap:false, data:S.months.map(ml), axisLabel:{ color:mu, fontSize:11 }, axisLine:{ lineStyle:{ color:cssv('--border') } } },
+    yAxis:{ type:'value', axisLabel:{ color:mu, fontSize:10.5, formatter:plB }, splitLine:{ lineStyle:{ color:cssv('--border') } } },
+    series:[
+      { name:tr('Plan (cumulative)', 'Kế hoạch luỹ kế'), type:'line', symbol:'none', data:S.plan, lineStyle:{ width:2, type:'dashed', color:cssv('--txt'), opacity:.55 }, itemStyle:{ color:cssv('--txt') },
+        markLine:{ silent:true, symbol:'none', lineStyle:{ color:cssv('--st-bad'), width:1.5 }, label:{ formatter:tr('Today', 'Hôm nay'), color:cssv('--st-bad'), fontWeight:700, position:'insideEndTop' }, data:[{ xAxis:S.ci }] } },
+      { name:tr('Actual paid (cumulative)', 'Thực tế đã trả luỹ kế'), type:'line', symbol:'circle', symbolSize:6, data:S.actual, lineStyle:{ width:2.5, color:one }, itemStyle:{ color:one },
+        areaStyle:{ color:new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset:0, color:one + '40' }, { offset:1, color:one + '05' }]) } },
+      { name:tr('Forecast (unpaid)', 'Dự báo (chưa trả)'), type:'line', symbol:'circle', symbolSize:5, data:S.forecast, lineStyle:{ width:2, type:'dotted', color:one }, itemStyle:{ color:one } }]
+  }, true);
 }
 
 /* 5.3 lookahead */
