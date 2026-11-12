@@ -329,6 +329,23 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 .lt .bar .c{position:absolute;top:0;width:2px;height:14px;margin-left:-1px;background:var(--strong);border-radius:1px}
 .lt .t{min-width:96px;text-align:right}
 .sc-note{font-size:12px;color:var(--muted);margin-top:8px;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
+/* bảng điểm NCC: bảng + ma trận NCC; cột Đúng hạn = bullet (vùng C <50% · B · A ≥80%, vạch mục tiêu 80%); cột Lịch sử giao = chấm */
+.sc-wrap{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(280px,1fr);gap:14px;align-items:stretch}
+.sc-mx{display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--border);padding-left:14px}
+.sc-mx-h{font-size:12.5px;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline}
+.sc-mx-h small{color:var(--muted);font-size:11.5px}
+#scMx{flex:1 1 auto;min-height:300px;height:340px}
+.sc-bul{position:relative;flex:0 0 84px;height:12px}
+.sc-bul .z{position:absolute;top:0;bottom:0}
+.sc-bul .z1{left:0;width:50%;border-radius:3px 0 0 3px;background:color-mix(in srgb,var(--st-bad) 20%,transparent)}
+.sc-bul .z2{left:50%;width:30%;background:color-mix(in srgb,var(--st-warn) 18%,transparent)}
+.sc-bul .z3{left:80%;width:20%;border-radius:0 3px 3px 0;background:color-mix(in srgb,var(--st-ok) 20%,transparent)}
+.sc-bul .v{position:absolute;left:0;top:3px;height:6px;border-radius:0 3px 3px 0;background:var(--txt)}
+.sc-bul .tg{position:absolute;left:80%;top:-2px;bottom:-2px;width:2px;margin-left:-1px;border-radius:2px;background:var(--txt)}
+.sc-hist{display:inline-flex;gap:3px;align-items:center;justify-content:flex-end}
+.sc-hist i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.sc-hist small{color:var(--muted);font-size:10.5px;margin-right:2px}
+@media(max-width:1000px){.sc-wrap{grid-template-columns:1fr}.sc-mx{border-left:0;padding-left:0;border-top:1px solid var(--border);padding-top:10px}}
 .pic-tbl tbody tr{cursor:pointer}
 .pic-tbl .pic-chip{cursor:pointer}
 /* ===== tab Phân tích: thanh xếp hạng ===== */
@@ -385,6 +402,10 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
   #p4 .sc-card{flex:1.5 1 0}
   #p4 .pic-card{flex:1 1 0}
   #p4 .sc-tbl{flex:1 1 auto;min-height:0;max-height:none}
+  #p4 .sc-wrap{flex:1 1 auto;min-height:0}
+  #p4 .sc-wrap .sc-tbl{height:100%}
+  #p4 #scMx{height:auto;min-height:0}
+  #p4 .sc-wrap .lt .bar{flex-basis:96px}
   #p4 .sc-tbl td{padding:5px 8px}
   #p4 .sc-note,#p4 #picNote{flex:0 0 auto;margin-top:6px}
   /* Danh mục › Tổng quan: 4 biểu đồ co giãn lấp phần còn lại của màn hình */
@@ -409,6 +430,23 @@ tr.late-flag:hover{animation-play-state:paused;background:rgba(248,113,113,.27)}
 #p5 .card{position:relative;min-width:0}
 #p5 .card h3 small{font-weight:500;color:var(--muted);font-size:12px;margin-left:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pl-look{grid-column:2;grid-row:1 / 3}
+/* lịch nhiệt 90 ngày: cột = tuần, hàng = thứ; màu xanh dương đậm = nhiều máy về; viền đỏ = có máy chưa sẵn sàng còn ≤ 14 ngày */
+.pl-cal{flex:0 0 auto;display:grid;gap:3px;margin:2px 0 10px;font-size:10.5px;color:var(--muted)}
+.pl-cal .mh{grid-row:1;white-space:nowrap;overflow:visible;font-weight:700;color:var(--txt)}
+.pl-cal .dl{text-align:right;padding-right:4px;line-height:15px}
+.pl-cal .c{height:15px;border-radius:3px;background:rgba(148,163,184,.1);position:relative}
+.pl-cal .c.past{background:transparent;border:1px dashed rgba(148,163,184,.18)}
+.pl-cal .c.on{cursor:pointer}
+.pl-cal .c.on:hover{outline:2px solid var(--txt);outline-offset:1px}
+.pl-cal .c.red{box-shadow:inset 0 0 0 2px var(--st-bad)}
+.pl-cal .c.today::after{content:'';position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;background:var(--txt)}
+.pl-cal .c b{position:absolute;inset:0;display:grid;place-items:center;font-size:9.5px;color:#fff;font-weight:800}
+.pl-cal .wt{text-align:center;font-weight:800;color:var(--txt);line-height:14px}
+.pl-cal .wt.z{color:var(--muted);font-weight:500}
+.pl-cal .leg{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:3px 12px;align-items:center;margin-top:2px}
+.pl-cal .leg i{display:inline-block;width:12px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+.pl-m.flash{animation:plFlash 1.6s ease-out}
+@keyframes plFlash{0%{box-shadow:0 0 0 3px var(--sky)}100%{box-shadow:0 0 0 0 transparent}}
 #plMta{height:300px} #plCash{height:240px}
 .pl-note{font-size:11.5px;color:var(--muted);margin-top:4px}
 .pl-pick{position:absolute;right:14px;top:46px;z-index:30;width:min(360px,calc(100% - 28px));max-height:360px;overflow:auto;background:var(--panel2);
@@ -1083,7 +1121,9 @@ select.mp-open{border-color:var(--blue)}
         <select id="evMonth"><option value="">Month: All</option></select>
         <select id="evYear"><option value="">Year: All</option></select>
         <span id="evInfo"></span></span></h3>
-      <div class="sc-tbl" id="scTable"></div><div class="sc-note" id="scNote"></div></div>
+      <div class="sc-wrap"><div class="sc-tbl" id="scTable"></div>
+        <div class="sc-mx"><div class="sc-mx-h"><b id="scMxT"></b><small id="scMxS"></small></div><div id="scMx"></div></div></div>
+      <div class="sc-note" id="scNote"></div></div>
     <div class="card pic-card" style="--accent:#2dd4bf;margin-top:12px"><h3><span class="dot"></span><span id="picTitle"></span><small id="picSub" style="font-weight:500;color:var(--muted);font-size:12px;margin-left:8px"></small></h3>
       <div class="sc-tbl pic-tbl" id="picTable"></div><div class="dm-legend" id="picNote" style="margin:8px 0 0"></div></div>
   </div>
@@ -1097,7 +1137,7 @@ select.mp-open{border-color:var(--blue)}
       <div class="card pl-cash" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="plCashT"></span><small id="plCashS"></small></h3>
         <div id="plCash"></div><div class="dm-hint" id="plCashE" hidden></div><div class="pl-due" id="plDue"></div></div>
       <div class="card pl-look" style="--accent:var(--st-warn)"><h3><span class="dot"></span><span id="plLookT"></span><small id="plLookS"></small></h3>
-        <div class="dm-legend" id="plLookL"></div><div class="pl-list" id="plLook"></div></div>
+        <div class="pl-cal" id="plCal"></div><div class="dm-legend" id="plLookL"></div><div class="pl-list" id="plLook"></div></div>
     </div>
   </div>
 
@@ -2490,13 +2530,14 @@ function buildEval(){
 }
 /* bảng điểm NCC: 1 bảng sắp xếp được — hạng A/B/C, đúng hạn, lead time cam kết → thực tế vẽ ngay trong dòng.
    Mặc định NCC kém nhất lên đầu (C → B → A). */
-let SC = [], scSort = null;
+let SC = [], scSort = null, SC_ROWS = [];
 const GR_RANK = { C:0, B:1, A:2 };
 const SC_COLS = () => [
   ['grade',       tr('Grade','Hạng'), 'c'],
   ['name',        tr('Supplier','Nhà cung cấp'), 'l'],
   ['delivered',   tr('Delivered','Đã giao')],
   ['onTimePct',   tr('On-time %','Đúng hạn')],
+  ['hist',        tr('Delivery history','Lịch sử giao')],
   ['avgLateDays', tr('Avg days late','TB ngày trễ')],
   ['gapDays',     tr('Lead time committed → actual (days)','Lead time cam kết → thực tế (ngày)')],
   ['inProgress',  tr('In progress','Đang chờ')]
@@ -2504,13 +2545,61 @@ const SC_COLS = () => [
 function drawScorecard(rows){
   scTitle.textContent = tr('Supplier scorecard — on-time delivery & lead time', 'Bảng điểm nhà cung cấp — đúng hạn & lead time');
   SC = DM.supplierScorecard(rows, { minDelivered: 2 }).map(r => Object.assign(r, { grade: DM.supplierGrade(r) }));
+  // CHỈ HIỂN THỊ: từng lần giao của NCC theo thời gian (cho cột Lịch sử giao + ma trận), không đổi cách chấm
+  SC_ROWS = rows; const byN = new Map();
+  rows.forEach(x => { const k = x.ncc || ''; if(!byN.has(k)) byN.set(k, []); byN.get(k).push(x); });
+  SC.forEach(r => { r.rows = byN.get(r.name) || [];
+    r.hist = r.rows.map(x => ({ x, m: DM.milestones(x)[2] })).filter(o => o.m.actual).sort((a, b) => String(a.m.actual).localeCompare(String(b.m.actual)))
+      .map(o => ({ ten: unescH(o.x.ten), d: o.m.actual, late: o.m.planned ? DM.days(o.m.planned, o.m.actual) : null })); });
   const ok = SC.filter(r => r.sufficient), cnt = g => ok.filter(r => r.grade === g).length;
   scSub.textContent = SC.length ? tr(`${ok.length} of ${SC.length} suppliers rated · min. 2 deliveries · worst first`, `${ok.length} / ${SC.length} NCC được chấm · tối thiểu 2 lần giao · kém nhất xếp đầu`) : '';
   scNote.innerHTML = SC.length ? ['A','B','C'].map(g => `<span><span class="gr gr-${g}">${g}</span> × <b>${cnt(g)}</b></span>`).join('') +
     `<span>${tr('A: on time ≥ 80% and avg. lateness ≤ 7 days · C: on time < 50% or avg. lateness > 14 days · B: the rest · LT = contract signed → arrival at plant',
                 'A: đúng hạn ≥ 80% và trễ TB ≤ 7 ngày · C: đúng hạn < 50% hoặc trễ TB > 14 ngày · B: còn lại · LT = ký HĐ → về NM')}</span>` : '';
-  renderScTable();
+  renderScTable();  drawScMatrix();
 }
+/* Ma trận NCC (ECharts): x = % đúng hạn, y = TB ngày trễ (0 ở trên), bong bóng = số máy đã giao, màu = hạng.
+   Vạch 80% (mục tiêu / hạng A) và 7 ngày chia 4 ô. CHỈ HIỂN THỊ — dùng đúng số của bảng điểm. Bấm bong bóng → danh sách máy. */
+function drawScMatrix(){
+  const el = document.getElementById('scMx'); if(!el) return;
+  const pts = SC.filter(r => r.sufficient && r.onTimePct != null);
+  scMxT.textContent = tr('Supplier matrix', 'Ma trận NCC');
+  scMxS.textContent = pts.length ? tr('bubble = deliveries · colour = grade · click for machines', 'bong bóng = số máy đã giao · màu = hạng · bấm để xem máy') : '';
+  const c = echarts.getInstanceByDom(el) || echarts.init(el);
+  if(!el._ro){ el._ro = new ResizeObserver(() => c.resize()); el._ro.observe(el); }
+  if(!pts.length){ c.clear(); el.dataset.empty = '1'; c.setOption({ graphic:{ type:'text', left:'center', top:'middle', style:{ text:tr('No supplier with 2+ deliveries yet','Chưa NCC nào đủ 2 lần giao'), fill:cssv('--muted'), fontSize:12 } } }); return; }
+  delete el.dataset.empty;
+  const ink = cssv('--txt'), mu = cssv('--muted'), GC = { A:cssv('--st-ok'), B:cssv('--st-warn'), C:cssv('--st-bad') };
+  const maxD = Math.max(...pts.map(r => r.delivered)), yMax = Math.max(14, Math.ceil(Math.max(...pts.map(r => r.avgLateDays || 0)) * 1.15 / 7) * 7);
+  const size = n => 12 + Math.sqrt(n / maxD) * 26;
+  const key = r => Math.round(r.onTimePct * 1000) + '|' + Math.round((r.avgLateDays || 0) * 10), grp = new Map();
+  pts.slice().sort((a, b) => b.delivered - a.delivered || a.name.localeCompare(b.name)).forEach(r => { const k = key(r); if(!grp.has(k)) grp.set(k, []); grp.get(k).push(r); });
+  const q = (x0, x1, y0, y1, name, pos, tint) => [{ xAxis:x0, yAxis:y0, name, itemStyle:{ color:tint }, label:{ position:pos, color:mu, fontSize:11, fontWeight:600 } }, { xAxis:x1, yAxis:y1 }];
+  c.setOption({
+    grid:{ left:44, right:16, top:14, bottom:40 },
+    tooltip:{ backgroundColor:cssv('--panel2'), borderColor:cssv('--border'), textStyle:{ color:ink, fontSize:12 }, extraCssText:'border-radius:10px',
+      formatter:p => { const r = p.data.r, g = grp.get(key(r)); return (g.length > 1 ? `<span style="color:${mu}">${tr('Same position','Cùng vị trí')}: ${g.map(o => ovEsc(unescH(o.name))).join(', ')}</span><br>` : '') + `<b>${ovEsc(unescH(r.name))}</b> · ${tr('grade','hạng')} <b>${r.grade}</b><br>${tr('On time','Đúng hạn')}: ${dmN(r.onTimePct * 100)}% (${r.onTimeNum}/${r.onTimeDen})<br>${tr('Avg days late','TB ngày trễ')}: ${r.avgLateDays == null ? 0 : '+' + dmN(r.avgLateDays, 0)}<br>${tr('Delivered','Đã giao')}: ${r.delivered}<br><span style="color:${mu}">${tr('click for the machine list','bấm để xem danh sách máy')}</span>`; } },
+    xAxis:{ type:'value', min:0, max:100, interval:20, name:tr('On-time %','% đúng hạn'), nameLocation:'middle', nameGap:24, nameTextStyle:{ color:mu, fontSize:11 },
+      axisLabel:{ color:mu, fontSize:10.5, formatter:'{value}%' }, splitLine:{ lineStyle:{ color:'rgba(148,163,184,.1)' } }, axisLine:{ lineStyle:{ color:'rgba(148,163,184,.3)' } } },
+    yAxis:{ type:'value', min:0, max:yMax, inverse:true, name:tr('Avg days late','TB ngày trễ'), nameLocation:'middle', nameGap:30, nameTextStyle:{ color:mu, fontSize:11 },
+      axisLabel:{ color:mu, fontSize:10.5, formatter:v => v ? '+' + v : '0' }, splitLine:{ lineStyle:{ color:'rgba(148,163,184,.1)' } } },
+    series:[{ type:'scatter', data:pts.map(r => ({ value:[r.onTimePct * 100, r.avgLateDays || 0], r, symbolSize:size(r.delivered),
+        itemStyle:{ color:GC[r.grade], opacity:.85, borderColor:cssv('--panel'), borderWidth:2 } })),
+      label:{ show:true, position:'right', color:ink, fontSize:11, fontWeight:600, formatter:p => { const g = grp.get(key(p.data.r)); return g[0].name !== p.data.r.name ? '' : unescH(g[0].name) + (g.length > 1 ? ` +${g.length - 1}` : ''); } }, labelLayout:{ hideOverlap:true },
+      emphasis:{ scale:1.15, label:{ show:true } },
+      markLine:{ silent:true, symbol:'none', lineStyle:{ color:mu, type:'dashed', width:1 }, label:{ color:mu, fontSize:10.5 },
+        data:[ { xAxis:80, label:{ formatter:tr('target 80%','mục tiêu 80%'), position:'insideStartTop' } }, { yAxis:7, label:{ formatter:'7 ' + tr('d','ngày'), position:'insideEndBottom' } } ] },
+      markArea:{ silent:true, data:[ q(80, 100, 0, 7, tr('Reliable','Tin cậy'), 'insideTopRight', 'rgba(52,211,153,.06)'), q(0, 80, 0, 7, tr('Often late (slightly)','Hay trễ nhẹ'), 'insideTopLeft', 'rgba(148,163,184,.03)'),
+        q(0, 80, 7, yMax, tr('Late — needs action','Trễ nặng — cần xử lý'), 'insideBottomLeft', 'rgba(248,113,113,.045)'), q(80, 100, 7, yMax, tr('Rarely late, but long delays','Ít trễ nhưng trễ lâu'), 'insideBottomRight', 'rgba(148,163,184,.03)') ] } }]
+  }, true);
+  c.off('click'); c.on('click', p => { if(p.data && p.data.r) showMachines('🏭 ' + unescH(p.data.r.name), p.data.r.rows); });
+}
+document.addEventListener('themechange', () => {
+  if(document.getElementById('p4').classList.contains('active')) drawScMatrix();
+  // đổi sáng/tối: vẽ lại Tổng quan / Phân tích (thẻ KPI, biểu đồ) và Kế hoạch (lịch nhiệt…) — chỉ vẽ lại, số liệu như cũ
+  try{ OV_HOOKS.forEach(f => f()); }catch(e){}
+  if(inited.p5){ try{ plDrawMta(); plDrawCash(); plDrawLook(); }catch(e){} }
+});
 function renderScTable(){
   if(!SC.length){ scTable.innerHTML = `<div class="dm-hint">${tr('No supplier data for this period.', 'Không có dữ liệu NCC trong kỳ này.')}</div>`; return; }
   const cols = SC_COLS(), d = v => v == null ? '—' : dmN(v, 0);
@@ -2528,16 +2617,23 @@ function renderScTable(){
   const lt = r => r.committedLT == null ? '—' : `<span class="lt"><span class="bar" title="${tr('marker = committed · bar = actual','vạch dọc = cam kết · thanh màu = thực tế')} · ${tr('based on','dựa trên')} ${r.ltCount} ${tr('deliveries','lần giao')}">
       <i class="a" style="width:${r.actualLT/maxLT*100}%;background:${gapCol(r.gapDays)}"></i><i class="c" style="left:${r.committedLT/maxLT*100}%"></i></span>
       <span class="t">${d(r.committedLT)} → ${d(r.actualLT)} <b style="color:${gapCol(r.gapDays)}">${(r.gapDays > 0 ? '+' : '') + dmN(r.gapDays, 0)}</b></span></span>`;
+  const hist = r => { const h = r.hist || [], sh = h.slice(-12);
+    if(!h.length) return '—';
+    return `<span class="sc-hist">${h.length > sh.length ? `<small>+${h.length - sh.length}</small>` : ''}${sh.map(o => {
+      const c = o.late == null ? 'var(--st-done)' : o.late <= 0 ? 'var(--st-ok)' : o.late <= 7 ? 'var(--st-warn)' : 'var(--st-bad)';
+      const t = `${o.ten} · ${tr('arrived','về')} ${dmD(o.d)} · ` + (o.late == null ? tr('no planned date','chưa có ngày KH') : o.late <= 0 ? tr('on time','đúng hạn') + (o.late < 0 ? ` (${tr('early','sớm')} ${-o.late} ${tr('d','ngày')})` : '') : `${tr('late','trễ')} ${o.late} ${tr('d','ngày')}`);
+      return `<i style="background:${c}" title="${ovEsc(t)}"></i>`; }).join('')}</span>`; };
   const row = r => `<tr><td class="c">${r.grade ? `<span class="gr gr-${r.grade}">${r.grade}</span>` : '—'}</td><td class="nm">${nm(r)}</td><td>${r.delivered}</td>` +
-    `<td>${r.onTimePct == null ? '—' : `<span class="mini"><b style="color:${pctCol(r.onTimePct)}">${dmN(r.onTimePct * 100)}%</b><small style="color:var(--muted)">${r.onTimeNum}/${r.onTimeDen}</small><span class="tr"><i style="width:${r.onTimePct*100}%;background:${pctCol(r.onTimePct)}"></i></span></span>`}</td>` +
+    `<td>${r.onTimePct == null ? '—' : `<span class="mini"><b style="color:${pctCol(r.onTimePct)}">${dmN(r.onTimePct * 100)}%</b><small style="color:var(--muted)">${r.onTimeNum}/${r.onTimeDen}</small><span class="sc-bul" title="${tr('Bullet: red < 50% (C) · amber 50–80% · green ≥ 80% (A) · marker = 80% target','Nền: đỏ < 50% (C) · vàng 50–80% · xanh ≥ 80% (A) · vạch = mục tiêu 80%')}"><i class="z z1"></i><i class="z z2"></i><i class="z z3"></i><i class="v" style="width:${r.onTimePct*100}%"></i><i class="tg"></i></span></span>`}</td>` +
+    `<td>${hist(r)}</td>` +
     `<td>${r.avgLateDays == null ? '—' : '+' + dmN(r.avgLateDays, 0)}</td><td>${lt(r)}</td><td>${r.inProgress}</td></tr>`;
-  const rowFew = r => `<tr class="insuf"><td class="c">—</td><td class="nm">${nm(r)}</td><td>${r.delivered}</td><td class="na" colspan="3">${tr('insufficient data', 'chưa đủ dữ liệu')}</td><td>${r.inProgress}</td></tr>`;
+  const rowFew = r => `<tr class="insuf"><td class="c">—</td><td class="nm">${nm(r)}</td><td>${r.delivered}</td><td class="na">${tr('insufficient data', 'chưa đủ dữ liệu')}</td><td>${hist(r)}</td><td class="na" colspan="2"></td><td>${r.inProgress}</td></tr>`;
   scTable.innerHTML = `<table><thead><tr>${cols.map(([k, t, c]) => `<th data-k="${k}" class="${c || ''} ${scSort && scSort.k === k ? 'on' : ''}">${t}${scSort && scSort.k === k ? (scSort.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody>` +
-    (ok.length ? ok.map(row).join('') : `<tr><td colspan="7" class="na">${tr('No supplier has 2 or more deliveries in this period.', 'Chưa NCC nào có từ 2 lần giao trong kỳ này.')}</td></tr>`) +
-    (few.length ? `<tr class="sc-sep"><td colspan="7">${tr('Fewer than 2 deliveries — insufficient data', 'Dưới 2 lần giao — chưa đủ dữ liệu')} (${few.length})</td></tr>` + few.map(rowFew).join('') : '') +
+    (ok.length ? ok.map(row).join('') : `<tr><td colspan="8" class="na">${tr('No supplier has 2 or more deliveries in this period.', 'Chưa NCC nào có từ 2 lần giao trong kỳ này.')}</td></tr>`) +
+    (few.length ? `<tr class="sc-sep"><td colspan="8">${tr('Fewer than 2 deliveries — insufficient data', 'Dưới 2 lần giao — chưa đủ dữ liệu')} (${few.length})</td></tr>` + few.map(rowFew).join('') : '') +
     `</tbody></table>`;
   scTable.querySelectorAll('th').forEach(th => th.onclick = () => {
-    const k = th.dataset.k;
+    const k = th.dataset.k; if(k === 'hist') return;
     scSort = scSort && scSort.k === k ? (scSort.dir < 0 ? { k, dir: 1 } : null) : { k, dir: k === 'name' ? 1 : -1 };
     renderScTable();
   });
@@ -2675,6 +2771,7 @@ function plDrawLook(){
   plLookS.innerHTML = `${L.length} ${tr('machines', 'máy')}` + (L.filter(o => o.red).length ? ` · <b style="color:var(--st-bad)">${L.filter(o => o.red).length} ${tr('not ready, ≤ 14 days', 'chưa sẵn sàng, còn ≤ 14 ngày')}</b>` : '');
   plLookL.innerHTML = ['done', 'in_progress', 'todo', 'na'].map(k => `<span><span class="pl-chip ${k}" style="padding:0 6px">${RS[k]}</span></span>`).join('') +
     (canW ? `<span>${tr('click a chip to change its status', 'bấm vào mục để đổi trạng thái')}</span>` : '');
+  plDrawCal(L);
   if(PL.err.ready){ plLook.innerHTML = `<div class="m-gt">${plMissing(PL.err.ready, '20261030_03_site_readiness.sql')}</div>`; }
   if(!L.length){ plLook.innerHTML += `<div class="dm-hint">${tr('No machines due at site in the next 90 days.', 'Không có máy nào về nhà máy trong 90 ngày tới.')}</div>`; return; }
   const G = tr(['0–30 days', '31–60 days', '61–90 days'], ['0–30 ngày', '31–60 ngày', '61–90 ngày']);
@@ -2684,7 +2781,7 @@ function plDrawLook(){
         const tip = `${RS[it.status]}${it.due_date ? ' · ' + tr('due ', 'hạn ') + dmD(it.due_date) : ''}${it.owner ? ' · ' + it.owner : ''}${it.note ? ' · ' + it.note : ''}`;
         return canW ? `<button class="pl-chip ${it.status}${late ? ' late' : ''}" title="${ovEsc(tip)}" data-m="${o.x._id}" data-it="${it.item}" data-st="${it.status}">${RL[it.item]}</button>`
                     : `<span class="pl-chip ${it.status}${late ? ' late' : ''}" title="${ovEsc(tip)}">${RL[it.item]}</span>`; }).join('');
-      return `<div class="pl-m${o.red ? ' red' : ''}"><div class="hd"><span class="nm" onclick="showDetail(${DATA.indexOf(o.x)})">${ovEsc(o.x.ten)}<small>${DM.companyCode(o.x.noilapdat) || ovEsc(o.x.noilapdat)} · ${ovEsc(o.x.phutrach) || '—'} · ${tr('at site ', 'về NM ')}${dmD(o.forecast)}</small></span>` +
+      return `<div class="pl-m${o.red ? ' red' : ''}" data-mid="${o.x._id}"><div class="hd"><span class="nm" onclick="showDetail(${DATA.indexOf(o.x)})">${ovEsc(o.x.ten)}<small>${DM.companyCode(o.x.noilapdat) || ovEsc(o.x.noilapdat)} · ${ovEsc(o.x.phutrach) || '—'} · ${tr('at site ', 'về NM ')}${dmD(o.forecast)}</small></span>` +
         `<span class="dd" style="color:${o.red ? 'var(--st-bad)' : o.days <= 30 ? 'var(--st-warn)' : 'var(--muted)'}">${o.days === 0 ? tr('today', 'hôm nay') : tr('in ' + o.days + ' d', 'còn ' + o.days + ' ngày')}${o.red ? ' ⚠' : ''}</span>` +
         `<span style="font-size:11.5px;color:var(--muted)">${5 - o.open}/5</span>${canW ? `<button class="ed" title="${tr('Edit checklist', 'Sửa checklist')}" data-ed="${o.x._id}">✏️</button>` : ''}</div>` +
         `<div class="pl-chips">${chips}</div></div>`; }).join(''); }).join('');
@@ -2699,6 +2796,41 @@ function plDrawLook(){
     plDrawLook();
   });
   plLook.querySelectorAll('button[data-ed]').forEach(b => b.onclick = () => plEditReady(b.dataset.ed));
+}
+/* lịch nhiệt 90 ngày (CHỈ HIỂN THỊ — cùng danh sách DM.lookahead): mỗi ô 1 ngày, số máy dự kiến về NM;
+   1 tông xanh dương (VZ.seq) càng nổi càng nhiều máy; viền đỏ = ngày có máy chưa sẵn sàng, còn ≤ 14 ngày (o.red). Bấm ô → cuộn tới máy. */
+function plDrawCal(L){
+  const t = DM.todayIso(), end = DM.addDays(t, 90);
+  const d0 = new Date(t + 'T00:00:00'), dow = (d0.getDay() + 6) % 7;          // 0 = thứ 2
+  const start = DM.addDays(t, -dow), weeks = Math.ceil((DM.days(start, end) + 1) / 7);
+  const by = {}; L.forEach(o => (by[o.forecast] = by[o.forecast] || []).push(o));
+  const mx = Math.max(1, ...Object.values(by).map(a => a.length));
+  const DL = tr(['Mon','','Wed','','Fri','','Sun'], ['T2','','T4','','T6','','CN']);
+  const MN = tr(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12']);
+  let h = '<span></span>', lastM = -1;
+  for(let w = 0; w < weeks; w++){ const ds = DM.addDays(start, w * 7), m = +ds.slice(5, 7) - 1;
+    h += `<span class="mh" style="grid-column:${w + 2}">${m !== lastM ? MN[m] : ''}</span>`; lastM = m; }
+  for(let r = 0; r < 7; r++){
+    h += `<span class="dl" style="grid-row:${r + 2};grid-column:1">${DL[r]}</span>`;
+    for(let w = 0; w < weeks; w++){
+      const d = DM.addDays(start, w * 7 + r), list = by[d] || [], n = list.length, past = d < t, out = d > end;
+      const red = list.some(o => o.red), cls = ['c', past ? 'past' : '', n ? 'on' : '', red ? 'red' : '', d === t ? 'today' : ''].filter(Boolean).join(' ');
+      const tip = dmD(d) + (past ? '' : out ? tr(' · beyond 90 days', ' · ngoài 90 ngày') : n ? ` · ${n} ${tr('machine(s)', 'máy')}: ` + list.map(o => unescH(o.x.ten) + (o.red ? ' ⚠' : '')).join(', ') : tr(' · none', ' · không có máy'));
+      h += `<span class="${cls}" style="grid-row:${r + 2};grid-column:${w + 2};${n ? `background:${VZ.seq(mx > 1 ? 1 - (n - 1) / (mx - 1) : 0)}` : out ? 'opacity:.35' : ''}" title="${ovEsc(tip)}"${n ? ` data-d="${d}"` : ''}>${n > 1 ? `<b>${n}</b>` : ''}</span>`;
+    }
+  }
+  for(let w = 0; w < weeks; w++){ const ds = DM.addDays(start, w * 7), n = L.filter(o => o.forecast >= ds && o.forecast <= DM.addDays(ds, 6)).length;
+    h += `<span class="wt${n ? '' : ' z'}" style="grid-row:9;grid-column:${w + 2}" title="${tr('Week of ', 'Tuần từ ')}${dmD(ds)}: ${n} ${tr('machine(s)', 'máy')}">${n || '·'}</span>`; }
+  h += `<span class="dl" style="grid-row:9;grid-column:1">${tr('Wk', 'Tuần')}</span>`;
+  h += `<div class="leg" style="grid-row:10"><span><i style="background:${VZ.seq(1)}"></i>${tr('1 machine', '1 máy')}</span>${mx > 1 ? `<span><i style="background:${VZ.seq(0)}"></i>${mx} ${tr('machines', 'máy')}</span>` : ''}` +
+       `<span><i style="box-shadow:inset 0 0 0 2px var(--st-bad);background:transparent"></i>${tr('not ready, ≤ 14 days', 'chưa sẵn sàng, còn ≤ 14 ngày')}</span><span>${tr('hover a day for machines · click to jump', 'rê chuột xem máy · bấm để tới máy')}</span></div>`;
+  plCal.style.gridTemplateColumns = `28px repeat(${weeks}, minmax(0, 1fr))`;
+  plCal.innerHTML = h;
+  plCal.querySelectorAll('.c[data-d]').forEach(c => c.onclick = () => {
+    const o = (by[c.dataset.d] || [])[0]; if(!o) return;
+    const el = plLook.querySelector(`.pl-m[data-mid="${o.x._id}"]`); if(!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  });
 }
 /* sửa chi tiết checklist 1 máy: trạng thái, hạn, người phụ trách, ghi chú (người phụ trách + ghi chú mã hoá) */
 function plEditReady(mid){

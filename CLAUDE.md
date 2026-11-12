@@ -173,6 +173,14 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
   1 tông xanh dương `VZ.seq` theo giá trị — không dùng màu trạng thái; lọc 1 nhà máy thì cấp 1 là chuyền; bấm máy → `mmShow`) ·
   **Top 10 NCC** + **Nhóm** (7 nhóm + "Khác") thanh ngang 1 màu. Đổi sáng/tối: `setTheme` phát sự kiện `themechange` để vẽ lại.
   Test: `e2e_catalog_overview_test.py`, `onescreen_mmtb_check.py`.
+- 🏅 Đánh giá — Bảng điểm NCC (bước D1, `drawScorecard / renderScTable / drawScMatrix`): cột Đúng hạn = bullet (vùng C <50% · 50–80% · A ≥80%,
+  vạch mục tiêu 80% — đúng ngưỡng `DM.supplierGrade`), cột **Lịch sử giao** (1 chấm / máy đã về theo thời gian: xanh đúng/sớm, vàng trễ ≤7, đỏ >7),
+  **Ma trận NCC** (ECharts scatter: x % đúng hạn, y TB ngày trễ đảo trục, bong bóng = số máy đã giao, màu hạng; NCC trùng vị trí 1 nhãn "Tên +n";
+  bấm → `showMachines`). Hạng / % / ngày trễ không đổi. Test: `e2e_supplier_matrix_test.py`.
+- 📅 Kế hoạch — **Lịch nhiệt 90 ngày** (bước D2, `plDrawCal(L)` gọi trong `plDrawLook`, `#plCal`): cột = tuần, hàng = thứ, ô = số máy dự kiến về NM
+  (cùng danh sách `DM.lookahead`), màu `VZ.seq` (đậm/nổi = nhiều máy), viền đỏ = ngày có máy `o.red`, chấm = hôm nay, hàng cuối = tổng tuần;
+  bấm ô → cuộn tới thẻ máy (`.pl-m[data-mid]`, nháy sáng). Test: phần [1b] trong `e2e_planning_test.py`.
+- Đổi sáng/tối (`themechange`): vẽ lại `OV_HOOKS` (Tổng quan, Phân tích), Kế hoạch (`plDrawMta/Cash/Look`), ma trận NCC, Tổng quan Danh mục.
 
 ## 🧩 Sắp xếp — Danh mục MMTB (`arrange.js`, trang `#c4`, không cần migration)
 - Cấu trúc: Nhà máy → Chuyền (`production_lines`) → ⭐ máy chính (`role=main`) / ◇ máy phụ (`auxiliary`) → ↳ máy con (`sub_unit`, có `parent_machine_id`).
