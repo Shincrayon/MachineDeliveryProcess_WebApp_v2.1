@@ -1721,10 +1721,9 @@ CB.make(f_pt, { items:()=>DATA.map(x=>unescH(x.phutrach)) });
 CB.make(f_xx, { items:()=>DATA.map(x=>unescH(x.xuatxu)) });
 CB.make(f_th, { items:()=>DATA.map(x=>unescH(x.thuong_hieu)).concat(((window.__MMTB||{}).machines||[]).map(c=>c.manufacturer).filter(v=>v && v!=='🔒')) });
 CB.make(f_ncc, { items:()=>DATA.map(x=>unescH(x.ncc)).concat(((window.__MMTB||{}).suppliers||[]).map(s=>s.name)) });
-// Tên máy, Model, Công suất: xổ từ dữ liệu Tiến độ + Danh mục, vẫn gõ mới được (không nhắc "Có phải…": tên máy hay chỉ khác số thứ tự)
+// Tên máy, Công suất: xổ từ dữ liệu Tiến độ + Danh mục (Model không xổ: không phải thư viện), vẫn gõ mới được (không nhắc "Có phải…": tên máy hay chỉ khác số thứ tự)
 const mmVals = k => (((window.__MMTB||{}).machines)||[]).map(c=>c[k]).filter(v=>v && v!=='🔒');
 CB.make(f_ten, { items:()=>DATA.map(x=>unescH(x.ten)).concat(mmVals('name')), hint:false });
-CB.make(f_model, { items:()=>DATA.map(x=>unescH(x.model)).concat(mmVals('model')), hint:false });
 CB.make(f_cs, { items:()=>DATA.map(x=>unescH(x.congsuat)), hint:false });
 CB.select(f_nld);      // Nơi lắp đặt: gõ để tìm nhà máy trong thư viện
 /* ô Nơi lắp đặt: chỉ chọn nhà máy trong thư viện. Lưu đúng cách ghi nhiều máy của công ty đó đang dùng (bộ lọc, biểu đồ gom theo chữ),
@@ -4928,10 +4927,9 @@ function buildForm(){
   // ô chọn từ dữ liệu Danh mục (combo.js): vẫn gõ được giá trị mới. Ô đơn vị quá hẹp, không chèn dòng nhắc
   [['m_origin','origin'],['m_brand','manufacturer'],['m_eng','engineer'],['m_mgr','manager'],['m_capu','capacity_unit',false]].forEach(([id,k,hint])=>
     CB.make(document.getElementById(id), { items:()=>MM.machines.map(x=>x[k]), hint }));
-  // Tên máy, Model: xổ từ dữ liệu cả 2 phân hệ, vẫn gõ mới được (không nhắc "Có phải…" vì tên máy hay chỉ khác số thứ tự)
+  // Tên máy: xổ từ dữ liệu cả 2 phân hệ (Model không xổ: không phải thư viện), vẫn gõ mới được (không nhắc "Có phải…" vì tên máy hay chỉ khác số thứ tự)
   const dmVals = k => (typeof DATA !== 'undefined' ? DATA : []).map(x=>unescH(x[k] || ''));
   CB.make(m_name, { items:()=>MM.machines.map(x=>x.name).concat(dmVals('ten')), hint:false });
-  CB.make(m_model, { items:()=>MM.machines.map(x=>x.model).concat(dmVals('model')), hint:false });
   // ô chọn từ thư viện: gõ để tìm, chỉ nhận giá trị trong thư viện; NCC / Loại / Nhóm: admin thêm nhanh vào thư viện ngay trong ô
   CB.select(m_sup, { add: isAdmin ? t=>libQuickAdd('sup', t) : null });
   CB.select(m_type, { add: isAdmin && MM.hasTypes ? t=>libQuickAdd('type', t) : null });
