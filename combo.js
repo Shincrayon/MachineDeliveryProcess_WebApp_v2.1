@@ -165,6 +165,11 @@
     const all = [...sel.options].filter(op => op.value !== '' && !op.disabled).map(op => ({ v: op.value, t: op.textContent }));
     cur.rows = cur.typed && q ? all.filter(x => fold(x.t).includes(q)) : all;
     cur.at = cur.rows.findIndex(x => x.v === sel.value);
+    if (cur.at < 0 && cur.typed && q && cur.rows.length) {         // đang gõ: bôi sáng dòng khớp đúng (không dấu), không có thì dòng đầu -> Enter chọn luôn
+      const lo = v.toLowerCase(), by = f => cur.rows.findIndex(f);
+      const ex = [by(x => x.t.toLowerCase() === lo), by(x => x.t.toLowerCase().startsWith(lo)), by(x => fold(x.t) === q)].find(i => i >= 0);
+      cur.at = ex >= 0 ? ex : 0;
+    }
     cur.pop.textContent = '';
     cur.rows.forEach((x, i) => {
       const d = document.createElement('div'); d.className = 'cb-it'; d.textContent = x.t;

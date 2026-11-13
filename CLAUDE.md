@@ -273,3 +273,14 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Máy gốc: giữ mã, serial, giá trị hợp đồng, liên kết `tracking_machine_id`; đổi area/line, quantity 1 (notes trong sec → mã hoá lại cả gói `SEC.mmtb_machines.f`).
 - Máy mới: chép cột + trường sec, mã tạm `randCode`, `code_temp`, chép mốc `delivery_milestones`; để trống serial, asset_code, contract_amount
   (tổng không nhân đôi); không liên kết Tiến độ (UNIQUE); `source_ref` = "Tách từ <mã gốc> · <nguồn gốc>". Bên Tiến độ không đổi. Test: `e2e_sync_split_test.py`.
+
+## 📏 Thư viện Đơn vị (2026-11-13, migration 20 `mmtb_units`)
+- Bảng `mmtb_units (name unique, sort_order)`, mọi người xem, admin sửa; nạp sẵn 10 đơn vị chuẩn (kg/h … m³). Loader → `MM.units`, `MM.hasUnits`.
+  Chưa chạy 20: mọi ô đơn vị như cũ (Danh mục ô gõ combo; Tiến độ dùng danh sách chuẩn `CAP_STD`).
+- Tab 📚 › 📏 Đơn vị (`LIB.units`, `needs20`, tên `lockEdit` vì đơn vị trên máy nằm trong sec, không đổi hàng loạt được).
+- Danh mục: có thư viện thì `m_capu` là `<select>` + `CB.select` (admin ➕ `libQuickAdd('unit')`); `unitOpts(sel, cur)` thêm đơn vị cũ
+  của máy "(chưa có trong thư viện)" để không mất; đơn vị cũ viết khác (VD tấn/h) được nhận là đơn vị chuẩn (t/h) khi mở Sửa.
+  Loại thiết bị: `default_unit` kiểu `unit` (select từ thư viện).
+- Tiến độ: ô Công suất = `f_csv` (số) + `f_csu` (CB.select đơn vị); `f_cs` (hidden) vẫn là giá trị đọc/ghi/lưu "3000 kg/h"
+  (setter `.value` tách ra 2 ô qua `__capSplit`, sửa 2 ô thì ghép lại). Không tách được (VD "khoảng 3 tấn") → giữ nguyên + dòng `#f_csOld` cho tới khi nhập số.
+- `CB.select`: khi gõ, dòng khớp nguyên văn → bắt đầu bằng → khớp không dấu (hoặc dòng đầu) được bôi sáng, Enter chọn luôn. Test: `e2e_units_test.py`.

@@ -1011,6 +1011,8 @@ select.mp-open{border-color:var(--blue)}
 label:has(> .cb-src){position:relative}
 .cb-sel{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%)!important;background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%!important;background-size:5px 5px,5px 5px!important;background-repeat:no-repeat!important;padding-right:26px!important;text-overflow:ellipsis}
 .cb-it.cur{font-weight:700}
+.cs-pair{display:flex;gap:6px;position:relative}.cs-pair>#f_csv{flex:1;min-width:0}.cs-pair>.cb-sel{width:110px;flex:none}
+.cs-old{font-size:11.5px;font-weight:400;color:var(--st-over)}
 .sp-card{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px}
 .sp-h{font-size:13px;margin-bottom:6px}.sp-h small{color:var(--muted);font-weight:400;margin-left:4px}
 .sp-g{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
@@ -1265,7 +1267,7 @@ label:has(> .cb-src){position:relative}
       <label class="full">Machine name *<input id="f_ten" class="req" type="text" placeholder="e.g. Bottle label remover 3 t/h"></label>
       <label>Person in charge<input id="f_pt" type="text"></label>
       <label>Quantity<input id="f_sl" type="number" value="1" min="1"></label>
-      <label>Capacity<input id="f_cs" type="text" placeholder="e.g. 3000 kg/h"></label>
+      <label>Capacity<span class="cs-pair"><input id="f_csv" type="text" inputmode="decimal" placeholder="3000"><select id="f_csu"></select></span><input id="f_cs" type="hidden"><small id="f_csOld" class="cs-old" hidden></small></label>
       <label>Installation site<select id="f_nld"></select></label>
       <label id="f_thL" class="pt-off">Brand<input id="f_th" type="text"></label>
       <label>Supplier<input id="f_ncc" type="text"></label>
@@ -1728,7 +1730,29 @@ CB.make(f_ncc, { items:()=>DATA.map(x=>unescH(x.ncc)).concat(((window.__MMTB||{}
 // Tên máy, Công suất: xổ từ dữ liệu Tiến độ + Danh mục (Model không xổ: không phải thư viện), vẫn gõ mới được (không nhắc "Có phải…": tên máy hay chỉ khác số thứ tự)
 const mmVals = k => (((window.__MMTB||{}).machines)||[]).map(c=>c[k]).filter(v=>v && v!=='🔒');
 CB.make(f_ten, { items:()=>DATA.map(x=>unescH(x.ten)).concat(mmVals('name')), hint:false });
-CB.make(f_cs, { items:()=>DATA.map(x=>unescH(x.congsuat)), hint:false });
+/* ô Công suất: số + đơn vị chọn từ thư viện Đơn vị (migration 20; chưa có thì dùng danh sách đơn vị chuẩn).
+   f_cs (ẩn) vẫn là giá trị đọc / ghi / lưu như cũ ("3000 kg/h"); đặt f_cs.value thì 2 ô tự tách; sửa 2 ô thì ghép lại.
+   Giá trị cũ không tách được (VD "khoảng 3 tấn") giữ nguyên, hiện dòng nhắc cho tới khi nhập số mới. */
+const CAP_STD = ['kg/h','t/h','m³/h','l/h','kW','mm','m','kg','t','m³'];
+window.__capSplit = t => { const m = String(t || '').trim().match(/^([\d][\d.,]*)\s*(.*)$/);
+  if(!m) return { n:'', u:'', bad: !!String(t || '').trim() };
+  const u = m[2].trim(); return { n:m[1], u: u && window.NS ? (NS.normUnit(u) || u) : u, bad:false }; };
+(() => {
+  const dv = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  const names = () => (window.__unitNames && window.__unitNames()) || CAP_STD;
+  const fill = cur => { const L = names();
+    f_csu.innerHTML = `<option value="">—</option>` + L.map(n=>`<option value="${escH(n)}">${escH(n)}</option>`).join('')
+      + (cur && !L.includes(cur) ? `<option value="${escH(cur)}">${escH(cur)} ${tr('(not in the library)','(chưa có trong thư viện)')}</option>` : ''); };
+  const show = v => { const c = __capSplit(v); fill(c.u); dv.set.call(f_csv, c.n); f_csu.value = c.u;
+    f_csOld.hidden = !c.bad; f_csOld.textContent = c.bad ? tr('Old value: ','Giá trị cũ: ') + v + tr(' — enter a number and pick a unit to replace it',' — nhập số + chọn đơn vị để thay') : ''; };
+  Object.defineProperty(f_cs, 'value', { configurable:true, get(){ return dv.get.call(this); }, set(v){ dv.set.call(this, v); show(v); } });
+  const compose = () => { const n = f_csv.value.trim(); if(!n && f_csOld.hidden === false) return;
+    dv.set.call(f_cs, n ? (n + (f_csu.value ? ' ' + f_csu.value : '')) : ''); if(n) f_csOld.hidden = true; };
+  f_csv.addEventListener('input', compose); f_csu.addEventListener('change', compose);
+  show('');
+  CB.select(f_csu, { add: window.__role === 'admin' ? t => (window.__unitNames && window.__unitNames() ? window.__unitAdd(t) : Promise.resolve(t))
+    .then(n => { if(n && ![...f_csu.options].some(o=>o.value===n)) f_csu.add(new Option(n, n)); return n; }) : null });
+})();
 CB.select(f_nld);      // Nơi lắp đặt: gõ để tìm nhà máy trong thư viện
 /* ô Nơi lắp đặt: chỉ chọn nhà máy trong thư viện. Lưu đúng cách ghi nhiều máy của công ty đó đang dùng (bộ lọc, biểu đồ gom theo chữ),
    công ty chưa có máy thì lưu mã (mã không đổi, đổi tên trong thư viện vẫn nhận ra). Máy đang ghi cách khác / nơi lạ: giữ nguyên, không mất khi mở Sửa */
@@ -4894,7 +4918,7 @@ function buildForm(){
       ${L(tr('Production line','Chuyền'), `<select id="m_line"></select>`)}
       ${L(tr('Parent machine (for sub-units)','Máy cha (nếu là bộ phận con)'), `<select id="m_parent"></select>`)}
       ${L(tr('Role','Vai trò'), `<select id="m_role"><option value="main">${ROLEL.main}</option><option value="auxiliary">${ROLEL.auxiliary}</option></select>`)}
-      ${L(tr('Capacity','Công suất'), `<div style="display:flex;gap:6px"><input id="m_capv" type="number" step="any" style="flex:1;min-width:0" placeholder="3000"><input id="m_capu" type="text" style="width:96px" placeholder="kg/h"></div>`)}
+      ${L(tr('Capacity','Công suất'), `<div style="display:flex;gap:6px"><input id="m_capv" type="number" step="any" style="flex:1;min-width:0" placeholder="3000">${MM.hasUnits ? '<select id="m_capu" style="width:110px"></select>' : '<input id="m_capu" type="text" style="width:96px" placeholder="kg/h">'}</div>`)}
       ${L(tr('Materials','Vật liệu'), `<div class="mm-mat">${['PET','HDPE','PP'].map(m=>`<label><input type="checkbox" value="${m}" class="m_mat"> ${m}</label>`).join('')}</div>`)}
       ${L(tr('Group','Nhóm'), `<select id="m_group"></select>`)}
       ${L(tr('Equipment type','Loại thiết bị'), `<select id="m_type"></select>`)}
@@ -4930,7 +4954,7 @@ function buildForm(){
   document.querySelectorAll('.m_mat').forEach(c=>c.addEventListener('change', nameHint));
   m_code.oninput = ()=>{ m_code.dataset.touched = '1'; };
   // ô chọn từ dữ liệu Danh mục (combo.js): vẫn gõ được giá trị mới. Ô đơn vị quá hẹp, không chèn dòng nhắc
-  [['m_origin','origin'],['m_brand','manufacturer'],['m_eng','engineer'],['m_mgr','manager'],['m_capu','capacity_unit',false]].forEach(([id,k,hint])=>
+  [['m_origin','origin'],['m_brand','manufacturer'],['m_eng','engineer'],['m_mgr','manager']].concat(MM.hasUnits ? [] : [['m_capu','capacity_unit',false]]).forEach(([id,k,hint])=>
     CB.make(document.getElementById(id), { items:()=>MM.machines.map(x=>x[k]), hint }));
   // Tên máy: xổ từ dữ liệu cả 2 phân hệ (Model không xổ: không phải thư viện), vẫn gõ mới được (không nhắc "Có phải…" vì tên máy hay chỉ khác số thứ tự)
   const dmVals = k => (typeof DATA !== 'undefined' ? DATA : []).map(x=>unescH(x[k] || ''));
@@ -4940,14 +4964,27 @@ function buildForm(){
   CB.select(m_type, { add: isAdmin && MM.hasTypes ? t=>libQuickAdd('type', t) : null });
   CB.select(m_group, { add: isAdmin && MM.hasGroups ? t=>libQuickAdd('group', t) : null });
   [m_area, m_line, m_parent].forEach(el=>CB.select(el));
+  if(MM.hasUnits){ CB.select(m_capu, { add: isAdmin ? t=>libQuickAdd('unit', t) : null }).input.style.cssText = 'width:110px;flex:none'; }
   mmSave.onclick = save;
 }
 /* ➕ thêm nhanh 1 mục thư viện từ ô chọn trong form máy (admin). Trùng tên (không phân biệt dấu) thì chọn mục có sẵn.
    Thêm <option> vào ô và trả về value; MM được cập nhật tại chỗ để form không phải tải lại. */
-async function libQuickAdd(kind, text){
+/* ô <select> đơn vị: thư viện Đơn vị + đơn vị cũ của máy (nếu không còn trong thư viện) để không mất khi mở Sửa */
+function unitOpts(sel, cur){
+  const names = (MM.units || []).map(u=>u.name);
+  cur = String(cur || '').trim();
+  const norm = cur && window.NS ? (NS.normUnit(cur) || cur) : cur, hit = names.find(n=>n === cur) || names.find(n=>n === norm);
+  sel.innerHTML = `<option value="">—</option>` + names.map(n=>`<option value="${E(n)}">${E(n)}</option>`).join('')
+    + (cur && !hit ? `<option value="${E(cur)}">${E(cur)} ${tr('(not in the library)','(chưa có trong thư viện)')}</option>` : '');
+  return hit || cur;
+}
+window.__unitNames = () => MM.hasUnits ? (MM.units || []).map(u=>u.name) : null;
+window.__unitAdd = t => libQuickAdd('unit', t, null);
+async function libQuickAdd(kind, text, selArg){
   const name = String(text || '').trim(); if(!name) return null;
-  const sel = { sup:m_sup, type:m_type, group:m_group }[kind];
-  const same = [...sel.options].find(op=>op.value && DM.fold(op.textContent) === DM.fold(name)); if(same) return same.value;
+  const sel = selArg !== undefined ? selArg : { sup:m_sup, type:m_type, group:m_group, unit:window.m_capu }[kind];
+  if(kind === 'unit'){ const hit = (MM.units || []).find(u=>DM.fold(u.name) === DM.fold(name)); if(hit){ if(sel && ![...sel.options].some(o=>o.value===hit.name)) sel.add(new Option(hit.name, hit.name)); return hit.name; } }
+  const same = sel && [...sel.options].find(op=>op.value && DM.fold(op.textContent) === DM.fold(name)); if(same) return same.value;
   const sb = window.__sb; window.__selfWritingM = true;
   try{
     if(kind === 'sup'){
@@ -4955,11 +4992,12 @@ async function libQuickAdd(kind, text){
       const { error } = await sb.from('suppliers').insert(await window.__seal('suppliers', row)); if(error) throw error;
       MM.suppliers.push(row); sel.add(new Option(name, row.id)); toast('✅ ' + tr('Supplier added to the library','Đã thêm NCC vào thư viện') + ': <b>' + E(name) + '</b>'); return row.id;
     }
-    const table = kind === 'type' ? 'mmtb_equipment_types' : 'mmtb_groups';
+    const table = { type:'mmtb_equipment_types', group:'mmtb_groups', unit:'mmtb_units' }[kind];
     const { data, error } = await sb.from(table).insert({ name }).select().single(); if(error) throw error;
-    const arr = kind === 'type' ? (MM.types = MM.types || []) : (MM.groups = MM.groups || []);
-    arr.push(data || { name }); sel.add(new Option(name, name));
-    toast('✅ ' + (kind === 'type' ? tr('Type added to the library','Đã thêm loại thiết bị vào thư viện') : tr('Group added to the library','Đã thêm nhóm vào thư viện')) + ': <b>' + E(name) + '</b>');
+    const arr = kind === 'type' ? (MM.types = MM.types || []) : kind === 'unit' ? (MM.units = MM.units || []) : (MM.groups = MM.groups || []);
+    arr.push(data || { name }); if(sel) sel.add(new Option(name, name));
+    toast('✅ ' + ({ type:tr('Type added to the library','Đã thêm loại thiết bị vào thư viện'), unit:tr('Unit added to the library','Đã thêm đơn vị vào thư viện') }[kind]
+      || tr('Group added to the library','Đã thêm nhóm vào thư viện')) + ': <b>' + E(name) + '</b>');
     return name;
   }catch(ex){ throw new Error(errText(ex)); }
   finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
@@ -5027,6 +5065,7 @@ function openForm(x, clone){
   fillFormDeps({ area:v.area_id, line:v.line_id, parent:v.parent_machine_id });
   const set = (id, val) => { document.getElementById(id).value = val == null ? '' : val; };
   set('m_code', v.machine_code); set('m_name', v.name); set('m_model', v.model); set('m_brand', v.manufacturer);
+  if(MM.hasUnits) unitOpts(m_capu, v.capacity_unit);
   set('m_serial', v.serial_number); set('m_qty', v.quantity || 1); set('m_capv', v.capacity_value); set('m_capu', v.capacity_unit);
   set('m_group', v.group_name); set('m_type', v.equipment_type); set('m_origin', v.origin); set('m_sup', v.supplier_id);
   set('m_cur', v.contract_currency || 'VND'); set('m_amt', v.contract_amount); set('m_rate', v.locked_rate);
@@ -5273,10 +5312,15 @@ const LIB = {
     sort:(a,b)=>(+a.sort_order || 0) - (+b.sort_order || 0) || String(a.name).localeCompare(b.name), needs07:true },
   types:     { icon:'🔧', title:tr('Equipment types','Loại thiết bị'), table:'mmtb_equipment_types', rows:()=>(MM.types || []).filter(t=>!t.virtual),
     fields:[ {k:'name', l:tr('Type name (e.g. Máy băm, Băng tải)','Tên loại (VD Máy băm, Băng tải)'), req:1, full:1},
-             {k:'default_unit', l:tr('Usual capacity unit (kg/h, t/h, m³/h, kW, mm)','Đơn vị công suất thường dùng (kg/h, t/h, m³/h, kW, mm)')},
+             {k:'default_unit', l:tr('Usual capacity unit (kg/h, t/h, m³/h, kW, mm)','Đơn vị công suất thường dùng (kg/h, t/h, m³/h, kW, mm)'), get type(){ return MM.hasUnits ? 'unit' : undefined; }},
              {k:'sort_order', l:tr('Display order','Thứ tự hiển thị'), type:'number'} ],
     cols:['name','default_unit','sort_order'], uniq:['name'], used: r=>cnt(MM.machines, x=>x.equipment_type===r.name),
     sort:(a,b)=>(+a.sort_order || 0) - (+b.sort_order || 0) || String(a.name).localeCompare(b.name), needs11:true },
+  units:     { icon:'📏', title:tr('Units','Đơn vị'), table:'mmtb_units', rows:()=>MM.units || [],
+    fields:[ {k:'name', l:tr('Unit (e.g. kg/h, t/h, m³/h, kW)','Đơn vị (VD kg/h, t/h, m³/h, kW)'), req:1, lockEdit:1}, {k:'sort_order', l:tr('Display order','Thứ tự hiển thị'), type:'number'} ],
+    cols:['name','sort_order'], uniq:['name'],
+    used: r=>cnt(MM.machines, x=>x.capacity_unit===r.name) + cnt(MM.types || [], t=>t.default_unit===r.name) + cnt(DATA, x=>window.__capSplit && __capSplit(unescH(x.congsuat)).u===r.name),
+    sort:(a,b)=>(+a.sort_order || 0) - (+b.sort_order || 0) || String(a.name).localeCompare(b.name), needs20:true },
   names:     { icon:'✏️', title:tr('Standard names','Chuẩn hoá tên'), count:()=>MM.machines.filter(x=>nameIss(x).length).length }
 };
 const LABEL = (d, k) => { const f = d.fields.find(o=>o.k===k); return f ? f.l.replace(/ \(.*\)$/, '') : k; };
@@ -5307,6 +5351,8 @@ function drawLib(k){
   const d = LIB[k];
   if(d.needs07 && !MM.hasGroups){ libBody.innerHTML = need07(); return; }
   if(d.needs11 && !MM.hasTypes){ libBody.innerHTML = need11(); return; }
+  if(d.needs20 && !MM.hasUnits){ libBody.innerHTML = `<div class="mm-empty">${tr('This library needs <code>supabase/migrations/20261113_20_units.sql</code> — ask an admin to run it in Supabase › SQL Editor.',
+    'Thư viện này cần chạy <code>supabase/migrations/20261113_20_units.sql</code> trong Supabase › SQL Editor (admin).')}</div>`; return; }
   libBody.innerHTML = `<div class="toolbar">
       <div class="search"><input id="libQ" type="text" placeholder="${tr('Search…','Tìm…')}" value="${E(libQ)}"></div>
       ${isAdmin && k==='lines' && oldLines().length ? `<button class="nbtn2 ghost" onclick="libConvertLines()">${tr(`🎲 Standardize ${oldLines().length} old line codes`,`🎲 Chuẩn hoá ${oldLines().length} mã chuyền cũ`)}</button>` : ''}
@@ -5367,6 +5413,8 @@ function libInput(f, val, editing){
     case 'bool':     return `<div class="lib-chk"><label><input type="checkbox" id="${id}"${val!==false?' checked':''}> ${tr('Yes','Có')}</label></div>`;
     case 'textarea': return `<textarea id="${id}" rows="2">${E(val ?? '')}</textarea>`;
     case 'number':   return `<input id="${id}" type="number" step="1" value="${E(val ?? '')}">`;
+    case 'unit':     { const tmp = document.createElement('select'); const v = unitOpts(tmp, val); tmp.id = id;
+                       [...tmp.options].forEach(o=>{ if(o.value === v) o.setAttribute('selected', ''); }); return tmp.outerHTML; }
     default:         return f.gen ? `<span class="lib-gen"><input id="${id}" type="text" value="${E(val ?? '')}" style="text-transform:uppercase"><button type="button" id="${id}_gen" title="${tr('Generate a random code','Tạo mã ngẫu nhiên')}">🎲</button></span>`
                      : `<input id="${id}" type="text" value="${E(val ?? '')}"${f.lockEdit && editing ? ' readonly' : ''}${f.upper ? ' style="text-transform:uppercase"' : ''}>`;
   }
@@ -5376,7 +5424,7 @@ function libRead(f){
   if(f.type==='multi') return [...document.querySelectorAll('.lf_' + f.k + ':checked')].map(c=>c.value);
   if(f.type==='bool') return el.checked;
   if(f.type==='number') return el.value === '' ? 0 : Math.round(+el.value);
-  if(f.type==='company' || f.type==='workshop') return el.value || null;
+  if(f.type==='company' || f.type==='workshop' || f.type==='unit') return el.value || null;
   const s = (el.value || '').trim();
   return f.upper ? s.toUpperCase() : (s || null);
 }
@@ -6277,7 +6325,10 @@ window.encryptExisting = async () => {
       // loại thiết bị (migrations/20261102_11); chưa có bảng thì lấy theo loại đang dùng trong máy
       const ty = await sb.from('mmtb_equipment_types').select('*').order('sort_order').order('name');
       const types = ty.error ? [...new Set(m.map(x=>x.equipment_type).filter(Boolean))].sort().map(name=>({ name, virtual:true })) : (ty.data || []);
-      return deriveMmtb({ machines:m, companies:co, areas:ar, lines:ln, suppliers:sp, milestones:ms, rates, groups, hasGroups: !gr.error, types, hasTypes: !ty.error, hasLineNotes });
+      // thư viện đơn vị (migrations/20261113_20); chưa có bảng thì ô đơn vị vẫn là ô gõ như cũ
+      const un = await sb.from('mmtb_units').select('*').order('sort_order').order('name');
+      return deriveMmtb({ machines:m, companies:co, areas:ar, lines:ln, suppliers:sp, milestones:ms, rates, groups, hasGroups: !gr.error, types, hasTypes: !ty.error, hasLineNotes,
+                          units: un.error ? [] : (un.data || []), hasUnits: !un.error });
     }catch(e){ return Object.assign(empty, { err: String(e.message || e) }); }
   }
   window.__loadMmtb = () => loadMmtb(window.__sb);
