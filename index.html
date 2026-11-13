@@ -4939,10 +4939,10 @@ function syncRole(){
   else { const o = m_role.querySelector('[value=sub_unit]'); if(o) o.remove(); if(m_role.value==='sub_unit' || !m_role.value) m_role.value = 'main'; }
   m_role.disabled = sub;
 }
-/* mã ngẫu nhiên dạng <mã nhà máy>-XXXX: 4 ký tự chữ in hoa + số, bỏ ký tự dễ nhầm (0 O 1 I L); không trùng tập `used` */
+/* mã ngẫu nhiên dạng <mã nhà máy>-XXXX (n ký tự, mặc định 4; chuyền dùng 5): chữ in hoa + số, bỏ ký tự dễ nhầm (0 O 1 I L); không trùng tập `used` */
 const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-function randCode(prefix, used){
-  for(let i = 0; i < 5000; i++){ const r = crypto.getRandomValues(new Uint32Array(4));
+function randCode(prefix, used, n){
+  for(let i = 0; i < 5000; i++){ const r = crypto.getRandomValues(new Uint32Array(n || 4));
     const c = prefix + '-' + [...r].map(v => CODE_ABC[v % CODE_ABC.length]).join(''); if(!used.has(c)) return c; }
   return prefix + '-' + Date.now().toString(36).toUpperCase();
 }
@@ -5134,13 +5134,13 @@ const LIB = {
       + cnt(DATA, x=>DM.companyCode(unescH(x.noilapdat))===r.code),      // máy bên Tiến độ nhận công ty theo Nơi lắp đặt
     sort:(a,b)=>String(a.code).localeCompare(b.code) },
   areas:     { icon:'🏢', title:tr('Workshops','Nhà xưởng'), table:'areas', rows:()=>MM.areas,
-    fields:[ {k:'company_id', l:tr('Plant','Nhà máy'), type:'company', req:1}, {k:'code', l:tr('Workshop code (e.g. F07)','Mã xưởng (VD F07)'), req:1, upper:1, gen:1},
+    fields:[ {k:'company_id', l:tr('Plant','Nhà máy'), type:'company', req:1}, {k:'code', l:tr('Workshop code (e.g. F07)','Mã xưởng (VD F07)'), req:1, upper:1, gen:4},
              {k:'name', l:tr('Workshop name','Tên xưởng'), req:1, full:1} ],
     cols:['company_id','code','name'], uniq:['company_id','code'],
     used: r=>cnt(MM.machines, x=>x.area_id===r.id) + cnt(MM.lines, l=>l.area_id===r.id), sort:byCoCode },
   lines:     { icon:'⛓', title:tr('Production lines','Chuyền sản xuất'), table:'production_lines', rows:()=>MM.lines,
     fields:[ {k:'company_id', l:tr('Plant','Nhà máy'), type:'company', req:1}, {k:'area_id', l:tr('Workshop','Nhà xưởng'), type:'workshop'},
-             {k:'code', l:tr('Line code','Mã chuyền'), req:1, upper:1, gen:1}, {k:'name', l:tr('Line name','Tên chuyền'), req:1, full:1},
+             {k:'code', l:tr('Line code','Mã chuyền'), req:1, upper:1, gen:5}, {k:'name', l:tr('Line name','Tên chuyền'), req:1, full:1},
              {k:'materials', l:tr('Materials','Vật liệu'), type:'multi', opts:MATS}, {k:'is_active', l:tr('Running','Đang hoạt động'), type:'bool', def:true},
              {k:'notes', l:tr('Notes (to tell similar lines apart)','Ghi chú (để phân biệt chuyền)'), type:'textarea', full:1, need:()=>!!MM.hasLineNotes} ],
     get cols(){ return ['company_id','code','name','area_id','materials','is_active'].concat(MM.hasLineNotes ? ['notes'] : []); }, uniq:['company_id','code'],
@@ -5187,6 +5187,7 @@ function drawLib(k){
   if(d.needs11 && !MM.hasTypes){ libBody.innerHTML = need11(); return; }
   libBody.innerHTML = `<div class="toolbar">
       <div class="search"><input id="libQ" type="text" placeholder="${tr('Search…','Tìm…')}" value="${E(libQ)}"></div>
+      ${isAdmin && k==='lines' && oldLines().length ? `<button class="nbtn2 ghost" onclick="libConvertLines()">${tr(`🎲 Standardize ${oldLines().length} old line codes`,`🎲 Chuẩn hoá ${oldLines().length} mã chuyền cũ`)}</button>` : ''}
       ${isAdmin ? `<button class="nbtn2" onclick="libEdit('${k}')">${tr('➕ Add','➕ Thêm')}</button>` : ''}</div>
     <div class="tablewrap"><table><thead><tr>${d.cols.map(c=>`<th>${LABEL(d, c)}</th>`).join('')}<th>${tr('Machines using it','Số máy đang dùng')}</th>${isAdmin?'<th></th>':''}</tr></thead>
       <tbody id="libTb"></tbody></table></div>`;
@@ -5202,6 +5203,38 @@ function libRows(k){
       ${isAdmin ? `<td class="lib-act"><button onclick="libEdit('${k}','${r.id}')">✏️</button><button onclick="libDel('${k}','${r.id}')">🗑</button></td>` : ''}</tr>`).join('')
     || `<tr><td colspan="${d.cols.length + 2}" style="text-align:center;color:var(--muted);padding:20px">${tr('Nothing here yet.','Chưa có mục nào.')}</td></tr>`;
 }
+/* chuẩn hoá mã chuyền cũ (L1, DTR-L99…) -> <nhà máy>-XXXXX (5 ký tự). Phụ trợ (PHUTRO) giữ nguyên.
+   Máy trỏ chuyền bằng line_id nên không máy nào phải sửa. Mã cũ ghi thêm vào Ghi chú ("Mã cũ: L1") khi đã có cột notes (migration 19). */
+const LINE_FMT = /^[A-Z]+-[A-HJKMNP-Z2-9]{5}$/;
+const oldLines = () => MM.lines.filter(l=>!l.__locked && l.code !== 'PHUTRO' && !LINE_FMT.test(String(l.code || '')));
+window.libConvertLines = () => {
+  const used = new Map();      // mã đã dùng theo từng nhà máy
+  MM.lines.forEach(l=>{ if(!used.has(l.company_id)) used.set(l.company_id, new Set()); used.get(l.company_id).add(String(l.code || '').toUpperCase()); });
+  const list = oldLines().sort(byCoCode).map(l=>{
+    const u = used.get(l.company_id), c = randCode(coOf(l.company_id).code || 'X', u, 5); u.add(c); return { l, c }; });
+  if(!list.length) return;
+  const keep = !!MM.hasLineNotes;
+  const prev = list.map(({l,c})=>`<div class="cv-row" style="display:flex;align-items:center;gap:8px;padding:5px 10px;font-size:13px;border-top:1px solid var(--border);text-align:left"><span style="color:var(--muted);white-space:nowrap">${E(l.code)}</span><span>→</span><b style="white-space:nowrap">${E(c)}</b><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="${E(l.name + (l.notes ? " — " + l.notes : ""))}">${E(lineLbl(l))}</span></div>`).join('');
+  confirmBox({ title:tr(`Standardize ${list.length} old line codes?`,`Chuẩn hoá ${list.length} mã chuyền cũ?`),
+    sub:(keep ? tr('The old code is added to each line\'s Notes ("Old code: L1") so you can still look it up.','Mã cũ được ghi thêm vào Ghi chú của chuyền ("Mã cũ: L1") để vẫn tra lại được.')
+              : tr('⚠ The Notes column is not set up yet (migration 19), so old codes will not be kept.','⚠ Chưa có cột Ghi chú (migration 19) nên mã cũ sẽ không được giữ lại.')) + ' ' +
+        tr('Machines stay on their lines. The Utilities line (PHUTRO) is not changed.','Máy vẫn ở nguyên chuyền. Chuyền Phụ trợ (PHUTRO) giữ nguyên.'),
+    extra:`<div id="cvPrev" style="max-height:260px;overflow:auto;margin:4px 0 14px;border:1px solid var(--border);border-radius:8px">${prev}</div>`,
+    ok:tr('🎲 Standardize','🎲 Chuẩn hoá'), onOk: async ()=>{
+      window.__selfWritingM = true; let n = 0;
+      try{
+        for(const {l,c} of list){
+          const row = { id:l.id, code:c, name:l.name };              // gói sec phải đủ mọi trường mã hoá (tên + ghi chú)
+          if(keep) row.notes = (l.notes ? l.notes + '\n' : '') + 'Mã cũ: ' + l.code;
+          const sealed = await window.__seal('production_lines', row); delete sealed.id;
+          const { error } = await window.__sb.from('production_lines').update(sealed).eq('id', l.id); if(error) throw error;
+          n++;
+        }
+        await reload(); toast('✅ ' + tr('New line codes','Đã chuẩn hoá mã chuyền') + `: <b>${n}</b>`);
+      }catch(ex){ await reload(); showNotice({ type:'error', title:tr(`Stopped after ${n} lines`,`Dừng sau ${n} chuyền`), sub:errText(ex) }); }
+      finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+    } });
+};
 /* form thêm / sửa 1 mục thư viện (dùng khung modal chung) */
 function libInput(f, val, editing){
   const id = 'lf_' + f.k;
@@ -5246,7 +5279,7 @@ window.libEdit = (k, id) => {
   const gf = d.fields.find(f => f.gen), gEl = gf && document.getElementById('lf_' + gf.k);
   let lastGen = null;
   const gen = () => { if(!gEl) return; const coId = co ? co.value : null, cc = (MM.companies.find(c => c.id === coId) || {}).code || 'X';
-    lastGen = randCode(cc, new Set(d.rows().filter(r => r.company_id === coId && r.id !== id).map(r => String(r[gf.k] || '').toUpperCase()))); gEl.value = lastGen; };
+    lastGen = randCode(cc, new Set(d.rows().filter(r => r.company_id === coId && r.id !== id).map(r => String(r[gf.k] || '').toUpperCase())), gf.gen); gEl.value = lastGen; };
   if(gEl){ document.getElementById(gEl.id + '_gen').onclick = gen; if(!cur) gen(); }
   if(co){ co.onchange = () => { fillWs(); if(gEl && !cur && gEl.value === lastGen) gen(); }; fillWs(); }
   document.getElementById('lfForm').onsubmit = async e=>{

@@ -205,7 +205,12 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
   `NEW_FMT` (`<NM>-XXXX`) → nút "🎲 Chuẩn hoá N mã tạm cũ" → `libConvertCodes` tạo sẵn mã mới (không trùng mã hiện có + legacy_code),
   xem trước từng dòng `#cvPrev` (qua `confirmBox({extra})`) rồi `setCode` từng máy (mã đầu tiên giữ ở `legacy_code`). Mã kế toán
   (`code_temp=false`) và `ma_may` Tiến độ không đụng; Tiến độ liên kết bằng `tracking_machine_id` nên tự hiện mã mới.
-  Mã Nhà xưởng / Chuyền KHÔNG chuẩn hoá (user chọn, 2026-11-13). Test: `e2e_line_notes_test.py`.
+  Test: `e2e_line_notes_test.py`.
+- **Mã chuyền 5 ký tự** (2026-11-13): `randCode(prefix, used, n)`; field `gen` = số ký tự (Nhà xưởng `gen:4`, Chuyền `gen:5` → `DTR-7K4MQ`).
+  **Chuẩn hoá mã chuyền cũ**: `oldLines()` = chuyền không khớp `LINE_FMT` (`<NM>-XXXXX`), bỏ `PHUTRO` và dòng `__locked` → nút
+  "🎲 Chuẩn hoá N mã chuyền cũ" (tab Chuyền) → `libConvertLines` xem trước `#cvPrev` rồi update từng chuyền; gói `sec` phải đủ
+  `name` + `notes`; mã cũ nối vào Ghi chú ("Mã cũ: L1") khi có cột notes. Máy trỏ chuyền bằng `line_id` nên không phải sửa máy.
+  Mã Nhà xưởng KHÔNG chuẩn hoá (user chưa yêu cầu).
 
 ## 📋 Nhân bản máy (2 phân hệ)
 - Form ➕ Thêm có ô "Sao chép từ máy có sẵn…" (`clonePicker(host, list, onPick, onClear, srcTitle)` trong mainSrc, dùng chung; tìm không dấu, ↑↓ Enter);
