@@ -4104,7 +4104,7 @@ function confirmBox(o){
   let bg = document.getElementById('noticeBg');
   if(!bg){ bg=document.createElement('div'); bg.id='noticeBg'; bg.className='notice-bg'; document.body.appendChild(bg); }
   bg.innerHTML = `<div class="notice err" style="--nc:#fbbf24"><div class="ic-wrap"><div class="ic-core">❓</div></div>
-    <h4 style="font-size:19px">${o.title}</h4><p>${o.sub||''}</p>
+    <h4 style="font-size:19px">${o.title}</h4><p>${o.sub||''}</p>${o.extra||''}
     <div class="confirm-row"><button class="nbtn2 ghost" id="cfNo">${tr(`Cancel`,`Hủy`)}</button><button class="nbtn2" id="cfYes">${o.ok||tr('OK','Đồng ý')}</button></div></div>`;
   bg.classList.add('show');
   bg.querySelector('#cfNo').onclick = ()=> bg.classList.remove('show');
@@ -5402,17 +5402,18 @@ function nameSave(){
 
 /* ----- Mã máy: mã nhà máy + dãy số kế toán; chưa có số thì mã tạm 9 số ngẫu nhiên ----- */
 let codeCo = '', codeTemp = false;
-const RANDOM_FMT = /^[A-Z]+-(\d{9}|[A-HJKMNP-Z2-9]{4})$/;      // mã tạm ngẫu nhiên: dạng cũ 9 số hoặc dạng mới 4 ký tự
+const NEW_FMT = /^[A-Z]+-[A-HJKMNP-Z2-9]{4}$/;      // mã tạm chuẩn: <nhà máy>-XXXX. Mã tạm khác (9 số, DTR-004…) = mã cũ, chuẩn hoá được
+const oldTemps = () => MM.machines.filter(x=>x.code_temp && !NEW_FMT.test(x.machine_code));
 function drawCodes(){
   if(!MM.hasGroups){ libBody.innerHTML = need07(); return; }
-  const toConvert = MM.machines.filter(x=>x.code_temp && !RANDOM_FMT.test(x.machine_code)).length;
+  const toConvert = oldTemps().length;
   libBody.innerHTML = `<div class="lib-note">${tr('Code = plant code + accounting number, e.g. <b>DTR-104600041</b>. Until the accounting number is known, a random temporary code such as <b>DTR-7K4M</b> is used (marked <span class="tag-temp">temporary</span>).',
       'Mã máy = mã nhà máy + dãy số kế toán, VD <b>DTR-104600041</b>. Khi chưa có số kế toán, app cấp mã tạm ngẫu nhiên dạng <b>DTR-7K4M</b> (đánh dấu <span class="tag-temp">tạm</span>).')}</div>
     <div class="toolbar">
       <div class="search"><input id="libQ" type="text" placeholder="${tr('Search code, old code, machine name…','Tìm mã, mã cũ, tên máy…')}" value="${E(libQ)}"></div>
       <select id="codeCo"><option value="">${tr('Plant: All','Nhà máy: Tất cả')}</option>${MM.companies.map(c=>`<option value="${E(c.code)}"${c.code===codeCo?' selected':''}>${E(c.code)}</option>`).join('')}</select>
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)"><input type="checkbox" id="codeTemp"${codeTemp?' checked':''}> ${tr('Temporary only','Chỉ mã tạm')}</label>
-      ${isAdmin ? `${toConvert ? `<button class="nbtn2 ghost" onclick="libConvertCodes()">${tr(`🎲 Give ${toConvert} machines a new-style temporary code`,`🎲 Cấp mã tạm dạng mới cho ${toConvert} máy`)}</button>` : ''}
+      ${isAdmin ? `${toConvert ? `<button class="nbtn2 ghost" onclick="libConvertCodes()">${tr(`🎲 Standardize ${toConvert} old temporary codes`,`🎲 Chuẩn hoá ${toConvert} mã tạm cũ`)}</button>` : ''}
         <button class="nbtn2" onclick="libPasteCodes()">${tr('📋 Paste accounting codes','📋 Dán mã kế toán')}</button>` : ''}
     </div>
     <div class="tablewrap"><table><thead><tr><th>${tr('Code','Mã máy')}</th><th>${tr('Old code','Mã cũ')}</th><th>${tr('Machine','Tên máy')}</th><th>${tr('Plant','Nhà máy')}</th><th>${tr('Status','Trạng thái')}</th>${isAdmin?'<th></th>':''}</tr></thead>
@@ -5469,15 +5470,21 @@ window.libCode = id => {
   lcRnd.onclick = () => run({ value: tempCode(x.company_code), temp:true });
   lcForm.onsubmit = e => { e.preventDefault(); let s = lcVal.value.trim().toUpperCase(); if(/^\d+$/.test(s)) s = x.company_code + '-' + s; run({ value:s, temp:false }); };
 };
-/* mã cũ dạng DTR-004 -> mã tạm dạng mới DTR-xxxxxxxxx (mã cũ giữ ở legacy_code) */
+/* chuẩn hoá mã tạm cũ (9 số, DTR-004…) -> DTR-XXXX. Chỉ máy đang "tạm"; mã kế toán + mã Tiến độ không đụng.
+   Mã mới tạo sẵn để xem trước đúng từng dòng; mã đầu tiên của máy giữ ở legacy_code. Tiến độ liên kết bằng id nên tự thấy mã mới. */
 window.libConvertCodes = () => {
-  const list = MM.machines.filter(x=>x.code_temp && !RANDOM_FMT.test(x.machine_code));
-  confirmBox({ title:tr(`New temporary codes for ${list.length} machines?`,`Cấp mã tạm dạng mới cho ${list.length} máy?`),
-    sub:tr('Each machine gets a random code such as DTR-7K4M. The current code is kept as "old code" and is still searchable.',
-           'Mỗi máy nhận mã ngẫu nhiên dạng DTR-7K4M. Mã hiện tại được giữ ở cột "Mã cũ" và vẫn tìm được.'),
-    ok:tr('🎲 Assign','🎲 Cấp mã'), onOk: async ()=>{
+  const used = new Set(MM.machines.flatMap(x=>[x.machine_code, x.legacy_code]).filter(Boolean));
+  const list = oldTemps().sort((a,b)=>String(a.machine_code).localeCompare(b.machine_code))
+    .map(x=>{ const c = randCode(x.company_code || 'M', used); used.add(c); return { x, c }; });
+  if(!list.length) return;
+  const prev = list.map(({x,c})=>`<div class="cv-row" style="display:flex;align-items:center;gap:8px;padding:5px 10px;font-size:13px;border-top:1px solid var(--border);text-align:left"><span style="color:var(--muted);white-space:nowrap">${E(x.machine_code)}</span><span>→</span><b style="white-space:nowrap">${E(c)}</b><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="${E(x.name)}">${E(x.name)}</span></div>`).join('');
+  confirmBox({ title:tr(`Standardize ${list.length} old temporary codes?`,`Chuẩn hoá ${list.length} mã tạm cũ?`),
+    sub:tr('Only machines marked <span class="tag-temp">temporary</span>. The current code is kept as "old code" (still searchable, old Excel files still load). Accounting codes and Arrival-progress codes are not touched; Arrival progress shows the new code automatically.',
+           'Chỉ các máy đánh dấu <span class="tag-temp">tạm</span>. Mã hiện tại được giữ ở cột "Mã cũ" (vẫn tìm được, file Excel cũ vẫn nạp được). Mã kế toán và mã bên Tiến độ không đổi; bên Tiến độ tự hiện mã mới.'),
+    extra:`<div id="cvPrev" style="max-height:260px;overflow:auto;margin:4px 0 14px;border:1px solid var(--border);border-radius:8px">${prev}</div>`,
+    ok:tr('🎲 Standardize','🎲 Chuẩn hoá'), onOk: async ()=>{
       window.__selfWritingM = true; let n = 0;
-      try{ for(const x of list){ await setCode(x, { value: tempCode(x.company_code), temp:true }); n++; }
+      try{ for(const {x,c} of list){ await setCode(x, { value: c, temp:true }); n++; }
            await reload(); toast('✅ ' + tr('New codes','Đã cấp mã mới') + `: <b>${n}</b>`); }
       catch(ex){ await reload(); showNotice({ type:'error', title:tr(`Stopped after ${n} machines`,`Dừng sau ${n} máy`), sub:errText(ex) }); }
       finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }

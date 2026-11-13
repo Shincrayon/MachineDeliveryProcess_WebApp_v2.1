@@ -201,7 +201,11 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
   dòng ⓘ dưới tên chuyền ở 🧩 Sắp xếp; rê chuột ô Chuyền ở Danh sách / treemap. `x.line_notes` gắn vào máy trong deriveMmtb.
 - Mã ngẫu nhiên `randCode(prefix, used)` = `<mã nhà máy>-XXXX` (bảng `CODE_ABC`, bỏ 0 O 1 I L), không trùng: Thư viện Nhà xưởng / Chuyền (`gen:1` → nút 🎲,
   thêm mới tự điền, đổi nhà máy đổi tiền tố nếu chưa sửa tay, Sửa không tự đổi) và **mã tạm máy Danh mục** (`tempCode`, cả catalog_sync qua `__tempCode`).
-  `RANDOM_FMT` nhận cả mã tạm cũ 9 số lẫn dạng mới 4 ký tự (không mã nào bị đổi tự động). Test: `e2e_line_notes_test.py`.
+  Không mã nào bị đổi tự động. **Chuẩn hoá mã tạm cũ** (tab Mã máy, admin): `oldTemps()` = máy `code_temp` mà mã không khớp
+  `NEW_FMT` (`<NM>-XXXX`) → nút "🎲 Chuẩn hoá N mã tạm cũ" → `libConvertCodes` tạo sẵn mã mới (không trùng mã hiện có + legacy_code),
+  xem trước từng dòng `#cvPrev` (qua `confirmBox({extra})`) rồi `setCode` từng máy (mã đầu tiên giữ ở `legacy_code`). Mã kế toán
+  (`code_temp=false`) và `ma_may` Tiến độ không đụng; Tiến độ liên kết bằng `tracking_machine_id` nên tự hiện mã mới.
+  Mã Nhà xưởng / Chuyền KHÔNG chuẩn hoá (user chọn, 2026-11-13). Test: `e2e_line_notes_test.py`.
 
 ## 📋 Nhân bản máy (2 phân hệ)
 - Form ➕ Thêm có ô "Sao chép từ máy có sẵn…" (`clonePicker(host, list, onPick, onClear, srcTitle)` trong mainSrc, dùng chung; tìm không dấu, ↑↓ Enter);
