@@ -1007,6 +1007,12 @@ select.mp-open{border-color:var(--blue)}
 .cb-it{padding:6px 9px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;overflow-wrap:anywhere}
 .cb-it.on{background:color-mix(in srgb,var(--blue) 18%,transparent)}
 .cb-fresh{padding:6px 9px;font-size:12.5px;font-weight:400;color:var(--muted);overflow-wrap:anywhere}
+.cb-src{position:absolute!important;left:0;bottom:0;width:1px!important;height:1px!important;min-width:0!important;padding:0!important;border:0!important;opacity:0;pointer-events:none}
+label:has(> .cb-src){position:relative}
+.cb-sel{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%)!important;background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%!important;background-size:5px 5px,5px 5px!important;background-repeat:no-repeat!important;padding-right:26px!important;text-overflow:ellipsis}
+.cb-it.cur{font-weight:700}
+.cb-add{display:block;width:100%;text-align:left;margin-top:4px;padding:7px 9px;border-radius:7px;border:1px dashed var(--blue);background:color-mix(in srgb,var(--blue) 10%,transparent);color:var(--blue);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.cb-add:disabled{opacity:.6;cursor:wait}
 .cb-hint{font-size:12px;font-weight:400;color:var(--st-over);margin-top:4px;line-height:1.5}
 .cb-hint button{padding:0;border:0;background:none;color:var(--blue);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer}
 /* ===== hình thức mua ===== */
@@ -1709,11 +1715,18 @@ f_ht.onchange = ()=>{ f_ht.dataset.auto = ''; ptSwitch(); };
 f_xx.addEventListener('input', ()=>{ if(!hasPT() || (f_ht.value && !f_ht.dataset.auto)) return;
   f_ht.value = DM.suggestPurchase(f_xx.value); f_ht.dataset.auto = '1'; ptSwitch(); });
 /* ô chọn từ dữ liệu đang có (combo.js): vẫn gõ được giá trị mới */
-CB.labels = { pre:tr('Did you mean','Có phải'), post:tr('?','không?'), fresh:tr('New value','Giá trị mới') };
+CB.labels = { pre:tr('Did you mean','Có phải'), post:tr('?','không?'), fresh:tr('New value','Giá trị mới'),
+  none:tr('Not in the library','Chưa có trong thư viện'), add:tr('Add to the library','Thêm vào thư viện') };
 CB.make(f_pt, { items:()=>DATA.map(x=>unescH(x.phutrach)) });
 CB.make(f_xx, { items:()=>DATA.map(x=>unescH(x.xuatxu)) });
 CB.make(f_th, { items:()=>DATA.map(x=>unescH(x.thuong_hieu)).concat(((window.__MMTB||{}).machines||[]).map(c=>c.manufacturer).filter(v=>v && v!=='🔒')) });
 CB.make(f_ncc, { items:()=>DATA.map(x=>unescH(x.ncc)).concat(((window.__MMTB||{}).suppliers||[]).map(s=>s.name)) });
+// Tên máy, Model, Công suất: xổ từ dữ liệu Tiến độ + Danh mục, vẫn gõ mới được (không nhắc "Có phải…": tên máy hay chỉ khác số thứ tự)
+const mmVals = k => (((window.__MMTB||{}).machines)||[]).map(c=>c[k]).filter(v=>v && v!=='🔒');
+CB.make(f_ten, { items:()=>DATA.map(x=>unescH(x.ten)).concat(mmVals('name')), hint:false });
+CB.make(f_model, { items:()=>DATA.map(x=>unescH(x.model)).concat(mmVals('model')), hint:false });
+CB.make(f_cs, { items:()=>DATA.map(x=>unescH(x.congsuat)), hint:false });
+CB.select(f_nld);      // Nơi lắp đặt: gõ để tìm nhà máy trong thư viện
 /* ô Nơi lắp đặt: chỉ chọn nhà máy trong thư viện. Lưu đúng cách ghi nhiều máy của công ty đó đang dùng (bộ lọc, biểu đồ gom theo chữ),
    công ty chưa có máy thì lưu mã (mã không đổi, đổi tên trong thư viện vẫn nhận ra). Máy đang ghi cách khác / nơi lạ: giữ nguyên, không mất khi mở Sửa */
 function siteFill(cur){
@@ -4915,7 +4928,38 @@ function buildForm(){
   // ô chọn từ dữ liệu Danh mục (combo.js): vẫn gõ được giá trị mới. Ô đơn vị quá hẹp, không chèn dòng nhắc
   [['m_origin','origin'],['m_brand','manufacturer'],['m_eng','engineer'],['m_mgr','manager'],['m_capu','capacity_unit',false]].forEach(([id,k,hint])=>
     CB.make(document.getElementById(id), { items:()=>MM.machines.map(x=>x[k]), hint }));
+  // Tên máy, Model: xổ từ dữ liệu cả 2 phân hệ, vẫn gõ mới được (không nhắc "Có phải…" vì tên máy hay chỉ khác số thứ tự)
+  const dmVals = k => (typeof DATA !== 'undefined' ? DATA : []).map(x=>unescH(x[k] || ''));
+  CB.make(m_name, { items:()=>MM.machines.map(x=>x.name).concat(dmVals('ten')), hint:false });
+  CB.make(m_model, { items:()=>MM.machines.map(x=>x.model).concat(dmVals('model')), hint:false });
+  // ô chọn từ thư viện: gõ để tìm, chỉ nhận giá trị trong thư viện; NCC / Loại / Nhóm: admin thêm nhanh vào thư viện ngay trong ô
+  CB.select(m_sup, { add: isAdmin ? t=>libQuickAdd('sup', t) : null });
+  CB.select(m_type, { add: isAdmin && MM.hasTypes ? t=>libQuickAdd('type', t) : null });
+  CB.select(m_group, { add: isAdmin && MM.hasGroups ? t=>libQuickAdd('group', t) : null });
+  [m_area, m_line, m_parent].forEach(el=>CB.select(el));
   mmSave.onclick = save;
+}
+/* ➕ thêm nhanh 1 mục thư viện từ ô chọn trong form máy (admin). Trùng tên (không phân biệt dấu) thì chọn mục có sẵn.
+   Thêm <option> vào ô và trả về value; MM được cập nhật tại chỗ để form không phải tải lại. */
+async function libQuickAdd(kind, text){
+  const name = String(text || '').trim(); if(!name) return null;
+  const sel = { sup:m_sup, type:m_type, group:m_group }[kind];
+  const same = [...sel.options].find(op=>op.value && DM.fold(op.textContent) === DM.fold(name)); if(same) return same.value;
+  const sb = window.__sb; window.__selfWritingM = true;
+  try{
+    if(kind === 'sup'){
+      const row = { id: crypto.randomUUID(), name, roles: [] };
+      const { error } = await sb.from('suppliers').insert(await window.__seal('suppliers', row)); if(error) throw error;
+      MM.suppliers.push(row); sel.add(new Option(name, row.id)); toast('✅ ' + tr('Supplier added to the library','Đã thêm NCC vào thư viện') + ': <b>' + E(name) + '</b>'); return row.id;
+    }
+    const table = kind === 'type' ? 'mmtb_equipment_types' : 'mmtb_groups';
+    const { data, error } = await sb.from(table).insert({ name }).select().single(); if(error) throw error;
+    const arr = kind === 'type' ? (MM.types = MM.types || []) : (MM.groups = MM.groups || []);
+    arr.push(data || { name }); sel.add(new Option(name, name));
+    toast('✅ ' + (kind === 'type' ? tr('Type added to the library','Đã thêm loại thiết bị vào thư viện') : tr('Group added to the library','Đã thêm nhóm vào thư viện')) + ': <b>' + E(name) + '</b>');
+    return name;
+  }catch(ex){ throw new Error(errText(ex)); }
+  finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
 }
 function fillFormDeps(keep){
   const co = m_co.value, k = keep || {};

@@ -236,7 +236,13 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Test: `e2e_arrange_test.py`.
 
 ## Ô chọn trong form + Nhà máy lấy từ thư viện (migration 14)
-- `combo.js` (`CB.make`): ô chữ có danh sách xổ, gõ không dấu để lọc, vẫn gõ được giá trị mới; gần giống giá trị đã có thì nhắc "Có phải … không?", không chặn. Danh sách lấy từ dữ liệu đã giải mã trong trình duyệt, không có bảng riêng: giá trị tự mất khi không còn máy nào dùng. Dùng cho `f_pt`, `f_xx`, `f_th` (thêm thương hiệu Danh mục), `f_ncc` (thêm thư viện NCC), `m_origin`, `m_brand`, `m_eng`, `m_mgr`, `m_capu`.
+- `combo.js` (`CB.make`): ô chữ có danh sách xổ, gõ không dấu để lọc, vẫn gõ được giá trị mới; gần giống giá trị đã có thì nhắc "Có phải … không?", không chặn. Danh sách lấy từ dữ liệu đã giải mã trong trình duyệt, không có bảng riêng: giá trị tự mất khi không còn máy nào dùng. Dùng cho `f_pt`, `f_xx`, `f_th` (thêm thương hiệu Danh mục), `f_ncc` (thêm thư viện NCC), `m_origin`, `m_brand`, `m_eng`, `m_mgr`, `m_capu`. Thêm (2026-11-13): `f_ten`, `f_model`, `f_cs`, `m_name`, `m_model` (hint:false — tên máy hay chỉ khác số thứ tự; nguồn cả 2 phân hệ).
+- `CB.select(sel, { add })` (2026-11-13): biến `<select>` thư viện thành ô gõ để tìm `#<id>_q`, CHỈ nhận giá trị trong danh sách. `<select>` vẫn giữ
+  giá trị (class `cb-src`: opacity 0, 1px — vẫn select_option / đọc .value được); `.value`/`.selectedIndex` bị ghi đè trên phần tử để code đặt giá trị
+  hay đổi innerHTML đều cập nhật chữ (MutationObserver). Rời ô: khớp đúng 1 dòng (fold) thì chọn, trống thì bỏ chọn, còn lại trả giá trị cũ.
+  Dùng cho `m_sup`, `m_type`, `m_group`, `m_area`, `m_line`, `m_parent`, `f_nld`. `add` = `libQuickAdd('sup'|'type'|'group', text)` (chỉ admin):
+  gõ giá trị chưa có → nút "➕ Thêm … vào thư viện" → insert (NCC mã hoá qua `__seal`), cập nhật MM tại chỗ + thêm <option> + chọn luôn; trùng tên (fold) thì chọn mục có sẵn.
+  Test: `e2e_form_pick2_test.py`.
 - `f_nld` (Nơi lắp đặt) là `<select>`, chỉ chọn nhà máy đang hoạt động trong thư viện (`siteFill`). Giá trị lưu vẫn là chữ: cách ghi nhiều máy của công ty đó đang dùng, công ty chưa có máy thì lưu mã. Máy đang ghi cách khác / nơi lạ giữ nguyên khi mở Sửa. Nạp Excel không qua ô này.
 - Thêm nhà máy: Danh mục › Thư viện › 🏭 Nhà máy, không sửa code. `DM.setCompanies(companies)` chạy trong `loadMmtb`, nhận theo mã + tên; 6 công ty gốc giữ cách nhận và thứ tự (`CO_ALIAS`, `CO_BASE`), đọc thư viện lỗi thì dùng 6 công ty này. Mã máy: `machine_company_code` đọc bảng `companies` từ migration 14; chưa chạy thì nhà máy mới nhận KXD. Hai bên phải giữ cùng quy tắc.
 - Mã nhà máy 2–4 chữ in hoa (định dạng Mã máy), không dùng KXD (`DM.companyCodeOk`). Bộ lọc công ty ở Tổng quan vẽ một lần, cần tải lại trang mới thấy nhà máy vừa thêm. Test: `e2e_form_pick_test.py`.

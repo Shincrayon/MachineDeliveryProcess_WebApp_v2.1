@@ -148,6 +148,105 @@
       }
     });
   };
+  /* ---------------------------------------------------------------------
+     CB.select(sel, { add, ph }) — biến <select> lấy từ thư viện thành ô gõ để tìm, CHỈ nhận giá trị có trong danh sách.
+     - <select> vẫn là nơi giữ giá trị (ẩn bằng opacity, vẫn đọc / ghi / select_option như cũ); code đặt .value, .selectedIndex
+       hay đổi innerHTML đều tự cập nhật chữ trong ô. Chọn 1 dòng = sel.value + bắn 'change' trên <select>.
+     - add(text): có thì gõ giá trị chưa có hiện nút "➕ Thêm … vào thư viện"; add phải thêm <option> và trả về value mới.
+     - Rời ô: chữ khớp đúng 1 dòng (không phân biệt dấu) thì chọn dòng đó; ô trống thì bỏ chọn; còn lại trả về giá trị cũ.
+     --------------------------------------------------------------------- */
+  const SP = HTMLSelectElement.prototype;
+  const dVal = Object.getOwnPropertyDescriptor(SP, 'value'), dIdx = Object.getOwnPropertyDescriptor(SP, 'selectedIndex');
+  CB.labels.none = CB.labels.none || 'Not in the library';
+  CB.labels.add = CB.labels.add || 'Add to the library';
+  CB.labels.clear = CB.labels.clear || '— none';
+  function sDraw() {
+    const sel = cur.o.sel, q = fold(cur.el.value), v = cur.el.value.trim();
+    const all = [...sel.options].filter(op => op.value !== '' && !op.disabled).map(op => ({ v: op.value, t: op.textContent }));
+    cur.rows = cur.typed && q ? all.filter(x => fold(x.t).includes(q)) : all;
+    cur.at = cur.rows.findIndex(x => x.v === sel.value);
+    cur.pop.textContent = '';
+    cur.rows.forEach((x, i) => {
+      const d = document.createElement('div'); d.className = 'cb-it'; d.textContent = x.t;
+      if (x.v === sel.value) d.classList.add('cur');
+      d.onmousemove = () => { if (cur.at !== i) { cur.at = i; mark(); } };
+      d.onclick = () => sPick(x.v);
+      cur.pop.appendChild(d);
+    });
+    if (cur.typed && v && !all.some(x => fold(x.t) === q)) {
+      const d = document.createElement('div'); d.className = 'cb-fresh'; d.textContent = CB.labels.none + ': ' + v;
+      cur.pop.appendChild(d);
+      if (cur.o.add) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'cb-add';
+        b.textContent = '➕ ' + CB.labels.add + ': "' + v + '"';
+        b.onclick = async () => {
+          const o = cur.o; b.disabled = true;
+          try { const nv = await o.add(v); if (nv != null) { sSet(o.sel, nv); } }
+          catch (e) { b.disabled = false; b.textContent = '⚠ ' + (e && e.message || e); }
+        };
+        cur.pop.appendChild(b);
+      }
+    }
+    cur.pop.hidden = !cur.pop.firstChild;
+    mark(); place();
+  }
+  function sSet(sel, v) {
+    close();
+    sel.value = v;
+    sel.dispatchEvent(new Event('input', { bubbles: true }));
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const sPick = v => sSet(cur.o.sel, v);
+  CB.select = (sel, o) => {
+    if (sel.__cb) return sel.__cb;
+    o = Object.assign({}, o, { sel });
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.id = sel.id + '_q'; inp.className = 'cb-sel'; inp.autocomplete = 'off';
+    if (o.ph) inp.placeholder = o.ph;
+    inp.setAttribute('role', 'combobox'); inp.setAttribute('aria-expanded', 'false');
+    sel.insertAdjacentElement('beforebegin', inp);
+    sel.classList.add('cb-src'); sel.tabIndex = -1; sel.setAttribute('aria-hidden', 'true');
+    const show = () => {
+      if (cur && cur.el === inp && cur.typed) return;
+      const op = sel.options[dIdx.get.call(sel)];
+      inp.value = op && op.value !== '' ? op.textContent : '';
+      inp.title = inp.value;
+      inp.disabled = sel.disabled;
+    };
+    Object.defineProperty(sel, 'value', { configurable: true, get() { return dVal.get.call(this); }, set(x) { dVal.set.call(this, x); show(); } });
+    Object.defineProperty(sel, 'selectedIndex', { configurable: true, get() { return dIdx.get.call(this); }, set(x) { dIdx.set.call(this, x); show(); } });
+    new MutationObserver(show).observe(sel, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
+    sel.addEventListener('change', show);
+    const opn = () => { if (sel.disabled) return; if (!(cur && cur.el === inp)) { close(); const pop = document.createElement('div'); pop.className = 'cb-pop';
+      pop.onmousedown = e => e.preventDefault();
+      document.body.appendChild(pop); cur = { el: inp, o, pop, rows: [], at: -1, typed: false, draw: sDraw }; inp.setAttribute('aria-expanded', 'true'); sDraw(); inp.select(); } };   // mở lại: bôi đen chữ cũ để gõ đè
+    inp.addEventListener('focus', () => { opn(); inp.select(); });
+    inp.addEventListener('click', opn);
+    inp.addEventListener('input', () => { opn(); if (cur) { cur.typed = true; sDraw(); } });
+    inp.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (document.activeElement === inp) return;
+        const t = fold(inp.value);
+        if (cur && cur.el === inp) close();
+        if (!t) { if (sel.value !== '' && [...sel.options].some(op => op.value === '')) sSet(sel, ''); else show(); return; }
+        const hit = [...sel.options].filter(op => op.value !== '' && fold(op.textContent) === t);
+        if (hit.length === 1 && hit[0].value !== sel.value) sSet(sel, hit[0].value); else show();
+      }, 120);
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault(); opn(); if (!cur || !cur.rows.length) return;
+        const n = cur.rows.length, st = e.key === 'ArrowDown' ? 1 : -1;
+        cur.at = cur.at < 0 ? (st > 0 ? 0 : n - 1) : (cur.at + st + n) % n; mark();
+      } else if (e.key === 'Enter' && cur && cur.el === inp) {
+        e.preventDefault(); e.stopPropagation();
+        if (cur.at >= 0 && cur.rows[cur.at]) sPick(cur.rows[cur.at].v);
+        else if (cur.rows.length === 1) sPick(cur.rows[0].v);
+      } else if (e.key === 'Escape' && cur && cur.el === inp) { e.stopPropagation(); close(); show(); }
+    });
+    show();
+    return (sel.__cb = { input: inp, refresh: show });
+  };
   window.addEventListener('resize', place);
   document.addEventListener('scroll', e => { if (cur && !cur.pop.contains(e.target)) place(); }, true);
 })();
