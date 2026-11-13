@@ -3,7 +3,7 @@
    - Ô <input> giữ nguyên id và .value, code đọc / ghi / lưu của form không đổi.
    - CB.make(input, { items, hint }): items() trả về các giá trị (được phép lặp, trống): CB.values gom lại;
      hint: false = không chèn dòng nhắc "Có phải … không?" (ô quá hẹp).
-   - Bấm vào ô là xổ cả danh sách; gõ thì lọc, không phân biệt dấu. Chọn 1 dòng bắn 'input' + 'change' như gõ tay.
+   - Bấm vào ô (hoặc nhấn ↓) là xổ cả danh sách — chỉ focus thì KHÔNG xổ; gõ thì lọc, không phân biệt dấu. Chọn 1 dòng bắn 'input' + 'change' như gõ tay.
    - Chỉ nhắc, không chặn: gõ gần giống giá trị đã có thì hỏi lại, vẫn lưu được.
    - Chữ do trang truyền vào CB.labels (đã dịch). Cần metrics.js (DM.fold).
    ===================================================================== */
@@ -122,7 +122,7 @@
   CB.make = (el, o) => {
     el.autocomplete = 'off';
     el.setAttribute('role', 'combobox'); el.setAttribute('aria-expanded', 'false');
-    el.addEventListener('focus', () => open(el, o));
+    // không mở khi chỉ được focus (form tự đặt con trỏ vào Tên máy lúc mở): chỉ mở khi bấm vào ô, gõ chữ hoặc nhấn ↓
     el.addEventListener('click', () => open(el, o));
     el.addEventListener('blur', () => { if (cur && cur.el === el) close(); });
     el.addEventListener('input', () => {
