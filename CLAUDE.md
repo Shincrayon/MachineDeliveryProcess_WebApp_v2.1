@@ -55,7 +55,8 @@ File Excel xuất trước bản này vẫn nạp lại được — dữ liệu
 - Một chiều, chạy TRONG APP sau khi giải mã (2 bảng mã hoá `sec`) — không dùng trigger DB. Lưu Tiến độ trước, đồng bộ sau
   (`CS.afterSave`, gọi từ `quSaveOne`, `saveMachine`→`csAfter`, `importMachines`); lỗi đồng bộ chỉ báo, không làm hỏng lần lưu.
   Hàng chờ / lệch không có bảng riêng: tính lại mỗi lần bằng `CS.planAll` (so 2 bên sau giải mã).
-- Điều kiện: có `ma_may`. Chưa liên kết + có `nghiemthu_tt` → tạo hồ sơ mới (mã tạm `tempCode`, `code_temp`, `needs_info`,
+- Điều kiện: có `ma_may`. Chưa liên kết + `nghiemthu_tt` đã qua đủ `WAIT_DAYS` = 10 ngày (mọi máy, 2026-11-13; chưa đủ → skip `wait_days`,
+  popup ghi "(từ dd/mm/yyyy)"; bài test đặt `window.CS_WAIT_DAYS`) → tạo hồ sơ mới (mã tạm `tempCode`, `code_temp`, `needs_info`,
   `source_ref = "Từ Tiến độ máy về · <ma_may>"`); không xác định công ty (KXD) → không tạo.
 - Trạng thái: về NM → `arrived` · lắp đặt / đang thử nghiệm (`testing`) → `installing` · nghiệm thu → `in_operation` + `commissioned_date`.
   Mốc `installed` = chaythu_tt chỉ khi ≤ hôm nay.
@@ -265,3 +266,10 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 4. Từ đây: nhập Ngày máy về NM TT là máy có mã. File Excel xuất trước bản này không nạp lại được — xuất file mới.
 
 `20261031_06_machine_code_not_null.sql` đã bỏ (chưa từng chạy) — thay bằng 08.
+
+## ✂️ Tách máy Danh mục (2026-11-13, `mmSplit`)
+- Nút ✂️ Tách máy trong chi tiết máy Danh mục (cùng quyền với Nhân bản). Chọn số máy (2–10, mặc định = SL bên Tiến độ nếu đã liên kết),
+  mỗi máy chọn Khu vực / Chuyền / Ghi chú vị trí (nối vào notes "Vị trí: …").
+- Máy gốc: giữ mã, serial, giá trị hợp đồng, liên kết `tracking_machine_id`; đổi area/line, quantity 1 (notes trong sec → mã hoá lại cả gói `SEC.mmtb_machines.f`).
+- Máy mới: chép cột + trường sec, mã tạm `randCode`, `code_temp`, chép mốc `delivery_milestones`; để trống serial, asset_code, contract_amount
+  (tổng không nhân đôi); không liên kết Tiến độ (UNIQUE); `source_ref` = "Tách từ <mã gốc> · <nguồn gốc>". Bên Tiến độ không đổi. Test: `e2e_sync_split_test.py`.

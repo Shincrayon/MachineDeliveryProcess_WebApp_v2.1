@@ -4,7 +4,7 @@
    Một chiều Tiến độ → Danh mục. Liên kết: mmtb_machines.tracking_machine_id = machines.id (UNIQUE).
 
    Quy tắc (CS.plan):
-   · Chỉ máy có Mã máy (ma_may). Chưa liên kết + đã có Ngày nghiệm thu TT -> tạo hồ sơ mới (mã tạm theo quy tắc Danh mục,
+   · Chỉ máy có Mã máy (ma_may). Chưa liên kết + đã nghiệm thu TT đủ WAIT_DAYS (10) ngày -> tạo hồ sơ mới (mã tạm theo quy tắc Danh mục,
      needs_info = "Cần bổ sung"); chưa liên kết + chưa nghiệm thu -> chưa chuyển.
    · Trạng thái theo DM.installStatus: về NM -> arrived · lắp đặt / đang thử nghiệm -> installing · nghiệm thu -> in_operation
      (commissioned_date = nghiemthu_tt). Không bao giờ hạ trạng thái bên Danh mục.
@@ -17,6 +17,7 @@
    · Tên máy bên Tiến độ không bao giờ bị sửa (kể cả "Giữ Danh mục" ở màn Lệch).
    ===================================================================== */
 (function(){
+const WAIT_DAYS = typeof window.CS_WAIT_DAYS === 'number' ? window.CS_WAIT_DAYS : 10;      // (CS_WAIT_DAYS: chỉ bài test đặt) máy mới chỉ vào Danh mục khi đã nghiệm thu đủ 10 ngày (mọi máy, user 2026-11-13)
 const LCO = ['planned','ordered','manufacturing','shipping','arrived','installing','in_operation','idle','disposed'];
 const MS_MAP = [['arrived_site','venm_tt'], ['installed','chaythu_tt'], ['commissioned','nghiemthu_tt']];
 const un = v => (typeof unescH === 'function' ? unescH(v == null ? '' : v) : String(v == null ? '' : v));   // DATA giữ chữ đã escape HTML
@@ -72,6 +73,7 @@ const FIELD_L = () => ({ company: L('Company','Công ty'), supplier: L('Supplier
   'ms:installed': L('Milestone: trial run','Mốc: vận hành thử'), 'ms:commissioned': L('Milestone: commissioning','Mốc: nghiệm thu') });
 const REASON = () => ({ no_code: L('no machine code yet (not arrived at plant)','chưa có Mã máy (chưa về NM)'),
   not_commissioned: L('not linked, not yet commissioned — a catalog record is created at commissioning','chưa liên kết, chưa nghiệm thu — tạo hồ sơ Danh mục khi nghiệm thu'),
+  wait_days: L(`commissioned, waiting ${WAIT_DAYS} days before a catalog record is created`,`đã nghiệm thu, chờ đủ ${WAIT_DAYS} ngày mới tạo hồ sơ Danh mục`),
   no_company: L('unknown company (installation site) — cannot create a catalog record','không xác định công ty (Nơi lắp đặt) — chưa tạo được hồ sơ Danh mục'),
   locked: L('catalog record could not be decrypted','hồ sơ Danh mục chưa giải mã được') });
 
@@ -86,6 +88,8 @@ function plan(x, C){
                                     `NCC "${w.ncc}" không có trong danh sách NCC của Danh mục — để trống, không tạo NCC mới`));
   if(!cat){
     if(!x.nghiemthu_tt){ p.action = 'skip'; p.reason = 'not_commissioned'; return p; }
+    const readyOn = DM.addDays(iso(x.nghiemthu_tt), WAIT_DAYS);
+    if(readyOn > DM.todayIso()){ p.action = 'skip'; p.reason = 'wait_days'; p.readyOn = readyOn; return p; }
     if(!w.company_id){ p.action = 'skip'; p.reason = 'no_company'; return p; }
     p.action = 'create';
     const s = p.set;
@@ -258,7 +262,7 @@ function linkInfo(x){
   const C = ctx(); if(!C) return null;
   const p = plan(x, C);
   return { cat: p.cat, pending: p.action === 'create' || p.action === 'update', conflicts: p.conflicts.length,
-           reason: p.action === 'skip' ? (REASON()[p.reason] || p.reason) : '', ready: C.ready };
+           reason: p.action === 'skip' ? (REASON()[p.reason] || p.reason) + (p.readyOn ? L(' (from ',' (từ ') + p.readyOn.split('-').reverse().join('/') + ')' : '') : '', ready: C.ready };
 }
 
 /* ---------- ghép cặp lần đầu ----------
@@ -521,6 +525,6 @@ async function writeTrack(x, ch){
   } finally { setTimeout(() => { window.__selfWriting = false; }, 1500); }
 }
 
-window.CS = { parseCap, fold, ctx, plan, planAll, apply, syncMachines, afterSave, linkInfo, score, suggest, nameSim, pendingCount, writeTrack,
+window.CS = { WAIT_DAYS, parseCap, fold, ctx, plan, planAll, apply, syncMachines, afterSave, linkInfo, score, suggest, nameSim, pendingCount, writeTrack,
               idle: () => chain.then(() => {}, () => {}) };
 })();
