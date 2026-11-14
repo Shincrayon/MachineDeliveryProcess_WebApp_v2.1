@@ -64,7 +64,9 @@ File Excel xuất trước bản này vẫn nạp lại được — dữ liệu
 - Trường chung (model, serial, xuất xứ, công suất, hợp đồng, NCC, công ty, ngày nghiệm thu, mốc): Danh mục trống → điền; khác → "lệch",
   không ghi (admin chọn giữ bên nào ở ⚖️ Lệch dữ liệu; "Giữ Danh mục" ghi ngược về Tiến độ).
 - KHÔNG BAO GIỜ ghi bên Danh mục: khu vực, chuyền, máy cha, vai trò, vật liệu, mã tài sản, mã máy đã có, ghi chú, kỹ sư, người quản lý.
-  Tên máy chỉ dùng khi tạo mới, không tính lệch. **Tên máy bên Tiến độ không bao giờ bị sửa.**
+  **Tên máy (2026-11-14): máy đã liên kết thì tên Danh mục LUÔN theo tên Tiến độ** (ghi đè mỗi lần đồng bộ, không tính lệch; tên cũ Danh mục
+  nối vào `alias_names`). Danh mục khoá ô Tên của máy đã liên kết (`m_name.readOnly` + `#m_nameLock` → mở máy bên Tiến độ); `nameIss` trả []
+  cho máy đã liên kết nên ✏️ Chuẩn hoá tên bỏ qua; 🩺 có mục `name_diff`. **Tên máy bên Tiến độ không bao giờ bị sửa.** Test: `e2e_name_follow_test.py`.
 - NCC: khớp tên đã bỏ dấu / không phân biệt hoa thường với `suppliers`; không khớp → để trống + cảnh báo, KHÔNG tạo NCC mới.
 - Mọi ghi vào `mmtb_machines` mã hoá lại cả gói `sec` (giữ các trường không đổi); nhật ký: trigger `mmtb_audit_trg` → `audit_log` (`MMTB_*`).
 - Admin: nút 🔗 Danh mục (trang Danh sách) → 🧩 Ghép cặp (đề xuất + file `GhepCap_TienDo_DanhMuc_YYYY-MM-DD.xlsx`, chỉ ghi dòng đã tick),

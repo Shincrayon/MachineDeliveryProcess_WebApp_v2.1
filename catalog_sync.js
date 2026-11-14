@@ -15,6 +15,8 @@
    · Lưu Tiến độ trước, đồng bộ sau (CS.afterSave); lỗi không làm hỏng lần lưu. Hàng chờ = máy đủ điều kiện mà Danh mục còn
      chậm hơn — tính lại mỗi lần (CS.planAll), không cần bảng riêng.
    · Tên máy bên Tiến độ không bao giờ bị sửa (kể cả "Giữ Danh mục" ở màn Lệch).
+   · Máy đã liên kết: tên Danh mục luôn theo tên Tiến độ (ghi đè, không tính lệch); tên cũ Danh mục chuyển vào alias_names.
+     Bên Danh mục khoá ô Tên máy của máy đã liên kết; ✏️ Chuẩn hoá tên bỏ qua máy đã liên kết.
    ===================================================================== */
 (function(){
 const WAIT_DAYS = typeof window.CS_WAIT_DAYS === 'number' ? window.CS_WAIT_DAYS : 10;      // (CS_WAIT_DAYS: chỉ bài test đặt) máy mới chỉ vào Danh mục khi đã nghiệm thu đủ 10 ngày (mọi máy, user 2026-11-13)
@@ -104,6 +106,16 @@ function plan(x, C){
   p.cat = cat;
   if(cat.__locked){ p.action = 'skip'; p.reason = 'locked'; return p; }
   const s = p.set, cf = (field, t, c, tv, cv) => p.conflicts.push({ field, track: t, cat: c, tv, cv });
+  // tên máy: đã liên kết thì Danh mục luôn theo tên Tiến độ (user 2026-11-14); tên cũ bên Danh mục giữ ở "Tên gọi khác" (alias_names)
+  const tn = txt(x.ten);
+  if(tn && tn !== cat.name){
+    s.name = tn; p.oldName = cat.name;
+    if('alias_names' in cat && cat.name && cat.name !== '🔒'){
+      const al = String(cat.alias_names || '').split(/\s*;\s*/).filter(Boolean);
+      if(!al.some(a => fold(a) === fold(cat.name)) && fold(cat.name) !== fold(tn)) al.push(cat.name);
+      const nv = al.join('; ') || null; if(nv !== (cat.alias_names || null)) s.alias_names = nv;
+    }
+  }
   if(w.company_id && w.company_id !== cat.company_id)
     cf('company', w.company_code, (C.coId.get(cat.company_id) || {}).code || '—', w.company_id, cat.company_id);
   if(w.supplier_id){
@@ -434,7 +446,7 @@ window.csSync = () => {
   const R = REASON(), FL = FIELD_L(), go = [...cr, ...up];
   mSub.innerHTML = L(`Preview — nothing is written until you press Sync.`,`Xem trước — chưa ghi gì cho tới khi bấm Đồng bộ.`);
   const line = p => `<tr><td><b>${esc(p.x.ma_may)}</b><small>${esc(un(p.x.ten))}</small></td><td>${p.action === 'create' ? '➕ ' + L('create','tạo mới') : '✏️ ' + esc(p.cat.machine_code)}</td>
-    <td>${Object.keys(p.set).filter(k => k !== 'name').map(k => esc(k)).concat(p.ms.map(m => 'ms:' + m.milestone)).join(', ')}${p.warn.map(w => `<small style="color:var(--st-over)">⚠ ${esc(w)}</small>`).join('')}</td></tr>`;
+    <td>${p.action === 'update' && p.set.name ? `<small class="cs-rn">✏️ ${L('name','tên')}: ${esc(p.oldName || '—')} → <b>${esc(p.set.name)}</b></small>` : ''}${Object.keys(p.set).filter(k => k !== 'name' && k !== 'alias_names').map(k => esc(k)).concat(p.ms.map(m => 'ms:' + m.milestone)).join(', ')}${p.warn.map(w => `<small style="color:var(--st-over)">⚠ ${esc(w)}</small>`).join('')}</td></tr>`;
   mBody.innerHTML = `<div class="cs-sum"><span>➕ ${L('Create','Tạo mới')}: <b>${cr.length}</b></span><span>✏️ ${L('Update','Cập nhật')}: <b>${up.length}</b></span>
       <span>⚖️ ${L('With differences','Có lệch')}: <b>${nc.length}</b></span><span>⏸ ${L('Not eligible','Chưa đủ điều kiện')}: <b>${sk.length}</b></span></div>
     ${Object.keys(by).length ? `<div class="cs-why">${Object.entries(by).map(([k, n]) => `<div>· ${esc(R[k] || k)}: <b>${n}</b></div>`).join('')}</div>` : ''}

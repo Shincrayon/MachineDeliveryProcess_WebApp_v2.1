@@ -765,6 +765,9 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 .mm-empty h3{color:var(--strong);margin-bottom:6px}
 .mm-empty code{background:var(--panel2);padding:1px 6px;border-radius:6px}
 #mmTb td.name .ind{color:var(--muted);margin-right:4px}
+#m_name.nm-lock{opacity:.8;cursor:not-allowed;background:var(--panel2)}
+.nm-lockmsg{font-size:12px;font-weight:400;color:var(--muted);margin-top:4px}
+.cs-rn{display:block;margin-bottom:2px}
 .hc-g{border:1px solid var(--border);border-radius:10px;margin:8px 0;padding:0 12px;background:var(--panel)}
 .hc-g.err{border-left:4px solid var(--st-bad)}.hc-g.warn{border-left:4px solid var(--st-over)}
 .hc-g summary{cursor:pointer;padding:10px 0;font-weight:700;font-size:13.5px}.hc-g summary b{margin-left:6px;color:var(--muted)}
@@ -4525,7 +4528,7 @@ const hasLink = () => MM.machines.length ? 'needs_info' in MM.machines[0] : fals
 const hasAlias = () => !!MM.hasTypes;     // migrations/20261102_11 tạo cùng lúc bảng loại thiết bị và cột alias_names
 const NAME_BAD = () => `<span class="tag-temp tag-name" title="${tr('Name does not follow the standard pattern','Tên chưa theo mẫu tên chuẩn')}">${tr('name not standard','tên chưa chuẩn')}</span>`;
 let NSC = null;      // ngữ cảnh name_std.js, tính lại ở index()
-const nameIss = x => (window.NS && NSC && MM.hasTypes) ? NS.issues(x, NSC) : [];
+const nameIss = x => (window.NS && NSC && MM.hasTypes && !x.tracking_machine_id) ? NS.issues(x, NSC) : [];   // máy đã liên kết: tên theo Tiến độ, không chuẩn hoá ở Danh mục
 const NEEDS = () => `<span class="tag-temp tag-need" title="${tr('Created from delivery tracking — add area, line, role, materials and a standard name','Tạo từ Tiến độ máy về — cần bổ sung khu vực, chuyền, vai trò, vật liệu, tên chuẩn')}">${tr('needs info','cần bổ sung')}</span>`;
 index();
 const coName = c => { const x = MM.companies.find(o=>o.code===c); return x ? x.name : c; };
@@ -4911,6 +4914,7 @@ let editId = null, fps = {};
 /* ✏️ tên chuẩn (name_std.js): cảnh báo + gợi ý dưới ô Tên máy — chỉ nhắc, không chặn lưu */
 function nameHint(){
   const el = document.getElementById('m_nameHint'); if(!el || !window.NS) return;
+  if(m_name.readOnly){ el.innerHTML = ''; return; }        // máy đã liên kết: tên theo Tiến độ, không gợi ý chuẩn hoá
   const C = NS.ctx(MM), sup = MM.suppliers.find(s=>s.id===m_sup.value);
   const fx = { name: m_name.value, equipment_type: m_type.value, model: m_model.value.trim(), supplier_name: sup ? sup.name : null,
                company_id: m_co.value, capacity_value: m_capv.value === '' ? null : +m_capv.value, capacity_unit: m_capu.value.trim(),
@@ -5095,6 +5099,13 @@ function openForm(x, clone){
   fillFormDeps({ area:v.area_id, line:v.line_id, parent:v.parent_machine_id });
   const set = (id, val) => { document.getElementById(id).value = val == null ? '' : val; };
   set('m_code', v.machine_code); set('m_name', v.name); set('m_model', v.model); set('m_brand', v.manufacturer);
+  // máy đã liên kết Tiến độ: tên theo Tiến độ — khoá ô, sửa tên ở Tiến độ (user 2026-11-14)
+  const nmLock = !!(x && !clone && x.tracking_machine_id);
+  m_name.readOnly = nmLock; m_name.classList.toggle('nm-lock', nmLock); m_name.title = nmLock ? tr('Name follows Delivery — rename it there','Tên theo Tiến độ máy về — sửa tên ở bên đó') : '';
+  let nmL = document.getElementById('m_nameLock');
+  if(!nmL){ nmL = document.createElement('div'); nmL.id = 'm_nameLock'; nmL.className = 'nm-lockmsg'; m_name.insertAdjacentElement('afterend', nmL); }
+  nmL.hidden = !nmLock;
+  nmL.innerHTML = nmLock ? `🔗 ${tr('Name follows Delivery progress','Tên theo Tiến độ máy về')} — <a class="cs-link" onclick="mmClose();window.__goTracking('${x.tracking_machine_id}')">${tr('rename on the Delivery side','sửa tên bên Tiến độ')} ↗</a>` : '';
   if(MM.hasUnits) unitOpts(m_capu, v.capacity_unit);
   set('m_serial', v.serial_number); set('m_qty', v.quantity || 1); set('m_capv', v.capacity_value); set('m_capu', v.capacity_unit);
   set('m_group', v.group_name); set('m_type', v.equipment_type); set('m_origin', v.origin); set('m_sup', v.supplier_id);
@@ -5429,6 +5440,9 @@ function dataIssues(){
     add('err', 'track_co', tr('Plant differs from the linked Delivery machine','Nhà máy khác với máy Tiến độ đã liên kết'), tr('Check the installation site on the Delivery side or the plant here.','Kiểm tra Nơi lắp đặt bên Tiến độ hoặc Nhà máy bên Danh mục.'),
         ms.filter(x=>{ const t = tBy.get(x.tracking_machine_id); const c = t && DM.companyCode(unescH(t.noilapdat)); return c && c !== x.company_code; })
           .map(x=>{ const t = tBy.get(x.tracking_machine_id); return say(x, (t.ma_may || '') + ': ' + DM.companyCode(unescH(t.noilapdat)) + ' ≠ ' + x.company_code); }));
+    add('warn', 'name_diff', tr('Name differs from the linked Delivery machine','Tên khác với máy Tiến độ đã liên kết'), tr('Use 🔗 Catalog › 🔄 Sync on the Delivery list — the catalog takes the Delivery name.','Dùng 🔗 Danh mục › 🔄 Đồng bộ lại ở Danh sách Tiến độ — Danh mục sẽ lấy tên bên Tiến độ.'),
+        ms.filter(x=>{ const t = tBy.get(x.tracking_machine_id); const tn = t && unescH(t.ten || '').trim(); return tn && tn !== x.name; })
+          .map(x=>say(x, x.name + ' → ' + unescH(tBy.get(x.tracking_machine_id).ten).trim())));
     const C = window.CS && CS.ctx && CS.ctx();
     if(C && C.ready){
       const P = CS.planAll(T, C);
@@ -5629,9 +5643,11 @@ function nameRows(){
 }
 function drawNames(){
   if(!window.NS || !MM.hasTypes || !hasAlias()){ libBody.innerHTML = need11(); return; }
-  const C = NSC || NS.ctx(MM), common = NS.commonTypes(MM.machines, C).slice(0, 12);
+  const C = NSC || NS.ctx(MM), common = NS.commonTypes(MM.machines, C).slice(0, 12), nLinked = MM.machines.filter(x=>x.tracking_machine_id).length;
   libBody.innerHTML = `<div class="lib-note">${tr('Standard name: <b>&lt;Equipment type&gt; &lt;Material&gt; &lt;Feature&gt; &lt;Capacity + unit&gt;</b>, e.g. <b>Máy băm PET 3 t/h</b>. Units: kg/h · t/h · m³/h · kW · mm. Supplier and model have their own columns. Renaming keeps the old name in "Other names" so it can still be searched. Delivery tracking names are not changed.',
       'Tên chuẩn: <b>&lt;Loại thiết bị&gt; &lt;Vật liệu&gt; &lt;Đặc điểm&gt; &lt;Công suất + đơn vị&gt;</b>, VD <b>Máy băm PET 3 t/h</b>. Đơn vị: kg/h · t/h · m³/h · kW · mm. NCC và model đã có cột riêng. Đổi tên thì tên cũ được giữ ở "Tên gọi khác" để vẫn tìm được. Tên bên Tiến độ máy về không đổi.')}</div>
+    ${nLinked ? `<div class="lib-note nm-linked">🔗 ${tr(`${nLinked} machine(s) linked to Delivery are skipped here — their name follows Delivery; rename them on the Delivery side.`,
+        `${nLinked} máy đã liên kết Tiến độ được bỏ qua ở đây — tên theo Tiến độ máy về; muốn đổi tên thì sửa bên Tiến độ.`)}</div>` : ''}
     ${isAdmin && common.length ? `<div class="nm-common"><b>${tr('Frequent types in names, not yet in the list','Loại thường gặp trong tên, chưa có trong danh sách')}:</b>
       ${common.map(o=>`<button type="button" class="nbtn2 ghost" data-type="${E(o.name)}">＋ ${E(o.name)} <small>(${o.n})</small></button>`).join('')}</div>` : ''}
     <div class="toolbar">
