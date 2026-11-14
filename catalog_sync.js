@@ -63,7 +63,8 @@ function want(x, C){
   const vnd = +x.vnd || 0, usd = +x.usd || 0;
   return { company_id: coRow ? coRow.id : null, company_code: co, supplier_id: sup ? sup.id : null, ncc, ncc_unmatched: !!ncc && !sup,
            model: txt(x.model), serial_number: txt(x.serial), origin: txt(x.xuatxu), manufacturer: txt(x.thuong_hieu),
-           capacity: cap, contract: vnd > 0 ? { currency:'VND', amount: vnd } : usd > 0 ? { currency:'USD', amount: usd } : null, vnd, usd };
+           capacity: cap, contract: x.gia_tien_te === 'USD' && usd > 0 ? { currency:'USD', amount: usd }      // báo giá theo USD (migration 21)
+             : vnd > 0 ? { currency:'VND', amount: vnd } : usd > 0 ? { currency:'USD', amount: usd } : null, vnd, usd };
 }
 /* trạng thái Danh mục muốn có (null = chưa về NM -> không đổi) */
 const target = x => { const st = DM.installStatus(x).stage; return st === 'testing' ? 'installing' : st; };   // Danh mục không có 'testing'

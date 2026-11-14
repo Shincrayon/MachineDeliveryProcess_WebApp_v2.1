@@ -690,7 +690,7 @@ td.qu-c input,th.qu-h input{width:16px;height:16px;vertical-align:middle;accent-
 .add-grid label{min-width:0}
 .add-grid input,.add-grid select,.add-grid textarea{min-width:0;max-width:100%;box-sizing:border-box}   /* điện thoại: ô nhập không làm form tràn ngang */
 .add-grid label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--muted);font-weight:600}
-.add-grid label.full{grid-column:1/-1}
+.add-grid label.full,.add-grid > div.full{grid-column:1/-1}
 .add-grid input,.add-grid select,.add-grid textarea{padding:8px 10px;border-radius:9px;border:1px solid var(--border);
   background:var(--field);color:var(--txt);font-size:13px;outline:none;font-family:inherit}
 .add-grid input:focus,.add-grid select:focus,.add-grid textarea:focus{border-color:var(--blue)}
@@ -770,6 +770,10 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 .cs-rn{display:block;margin-bottom:2px}
 small.unit-p{display:block;font-size:11px;font-weight:500;color:var(--muted);white-space:nowrap}
 .price-tot{font-size:12px;color:var(--muted);margin-top:4px}.price-tot b{color:var(--txt)}
+.cur-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:12.5px;color:var(--muted);font-weight:600}
+.cur-row .cur-opt{display:flex!important;flex-direction:row!important;align-items:center;gap:5px;font-size:13px;color:var(--txt)}
+.cur-row .cur-rate{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;margin-left:auto}.cur-row .cur-rate input{width:130px}
+input.cur-auto{opacity:.75;background:var(--panel2);cursor:default}
 td.name small.nm-alias{display:block;color:var(--muted);font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:360px}
 .hc-g{border:1px solid var(--border);border-radius:10px;margin:8px 0;padding:0 12px;background:var(--panel)}
 .hc-g.err{border-left:4px solid var(--st-bad)}.hc-g.warn{border-left:4px solid var(--st-over)}
@@ -1290,6 +1294,10 @@ label:has(> .cb-src){position:relative}
       <label id="f_htL" class="pt-off">Purchase type *<select id="f_ht"></select></label>
       <label>Model<input id="f_model" type="text"></label>
       <label>Serial number<input id="f_serial" type="text"></label>
+      <div class="full cur-row" id="f_curRow"><span class="cur-lbl">Quote / contract in</span>
+        <label class="cur-opt"><input type="radio" name="f_cur" value="VND" checked> VND</label>
+        <label class="cur-opt"><input type="radio" name="f_cur" value="USD"> USD</label>
+        <label class="cur-rate">Exchange rate (VND per USD)<input id="f_rate" type="number" step="any" min="0"></label></div>
       <label>Unit price per set (VND)<input id="f_vnd" type="text" inputmode="numeric" placeholder="e.g. 3,000,000,000"></label>
       <label>Unit price per set (USD)<input id="f_usd" type="text" inputmode="numeric" placeholder="e.g. 120,000"></label>
       <div class="full price-tot" id="f_tot" hidden></div>
@@ -1329,6 +1337,7 @@ window.__trackRows = () => DATA;          // Danh mục MMTB tra mã Tiến đ�
 const hasPT = () => DATA.some(x=>x._pt);
 /* Thương hiệu (migrations/20261110_18). Chưa chạy migration: ô / cột tự ẩn, app chạy như cũ. */
 const hasTH = () => DATA.some(x=>x._th);
+const hasGT = () => DATA.some(x=>x._gt);
 /* ô Nhà cung cấp trong bảng: Thương hiệu ở trên, NCC dòng nhỏ dưới; máy chưa có thương hiệu: NCC như cũ */
 const thCell = x => x.thuong_hieu ? `${x.thuong_hieu}${x.ncc ? `<small class="th-ncc">${x.ncc}</small>` : ''}` : x.ncc;
 const PT_LBL = tr({import:'Direct import', agency:'Through an agent', domestic:'Domestic'}, {import:'Nhập khẩu trực tiếp', agency:'Qua đại lý', domestic:'Trong nước'});
@@ -1655,11 +1664,43 @@ function fmtMoney(v){ return v ? Number(v).toLocaleString(NUMLOC) : ''; }
     el.addEventListener('input', ()=>{
       const digits = el.value.replace(/\D/g,'');
       el.value = fmtMoney(digits);
-      priceTot();
+      if(el === curFrom()) curSync(); else priceTot();
     });
   });
   f_sl.addEventListener('input', priceTot);
+  f_rate.addEventListener('input', curSync);
+  document.querySelectorAll('input[name=f_cur]').forEach(r=>r.addEventListener('change', ()=>{ curUI(); curSync(); }));
 })();
+/* báo giá / hợp đồng theo VND hay USD (user 2026-11-14): nhập đơn giá bên đã chọn, bên kia = × / ÷ tỷ giá (chỉ xem).
+   Tỷ giá không lưu riêng: mở Sửa thì suy ra = VNĐ ÷ USD; máy mới lấy tỷ giá USD mới nhất ở 📚 › 💱 Tỷ giá.
+   Mở form KHÔNG tính lại (giữ đúng 2 số đang lưu) — chỉ khi sửa giá / tỷ giá / đổi VND–USD mới quy đổi. */
+const curMode = () => (document.querySelector('input[name=f_cur]:checked') || {}).value || 'VND';
+const curFrom = () => curMode() === 'USD' ? f_usd : f_vnd, curTo = () => curMode() === 'USD' ? f_vnd : f_usd;
+const rateVal = () => { const n = Number(f_rate.value); return n > 0 ? n : 0; };
+const defRate = () => { const r = (((window.__MMTB || {}).rates) || []).find(o=>o.currency === 'USD'); return r ? Number(r.rate_to_vnd) : 0; };
+function curUI(){
+  const from = curFrom(), to = curTo(), auto = rateVal() > 0;
+  from.readOnly = false; from.classList.remove('cur-auto');
+  to.readOnly = auto; to.classList.toggle('cur-auto', auto);
+  to.title = auto ? tr('Calculated from the exchange rate','Tự tính theo tỷ giá') : '';
+}
+function curSync(){
+  curUI();
+  const r = rateVal(), from = curFrom(), to = curTo();
+  if(r){
+    const u = from.value === from.dataset.shown && from.dataset.exact ? Number(from.dataset.exact) : parseMoney(from.value);
+    const ex = curMode() === 'USD' ? u * r : u / r;
+    to.value = u ? fmtMoney(Math.round(ex)) : ''; to.dataset.exact = u ? String(ex) : ''; to.dataset.shown = to.value;
+  }
+  priceTot();
+}
+function curLoad(x){            // mở form: chọn loại tiền + tỷ giá, không đổi 2 số đang lưu
+  const mode = x && x.gia_tien_te ? x.gia_tien_te : (x && +x.usd > 0 ? 'USD' : 'VND');
+  document.querySelectorAll('input[name=f_cur]').forEach(r=>{ r.checked = r.value === mode; });
+  const rr = x && +x.vnd > 0 && +x.usd > 0 ? (+x.vnd) / (+x.usd) : defRate();
+  f_rate.value = rr ? String(Math.round(rr * 100) / 100) : '';
+  curUI();
+}
 /* ô giá = ĐƠN GIÁ 1 set (user 2026-11-14); máy vẫn lưu TỔNG = đơn giá × SL.
    Mở Sửa: đơn giá = tổng ÷ SL (giữ số chính xác trong dataset.exact để lưu lại không bị lệch do làm tròn). */
 const slOf = () => Math.max(1, Math.round(Number(f_sl.value) || 1));
@@ -1842,7 +1883,7 @@ function fillFromClone(x){
   const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = (v == null ? '' : v); };
   set('f_ten', unescH(x.ten)); set('f_pt', unescH(x.phutrach)); set('f_sl', x.sl || 1); set('f_cs', unescH(x.congsuat));
   siteFill(unescH(x.noilapdat)); set('f_th', unescH(x.thuong_hieu)); set('f_ncc', unescH(x.ncc)); set('f_xx', unescH(x.xuatxu)); set('f_model', unescH(x.model));
-  unitSet('f_vnd', x.vnd, x.sl); unitSet('f_usd', x.usd, x.sl); setTimeout(priceTot);   // ô giá = đơn giá 1 set (tổng ÷ SL)
+  unitSet('f_vnd', x.vnd, x.sl); unitSet('f_usd', x.usd, x.sl); curLoad(x); setTimeout(priceTot);   // ô giá = đơn giá 1 set (tổng ÷ SL)
   set('f_ctu', x.ctu || 0); set('f_dt', x.ditaukh || 0); set('f_lm', x.lanhkh || 0); set('f_ctm', x.sonagyctm || 0);
   set('f_wd', (x.workingday || 'no').toLowerCase() === 'yes' ? 'yes' : 'no');
   set('f_ht', x.hinh_thuc_mua || ''); f_ht.dataset.dom = x.hinh_thuc_mua === 'domestic' ? '1' : '';
@@ -1884,7 +1925,7 @@ async function submitAdd(){
     lanhkh: Math.round(lm), lanhtt: Math.round(lmTT),
     xuatxuong: val('f_xxg')||null, workingday: wd,
     nghiemthu_kh: val('f_ntkh')||null,
-    hinh_thuc_mua: val('f_ht'), thuong_hieu: val('f_th')
+    hinh_thuc_mua: val('f_ht'), thuong_hieu: val('f_th'), gia_tien_te: curMode()
   };
 
   /* lưu lên kho dữ liệu chung của app */
@@ -1902,7 +1943,7 @@ async function submitAdd(){
 
 function resetAddForm(){
   ['f_mamay','f_ten','f_pt','f_cs','f_th','f_ncc','f_xx','f_model','f_serial','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_ntkh','f_gt'].forEach(id=>document.getElementById(id).value='');
-  ['f_vnd','f_usd'].forEach(id=>{ const el = document.getElementById(id); el.dataset.exact = ''; el.dataset.shown = ''; }); priceTot();
+  ['f_vnd','f_usd'].forEach(id=>{ const el = document.getElementById(id); el.dataset.exact = ''; el.dataset.shown = ''; }); curLoad(null); priceTot();
   siteFill(''); CB.clearHints();
   ['f_duyet','f_dh','f_tutt','f_xxg','f_ntkh'].forEach(id=>{ if(window.fpickers && window.fpickers[id]) window.fpickers[id].clear(); });
   ['f_ctu','f_dt','f_lm','f_ctm'].forEach(id=>document.getElementById(id).value='0');
@@ -3475,6 +3516,7 @@ async function saveMachine(m, editId){
   if(cur && cur.ghichu_ld) r0.ghichu_ld = unescH(cur.ghichu_ld);
   if(hasTH()) r0.thuong_hieu = m.thuong_hieu==null ? (cur ? unescH(cur.thuong_hieu||'') : '') : String(m.thuong_hieu);
   if(hasPT() && m.hinh_thuc_mua){ r0.hinh_thuc_mua = m.hinh_thuc_mua; r0.hinh_thuc_can_xn = false; }   // lưu qua form = đã xác nhận
+  if(hasGT() && m.gia_tien_te) r0.gia_tien_te = m.gia_tien_te;          // migration 21: báo giá theo VND / USD
   const row = await window.__seal('machines', r0);     // mã hoá trường nhạy cảm (nếu đã bật)
   if(editId){
     const { data, error } = await sb.from('machines').update(row)
@@ -4210,7 +4252,7 @@ window.editMachine = i => {
   set('f_mamay', x.ma_may||''); set('f_ten', unescH(x.ten)); set('f_pt', unescH(x.phutrach)); set('f_sl', x.sl||1);
   set('f_cs', unescH(x.congsuat)); siteFill(unescH(x.noilapdat)); set('f_th', unescH(x.thuong_hieu)); set('f_ncc', unescH(x.ncc)); set('f_xx', unescH(x.xuatxu));
   set('f_model', unescH(x.model)); set('f_serial', unescH(x.serial));
-  unitSet('f_vnd', x.vnd, x.sl); unitSet('f_usd', x.usd, x.sl); setTimeout(priceTot);   // ô giá = đơn giá 1 set (tổng ÷ SL)
+  unitSet('f_vnd', x.vnd, x.sl); unitSet('f_usd', x.usd, x.sl); curLoad(x); setTimeout(priceTot);   // ô giá = đơn giá 1 set (tổng ÷ SL)
   set('f_ctu', x.ctu||0); set('f_dt', x.ditaukh||0); set('f_dttt', x.ditautt||'');     // TT = 0 -> ô trống = lấy theo KH
   set('f_lm', x.lanhkh||0); set('f_lmtt', x.lanhtt||''); set('f_ctm', x.sonagyctm||0);
   set('f_wd', (x.workingday||'no').toLowerCase()==='yes'?'yes':'no'); set('f_gt', unescH(x.giaitrinh));
@@ -4932,11 +4974,11 @@ window.mmShow = id => {
         ? `<a style="color:var(--sky);cursor:pointer" onclick="mmShow('${x.parent_machine_id}')">${E(x.parent_code)} — ${E(x.parent_name)}</a>` : '—', 'full')])}
     ${sec(tr('Procurement & value','Mua sắm & giá trị'), [
       it(tr('Supplier','Nhà cung cấp'), T(x.supplier_name)), it(tr('Proposal approval date','Ngày duyệt ĐXĐT'), D(x.approved_date)),
-      it(tr('Contract amount','Giá trị hợp đồng'), x.contract_amount != null ? N(x.contract_amount, 2) + ' ' + x.contract_currency
-        + ((+x.quantity || 1) >= 2 ? `<small class="unit-p">${tr('per set','đơn giá 1 set')}: ${N(x.contract_amount / x.quantity, 2)} ${x.contract_currency} × ${x.quantity}</small>` : '') : '—'),
+      it(tr('Contract amount','Giá trị hợp đồng'), x.contract_amount != null ? N(x.contract_amount) + ' ' + x.contract_currency
+        + ((+x.quantity || 1) >= 2 ? `<small class="unit-p">${tr('per set','đơn giá 1 set')}: ${N(x.contract_amount / x.quantity)} ${x.contract_currency} × ${x.quantity}</small>` : '') : '—'),
       it(tr('Locked exchange rate','Tỷ giá khoá'), x.locked_rate != null ? N(x.locked_rate, 2) : '—'),
       it(tr('Value (VND)','Giá trị (VNĐ)'), x.value_vnd != null ? N(x.value_vnd) + ' ₫' : '—', 'hl'),
-      it(tr('Value (USD)','Giá trị (USD)'), x.value_usd != null ? N(x.value_usd, 2) + ' $' : '—', 'hl'),
+      it(tr('Value (USD)','Giá trị (USD)'), x.value_usd != null ? N(x.value_usd) + ' $' : '—', 'hl'),
       it(tr('Manufacturing days (CTM)','Số ngày chế tạo máy (CTM)'), x.manufacturing_days != null ? N(x.manufacturing_days) + tr(' days',' ngày') : '—')])}
     ${sec(tr('Lifecycle','Vòng đời'), [
       it(tr('Status','Trạng thái'), badge(x.lifecycle_status)), it(tr('Commissioned','Ngày nghiệm thu'), D(x.commissioned_date)),
@@ -5006,7 +5048,7 @@ function buildForm(){
       ${L(tr('Origin','Xuất xứ'), `<input id="m_origin" type="text">`)}
       ${L(tr('Supplier','Nhà cung cấp'), `<select id="m_sup"></select>`)}
       ${L(tr('Currency','Tiền tệ'), `<select id="m_cur"><option>VND</option><option>USD</option><option>EUR</option></select>`)}
-      ${L(tr('Contract amount — unit price per set','Giá trị hợp đồng — đơn giá 1 set'), `<input id="m_amt" type="number" step="any" min="0"><div class="price-tot" id="m_tot" hidden></div>`)}
+      ${L(tr('Contract amount — unit price per set','Giá trị hợp đồng — đơn giá 1 set'), `<input id="m_amt" type="number" step="any" min="0"><div class="price-tot" id="m_tot" hidden></div><div class="price-tot" id="m_conv" hidden></div>`)}
       ${L(tr('Locked exchange rate (VND per unit)','Tỷ giá khoá (VNĐ / 1 đơn vị)'), `<input id="m_rate" type="number" step="any" min="0" placeholder="${tr('empty = current rate','trống = tỷ giá hiện hành')}">`)}
       ${L(tr('Proposal approval date','Ngày duyệt ĐXĐT'), `<input id="m_appr" type="date">`)}
       ${L(tr('Manufacturing days (CTM)','Số ngày chế tạo máy (CTM)'), `<input id="m_ctm" type="number" min="0" step="1">`)}
@@ -5159,8 +5201,8 @@ function openForm(x, clone){
   set('m_cur', v.contract_currency || 'VND'); set('m_rate', v.locked_rate);
   // ô giá = ĐƠN GIÁ 1 set; lưu tổng = đơn giá × SL (giữ số chính xác để lưu lại không lệch do làm tròn)
   { const q = Math.max(1, +v.quantity || 1), ex = v.contract_amount != null && v.contract_amount !== '' ? Number(v.contract_amount) / q : null;
-    m_amt.value = ex == null ? '' : String(Math.round(ex * 100) / 100); m_amt.dataset.exact = ex == null ? '' : String(ex); m_amt.dataset.shown = m_amt.value;
-    if(!m_amt._tot){ m_amt._tot = true; [m_amt, m_qty, m_cur].forEach(e=>e.addEventListener('input', mmTot)); m_cur.addEventListener('change', mmTot); }
+    m_amt.value = ex == null ? '' : String(Math.round(ex)); m_amt.dataset.exact = ex == null ? '' : String(ex); m_amt.dataset.shown = m_amt.value;
+    if(!m_amt._tot){ m_amt._tot = true; [m_amt, m_qty, m_cur, m_rate].forEach(e=>e.addEventListener('input', mmTot)); m_cur.addEventListener('change', mmTot); }
     mmTot(); }
   set('m_ctm', v.manufacturing_days); set('m_st', v.lifecycle_status || 'planned'); set('m_eng', v.engineer); set('m_mgr', v.manager); set('m_notes', v.notes);
   if(v.role && v.role!=='sub_unit') m_role.value = v.role;
@@ -5201,7 +5243,7 @@ window.mmSplit = id => {
   const trk = x.tracking_machine_id ? (window.__trackRows ? window.__trackRows() : []).find(t => t._id === x.tracking_machine_id) : null;
   const nMax = splitMax(x); if(nMax < 2) return;
   const hasAmt = x.contract_amount != null && x.contract_amount !== '' && !isNaN(+x.contract_amount), T0 = hasAmt ? +x.contract_amount : 0;
-  const dec = (x.contract_currency || 'VND') === 'VND' ? 0 : 2;
+  const dec = 0;                                   // chia giá trị theo số nguyên (mọi loại tiền)
   /* chia giá trị: ô có nhập giữ nguyên, ô để trống chia đều phần còn lại (máy gốc nhận phần lẻ); null = tổng các ô vượt / không khớp */
   const shares = vals => { const blank = vals.map((v, i)=>v == null ? i : -1).filter(i=>i >= 0), rem = T0 - vals.reduce((s, v)=>s + (v || 0), 0);
     if(rem < -0.005 || (!blank.length && Math.abs(rem) > 0.005)) return null;
@@ -5324,7 +5366,13 @@ function mmTotal(){
 function mmTot(){
   const t = mmTotal(), n = mmQty(), box = document.getElementById('m_tot'); if(!box) return;
   box.hidden = n < 2 || t == null;
-  box.innerHTML = box.hidden ? '' : `${tr('Total for','Tổng cho')} <b>${n}</b> ${tr('sets','set')}: <b>${N(t, 2)} ${E(m_cur.value)}</b>`;
+  box.innerHTML = box.hidden ? '' : `${tr('Total for','Tổng cho')} <b>${n}</b> ${tr('sets','set')}: <b>${N(t)} ${E(m_cur.value)}</b>`;
+  // quy đổi để dễ nhìn: theo tỷ giá khoá (nếu có) hoặc tỷ giá mới nhất ở 💱
+  const cv = document.getElementById('m_conv'); if(!cv) return;
+  const rOf = c => { if(c === 'VND') return 1; const lk = Number(m_rate.value); if(lk > 0 && c === m_cur.value) return lk; const o = (MM.rates || []).find(r=>r.currency === c); return o ? Number(o.rate_to_vnd) : 0; };
+  const usdR = rOf('USD'), vnd = t == null ? null : t * rOf(m_cur.value);
+  cv.hidden = t == null || !vnd; if(cv.hidden){ cv.innerHTML = ''; return; }
+  cv.innerHTML = `≈ ${m_cur.value !== 'VND' ? '<b>' + N(vnd) + ' ₫</b>' : ''}${m_cur.value === 'VND' && usdR ? '<b>$' + N(vnd / usdR) + '</b>' : ''}${m_cur.value === 'EUR' && usdR ? ' · $' + N(vnd / usdR) : ''} <span>${tr('at rate','theo tỷ giá')} ${N(m_cur.value === 'VND' ? usdR : rOf(m_cur.value))}</span>`;
 }
 async function save(){
   const val = id => (document.getElementById(id).value || '').trim();
@@ -5461,6 +5509,12 @@ const LIB = {
     cols:['name','sort_order'], uniq:['name'],
     used: r=>cnt(MM.machines, x=>x.capacity_unit===r.name) + cnt(MM.types || [], t=>t.default_unit===r.name) + cnt(DATA, x=>window.__capSplit && __capSplit(unescH(x.congsuat)).u===r.name),
     sort:(a,b)=>(+a.sort_order || 0) - (+b.sort_order || 0) || String(a.name).localeCompare(b.name), needs20:true },
+  rates:     { icon:'💱', title:tr('Exchange rates','Tỷ giá'), table:'exchange_rates', rows:()=>MM.xrates || [],
+    fields:[ {k:'currency', l:tr('Currency','Loại tiền'), type:'select', opts:[['USD','USD'],['EUR','EUR']], req:1},
+             {k:'rate_to_vnd', l:tr('Rate (VND per 1 unit)','Tỷ giá (VNĐ / 1 đơn vị)'), type:'decimal', req:1},
+             {k:'effective_date', l:tr('Effective date','Ngày áp dụng'), type:'date', req:1} ],
+    cols:['currency','rate_to_vnd','effective_date'], uniq:['currency','effective_date'], used: ()=>0,
+    sort:(a,b)=>String(b.effective_date).localeCompare(String(a.effective_date)) || String(a.currency).localeCompare(b.currency) },
   health:    { icon:'🩺', title:tr('Data check','Kiểm tra dữ liệu'), admin:true, count:()=>dataIssues().reduce((s,g)=>s + g.items.length, 0) },
   names:     { icon:'✏️', title:tr('Standard names','Chuẩn hoá tên'), count:()=>MM.machines.filter(x=>nameIss(x).length).length }
 };
@@ -5472,6 +5526,8 @@ function cell(k, v){
   if(k==='materials') return (v || []).join(', ') || '—';
   if(k==='is_active') return v===false ? '—' : '✓';
   if(k==='notes') return v ? `<span title="${E(v)}">${E(lineShort(v))}</span>` : '—';
+  if(k==='rate_to_vnd') return v == null ? '—' : N(v, 2);
+  if(k==='effective_date') return D(v);
   return T(v);
 }
 let libKey = 'codes', libQ = '';
@@ -5664,6 +5720,9 @@ function libInput(f, val, editing){
     case 'bool':     return `<div class="lib-chk"><label><input type="checkbox" id="${id}"${val!==false?' checked':''}> ${tr('Yes','Có')}</label></div>`;
     case 'textarea': return `<textarea id="${id}" rows="2">${E(val ?? '')}</textarea>`;
     case 'number':   return `<input id="${id}" type="number" step="1" value="${E(val ?? '')}">`;
+    case 'decimal':  return `<input id="${id}" type="number" step="any" min="0" value="${E(val ?? '')}">`;
+    case 'date':     return `<input id="${id}" type="date" value="${E(val ? String(val).slice(0, 10) : (f.today ? DM.todayIso() : ''))}">`;
+    case 'select':   return `<select id="${id}">${f.opts.map(([o, l])=>`<option value="${E(o)}"${o === val ? ' selected' : ''}>${E(l)}</option>`).join('')}</select>`;
     case 'unit':     { const tmp = document.createElement('select'); const v = unitOpts(tmp, val); tmp.id = id;
                        [...tmp.options].forEach(o=>{ if(o.value === v) o.setAttribute('selected', ''); }); return tmp.outerHTML; }
     default:         return f.gen ? `<span class="lib-gen"><input id="${id}" type="text" value="${E(val ?? '')}" style="text-transform:uppercase"><button type="button" id="${id}_gen" title="${tr('Generate a random code','Tạo mã ngẫu nhiên')}">🎲</button></span>`
@@ -5675,6 +5734,8 @@ function libRead(f){
   if(f.type==='multi') return [...document.querySelectorAll('.lf_' + f.k + ':checked')].map(c=>c.value);
   if(f.type==='bool') return el.checked;
   if(f.type==='number') return el.value === '' ? 0 : Math.round(+el.value);
+  if(f.type==='decimal') return el.value === '' ? null : Number(el.value);
+  if(f.type==='date' || f.type==='select') return el.value || null;
   if(f.type==='company' || f.type==='workshop' || f.type==='unit') return el.value || null;
   const s = (el.value || '').trim();
   return f.upper ? s.toUpperCase() : (s || null);
@@ -5752,6 +5813,7 @@ window.libEdit = (k, id) => {
 window.libDel = (k, id) => {
   const d = LIB[k], r = d.rows().find(x=>x.id===id); if(!r) return;
   const n = d.used(r);
+  if(k==='lines'){ libDelLine(r, n); return; }
   if(n){ showNotice({ type:'error', title:tr('Still in use','Đang được sử dụng'),
     sub:tr(`${n} machines (or workshops / lines) still use this. Move them to another one first.`,`Còn ${n} máy (hoặc xưởng / chuyền) đang dùng mục này. Hãy chuyển chúng sang mục khác trước.`) }); return; }
   confirmBox({ title:tr('Delete from the library?','Xoá khỏi thư viện?'), sub:`<b>${E(r.name || r.code || '')}</b>`,
@@ -5764,6 +5826,21 @@ window.libDel = (k, id) => {
     } });
 };
 
+/* xoá chuyền: các máy trong chuyền được trả ra (để trống ô Chuyền, giữ nguyên mọi thông tin khác) rồi mới xoá chuyền (user 2026-11-14) */
+function libDelLine(r, n){
+  confirmBox({ title:tr('Delete this line?','Xoá chuyền này?'),
+    sub:`<b>${E(r.name || r.code || '')}</b>` + (n ? '<br>' + tr(`${n} machine(s) on this line will be released — their Line becomes empty; nothing else changes.`,
+      `${n} máy trong chuyền sẽ được trả ra — ô Chuyền để trống, các thông tin khác giữ nguyên.`) : ''),
+    ok:tr('🗑 Delete','🗑 Xoá'), onOk: async ()=>{
+      window.__selfWritingM = true;
+      try{
+        if(n){ const { error: e1 } = await window.__sb.from('mmtb_machines').update({ line_id: null }).eq('line_id', r.id); if(e1) throw e1; }
+        const { error } = await window.__sb.from('production_lines').delete().eq('id', r.id); if(error) throw error;
+        await reload(); toast('🗑 ' + tr('Line deleted','Đã xoá chuyền') + (n ? ` · ${n} ` + tr('machine(s) released','máy được trả ra') : ''));
+      }catch(ex){ await reload(); showNotice({ type:'error', title:tr('Could not delete','Chưa xoá được'), sub:errText(ex) }); }
+      finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+    } });
+}
 /* ----- ✏️ Chuẩn hoá tên (name_std.js): đề xuất tên chuẩn cho máy có tên chưa đúng mẫu, duyệt rồi mới ghi -----
    Đề xuất sửa được; tải Excel để duyệt ngoài app (cột "Duyệt" ghi x) rồi nạp lại. Ghi: chỉ dòng đã tick, tên cũ -> "Tên gọi khác". */
 const NM = { sel: new Map(), ok: new Set(), q: '' };
@@ -6126,6 +6203,7 @@ const STATIC_VI = new Map([
   ['Installation site','Nơi lắp đặt'],
   ['Total value (VND)','Tổng giá trị (VNĐ)'],
   ['Unit price per set (VND)','Đơn giá 1 set (VNĐ)'], ['Unit price per set (USD)','Đơn giá 1 set (USD)'],
+  ['Quote / contract in','Báo giá / hợp đồng theo'], ['Exchange rate (VND per USD)','Tỷ giá (VNĐ / 1 USD)'],
   ['e.g. 3,000,000,000','VD: 3.000.000.000'],
   ['Total value (USD)','Tổng giá trị (USD)'],
   ['e.g. 120,000','VD: 120.000'],
@@ -6548,6 +6626,7 @@ window.encryptExisting = async () => {
     o._th = 'thuong_hieu' in d;                         // cơ sở dữ liệu đã chạy migration 18
     if(o._th && !SEC.machines.f.includes('thuong_hieu')){ SEC.machines.f.push('thuong_hieu'); SEC.machines.blank.thuong_hieu = null; }   // mã hoá cùng gói sec
     o._pt = 'hinh_thuc_mua' in d;                        // cơ sở dữ liệu đã chạy migration 13
+    o._gt = 'gia_tien_te' in d; o.gia_tien_te = d.gia_tien_te || '';   // migration 21
     o.hinh_thuc_can_xn = d.hinh_thuc_can_xn === true;
     return o;
   }
@@ -6592,8 +6671,9 @@ window.encryptExisting = async () => {
       const types = ty.error ? [...new Set(m.map(x=>x.equipment_type).filter(Boolean))].sort().map(name=>({ name, virtual:true })) : (ty.data || []);
       // thư viện đơn vị (migrations/20261113_20); chưa có bảng thì ô đơn vị vẫn là ô gõ như cũ
       const un = await sb.from('mmtb_units').select('*').order('sort_order').order('name');
+      const xr = await sb.from('exchange_rates').select('id,currency,rate_to_vnd,effective_date').order('effective_date', { ascending:false });   // 💱 lịch sử tỷ giá
       return deriveMmtb({ machines:m, companies:co, areas:ar, lines:ln, suppliers:sp, milestones:ms, rates, groups, hasGroups: !gr.error, types, hasTypes: !ty.error, hasLineNotes,
-                          units: un.error ? [] : (un.data || []), hasUnits: !un.error });
+                          units: un.error ? [] : (un.data || []), hasUnits: !un.error, xrates: xr.error ? [] : (xr.data || []) });
     }catch(e){ return Object.assign(empty, { err: String(e.message || e) }); }
   }
   window.__loadMmtb = () => loadMmtb(window.__sb);

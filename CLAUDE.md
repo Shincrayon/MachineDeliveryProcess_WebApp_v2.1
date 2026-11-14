@@ -325,3 +325,18 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Hiển thị: SL ≥ 2 thì dưới giá tổng có `small.unit-p` "… / set" (danh sách Tiến độ: VNĐ + USD; danh sách Danh mục; chi tiết 2 phân hệ).
 - ✂️ Tách máy: mỗi máy có ô Giá trị hợp đồng (`.sp-val`); ô trống chia đều phần còn lại (máy gốc / ô trống đầu nhận phần lẻ), gợi ý "≈ …";
   tổng các ô phải bằng giá trị ban đầu. Đồng bộ (`plan`): so giá trị Tiến độ với tổng máy gốc + các máy "Tách từ <mã>" cùng loại tiền. Test: `e2e_unit_price_test.py`.
+
+## Xoá chuyền trả máy ra + tiền chỉ số nguyên (2026-11-14)
+- `libDel('lines', …)` → `libDelLine`: không chặn khi còn máy; xác nhận "N máy trong chuyền sẽ được trả ra" → `mmtb_machines.line_id = null`
+  (cột không mã hoá, mọi thông tin khác giữ nguyên) rồi xoá chuyền. Các thư viện khác vẫn chặn xoá khi đang dùng.
+- Tiền hiển thị dạng đầy đủ chỉ số nguyên (giá trị hợp đồng, Giá trị USD, đơn giá 1 set, "Tổng cho N set", ô đơn giá Danh mục, chia giá trị khi tách
+  `dec = 0`). Số rút gọn (6,5 tỷ · $1,25M) giữ 1 số lẻ — user chọn. Tỷ giá khoá vẫn 2 số lẻ (không phải tiền). Test: `e2e_line_del_test.py`.
+
+## Báo giá theo VND / USD + 💱 Tỷ giá (2026-11-14, migration 21 `machines.gia_tien_te`)
+- Form Tiến độ: hàng `#f_curRow` (radio `f_cur` VND/USD + `#f_rate` tỷ giá VNĐ/USD). Nhập đơn giá bên đã chọn, bên kia tự tính (`curSync`, ô `cur-auto` chỉ xem).
+  Tỷ giá KHÔNG lưu: mở Sửa suy ra = VNĐ ÷ USD (`curLoad`); máy mới lấy USD mới nhất (`MM.rates` / v_latest_rates). Mở form không tính lại (giữ 2 số đang lưu).
+  Máy cũ: có USD → USD, chỉ VNĐ → VND. Lưu `gia_tien_te` khi `hasGT()` (cột migration 21).
+- Đồng bộ `want()`: `gia_tien_te === 'USD'` và có USD → hợp đồng Danh mục USD.
+- Danh mục: `#m_conv` "≈ … ₫ / $ theo tỷ giá …" (tỷ giá khoá nếu có, không thì mới nhất).
+- 📚 › 💱 Tỷ giá (`LIB.rates`, bảng `exchange_rates` có sẵn, admin sửa): loại tiền / tỷ giá / ngày áp dụng; `MM.xrates`. libInput thêm type `decimal`, `date`, `select`.
+- `.add-grid > div.full` chiếm cả hàng (trước chỉ `label.full`). Test: `e2e_currency_test.py`.
