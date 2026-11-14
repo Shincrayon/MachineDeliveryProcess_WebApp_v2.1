@@ -79,12 +79,28 @@ const REASON = () => ({ no_code: L('no machine code yet (not arrived at plant)',
   no_company: L('unknown company (installation site) — cannot create a catalog record','không xác định công ty (Nơi lắp đặt) — chưa tạo được hồ sơ Danh mục'),
   locked: L('catalog record could not be decrypted','hồ sơ Danh mục chưa giải mã được') });
 
+/* tên Danh mục = tên Tiến độ; tên cũ nối vào alias_names (nếu có cột) */
+function nameFollow(p, cat, tn){
+  p.set.name = tn; p.oldName = cat.name;
+  if('alias_names' in cat && cat.name && cat.name !== '🔒'){
+    const al = String(cat.alias_names || '').split(/\s*;\s*/).filter(Boolean);
+    if(!al.some(a => fold(a) === fold(cat.name)) && fold(cat.name) !== fold(tn)) al.push(cat.name);
+    const nv = al.join('; ') || null; if(nv !== (cat.alias_names || null)) p.set.alias_names = nv;
+  }
+}
 /* ---------- kế hoạch đồng bộ 1 máy ----------
    action: 'create' | 'update' | 'none' (đã khớp) | 'skip' (chưa đủ điều kiện, reason)
    set: trường ghi vào mmtb_machines · ms: mốc ghi vào delivery_milestones · conflicts: lệch · warn: cảnh báo */
 function plan(x, C){
   const p = { x, cat: null, action: 'none', reason: '', set: {}, ms: [], conflicts: [], warn: [] };
-  if(!x || !x.ma_may){ p.action = 'skip'; p.reason = 'no_code'; return p; }
+  if(!x){ p.action = 'skip'; p.reason = 'no_code'; return p; }
+  if(!x.ma_may){
+    // chưa có Mã máy (chưa về NM): không đồng bộ gì — TRỪ tên của máy đã ghép cặp (tên Danh mục luôn theo Tiến độ, user 2026-11-14)
+    const c0 = C.byTrack.get(x._id), tn0 = txt(x.ten);
+    if(c0 && !c0.__locked && tn0 && tn0 !== c0.name){ p.cat = c0; nameFollow(p, c0, tn0); p.action = 'update'; return p; }
+    if(c0) p.cat = c0;
+    p.action = 'skip'; p.reason = 'no_code'; return p;
+  }
   const w = want(x, C), st = target(x), cat = C.byTrack.get(x._id);
   if(w.ncc_unmatched) p.warn.push(L(`Supplier "${w.ncc}" is not in the catalog supplier list — left empty, no new supplier created`,
                                     `NCC "${w.ncc}" không có trong danh sách NCC của Danh mục — để trống, không tạo NCC mới`));
@@ -108,14 +124,7 @@ function plan(x, C){
   const s = p.set, cf = (field, t, c, tv, cv) => p.conflicts.push({ field, track: t, cat: c, tv, cv });
   // tên máy: đã liên kết thì Danh mục luôn theo tên Tiến độ (user 2026-11-14); tên cũ bên Danh mục giữ ở "Tên gọi khác" (alias_names)
   const tn = txt(x.ten);
-  if(tn && tn !== cat.name){
-    s.name = tn; p.oldName = cat.name;
-    if('alias_names' in cat && cat.name && cat.name !== '🔒'){
-      const al = String(cat.alias_names || '').split(/\s*;\s*/).filter(Boolean);
-      if(!al.some(a => fold(a) === fold(cat.name)) && fold(cat.name) !== fold(tn)) al.push(cat.name);
-      const nv = al.join('; ') || null; if(nv !== (cat.alias_names || null)) s.alias_names = nv;
-    }
-  }
+  if(tn && tn !== cat.name) nameFollow(p, cat, tn);
   if(w.company_id && w.company_id !== cat.company_id)
     cf('company', w.company_code, (C.coId.get(cat.company_id) || {}).code || '—', w.company_id, cat.company_id);
   if(w.supplier_id){
