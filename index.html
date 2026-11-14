@@ -768,6 +768,7 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 #m_name.nm-lock{opacity:.8;cursor:not-allowed;background:var(--panel2)}
 .nm-lockmsg{font-size:12px;font-weight:400;color:var(--muted);margin-top:4px}
 .cs-rn{display:block;margin-bottom:2px}
+td.name small.nm-alias{display:block;color:var(--muted);font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:360px}
 .hc-g{border:1px solid var(--border);border-radius:10px;margin:8px 0;padding:0 12px;background:var(--panel)}
 .hc-g.err{border-left:4px solid var(--st-bad)}.hc-g.warn{border-left:4px solid var(--st-over)}
 .hc-g summary{cursor:pointer;padding:10px 0;font-weight:700;font-size:13.5px}.hc-g summary b{margin-left:6px;color:var(--muted)}
@@ -3150,9 +3151,10 @@ function render(){
   if(pageNo>nPages) pageNo = nPages;
   const view = rows.slice((pageNo-1)*PS, pageNo*PS);
   const qw = !!window.__canWrite;
+  const alBy = new Map(((window.__MMTB || {}).machines || []).filter(c=>c.tracking_machine_id && c.alias_names).map(c=>[c.tracking_machine_id, window.__aliasTxt ? window.__aliasTxt(c.alias_names) : c.alias_names]));
   tb.innerHTML = view.map((x,i)=>`<tr class="${x.status!=='arrived'&&x.danhgia==='Trễ'?'late-flag':''} slide-in" data-mo="${x._id}" style="--i:${i};cursor:pointer" onclick="showDetail(${DATA.indexOf(x)})" title="${tr('Click to view full machine details','Bấm để xem đầy đủ thông tin thiết bị')}">
     ${qw ? `<td class="qu-c" onclick="event.stopPropagation()"><input type="checkbox" class="qu-ck" data-id="${x._id}"${QU_SEL.has(x._id)?' checked':''} aria-label="${tr('Select for quick update','Chọn để cập nhật nhanh')}"><button type="button" class="qu-btn" title="${tr('⚡ Quick update','⚡ Cập nhật nhanh')}" onclick="quickEdit(${DATA.indexOf(x)})">⚡</button></td>` : ''}
-    <td class="name">${x.ten}${x.congsuat?`<small>${x.congsuat}</small>`:''}</td>
+    <td class="name">${x.ten}${alBy.get(x._id) ? `<small class="nm-alias" title="${escH(tr('Other names','Tên gọi khác'))}: ${escH(alBy.get(x._id))}">${escH(alBy.get(x._id))}</small>` : x.congsuat?`<small>${x.congsuat}</small>`:''}</td>
     <td>${x.sl}</td><td>${x.noilapdat}</td><td>${thCell(x)}</td><td>${ctT(x.xuatxu)}${ptSub(x)}</td>
     <td>${x.phutrach||'—'}</td>
     <td class="money">${fmtM(x.vnd)} ₫</td>
@@ -3173,6 +3175,7 @@ function render(){
   if(window.quSync) quSync(rows);
 }
 window.goPage = p => { pageNo = p; render(); };
+window.__dRender = () => { try{ render(); }catch(e){} };      // Danh mục đổi (VD tên gọi khác) → vẽ lại danh sách Tiến độ
 window.showKPI = kind => {
   const K = KP && KP[kind]; if(!K) return;
   const T = tr({pipeline:'Machines in pipeline', ontime:'On-time rate — arrivals counted', delayed:'Delayed machines', arriving:'Arriving in 30 days', commissioning:'Pending commissioning'},
@@ -4545,6 +4548,9 @@ const hasLink = () => MM.machines.length ? 'needs_info' in MM.machines[0] : fals
 const hasAlias = () => !!MM.hasTypes;     // migrations/20261102_11 tạo cùng lúc bảng loại thiết bị và cột alias_names
 const NAME_BAD = () => `<span class="tag-temp tag-name" title="${tr('Name does not follow the standard pattern','Tên chưa theo mẫu tên chuẩn')}">${tr('name not standard','tên chưa chuẩn')}</span>`;
 let NSC = null;      // ngữ cảnh name_std.js, tính lại ở index()
+/* tên gọi khác (alias_names "a; b") → "a · b" để hiện chữ nhỏ dưới tên máy (Danh mục + Tiến độ qua liên kết) */
+const aliasTxt = a => String(a || '').split(/\s*;\s*/).filter(Boolean).join(' · ');
+window.__aliasTxt = aliasTxt;
 const nameIss = x => (window.NS && NSC && MM.hasTypes && !x.tracking_machine_id) ? NS.issues(x, NSC) : [];   // máy đã liên kết: tên theo Tiến độ, không chuẩn hoá ở Danh mục
 const NEEDS = () => `<span class="tag-temp tag-need" title="${tr('Created from delivery tracking — add area, line, role, materials and a standard name','Tạo từ Tiến độ máy về — cần bổ sung khu vực, chuyền, vai trò, vật liệu, tên chuẩn')}">${tr('needs info','cần bổ sung')}</span>`;
 index();
@@ -4854,7 +4860,7 @@ function renderList(){
   mmTb.innerHTML = view.map((x,i)=>{
     const nk = (kids.get(x.id) || []).length, par = x.parent_machine_id && byId.get(x.parent_machine_id);
     return `<tr class="slide-in" data-mo="${x.id}" style="--i:${i};cursor:pointer" onclick="mmShow('${x.id}')">
-      <td class="name">${E(x.name)}${nk ? ` <span class="mm-kidtag" title="${E((kids.get(x.id) || []).map(c=>c.name).join(', '))}">🧩 ${nk} ${tr(nk > 1 ? 'sub-units' : 'sub-unit','bộ phận con')}</span>` : ''}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${x.model || x.tracking_machine_id ? `<small>${E(x.model || '')}${x.model && x.tracking_machine_id ? ' · ' : ''}${x.tracking_machine_id ? `<span title="${tr('Linked to Delivery','Đã liên kết Tiến độ máy về')}">🔗</span>` : ''}</small>` : ''}${par ? `<small class="mm-of" onclick="event.stopPropagation();mmShow('${par.id}')" title="${tr('Open the parent machine','Mở máy cha')}">↳ ${tr('part of','thuộc')}: ${E(par.name)}</small>` : ''}</td>
+      <td class="name">${E(x.name)}${nk ? ` <span class="mm-kidtag" title="${E((kids.get(x.id) || []).map(c=>c.name).join(', '))}">🧩 ${nk} ${tr(nk > 1 ? 'sub-units' : 'sub-unit','bộ phận con')}</span>` : ''}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${aliasTxt(x.alias_names) || x.tracking_machine_id ? `<small class="nm-alias">${aliasTxt(x.alias_names) ? `<span title="${E(tr('Other names','Tên gọi khác'))}: ${E(aliasTxt(x.alias_names))}">${E(aliasTxt(x.alias_names))}</span>` : ''}${aliasTxt(x.alias_names) && x.tracking_machine_id ? ' · ' : ''}${x.tracking_machine_id ? `<span title="${tr('Linked to Delivery','Đã liên kết Tiến độ máy về')}">🔗</span>` : ''}</small>` : ''}${par ? `<small class="mm-of" onclick="event.stopPropagation();mmShow('${par.id}')" title="${tr('Open the parent machine','Mở máy cha')}">↳ ${tr('part of','thuộc')}: ${E(par.name)}</small>` : ''}</td>
       <td>${E(x.company_code)}</td><td>${T(x.area_name)}</td><td${x.line_notes ? ` title="${E(x.line_notes)}"` : ''}>${T(x.line_name)}${x.line_notes ? ' <span style="color:var(--muted)">ⓘ</span>' : ''}</td><td>${T(x.group_name)}</td>
       <td>${T(x.supplier_name)}</td><td>${T(x.manufacturer)}</td><td>${N(x.quantity || 1)}</td>
       <td class="money">${money(x)}</td><td>${badge(x.lifecycle_status)}</td></tr>`; }).join('')
@@ -5246,6 +5252,7 @@ async function reload(){
   listDrawn = false; if(document.getElementById('c2').classList.contains('active')) drawList();
   if(document.getElementById('c3').classList.contains('active')) drawLibrary();
   if(document.getElementById('c4').classList.contains('active') && window.ARR) ARR.draw();
+  if(window.__dRender) window.__dRender();
   if(hcOpen) document.querySelectorAll('.hc-g').forEach(d=>{ d.open = hcOpen.includes(d.dataset.k); });
   document.querySelectorAll('.page.active .tablewrap').forEach((e, i)=>{ if(tw[i] != null) e.scrollTop = tw[i]; });
   window.scrollTo(0, y); requestAnimationFrame(()=>window.scrollTo(0, y));
@@ -5490,9 +5497,32 @@ function drawHealth(){
       'Kiểm tra chỉ đọc trên dữ liệu đã giải mã ngay trong trình duyệt — không sửa gì. Bấm một dòng để mở máy và sửa.')}
       <b>${N(bad.reduce((s,g)=>s + g.items.length, 0))}</b> ${tr('items in','mục trong')} <b>${bad.length}</b> ${tr('checks','nhóm kiểm tra')} · ✅ ${ok.length} ${tr('checks OK','nhóm đạt')}</div>
     ${bad.map(g=>`<details class="hc-g ${g.lv}" data-k="${g.key}"${bad.length <= 3 ? ' open' : ''}><summary><span class="hc-lv">${g.lv === 'err' ? '⛔' : '⚠'}</span> ${E(g.title)} <b>${N(g.items.length)}</b></summary>
-      ${g.hint ? `<div class="hc-hint">${E(g.hint)}</div>` : ''}<div class="tablewrap"><table><tbody>${g.items.slice(0, 300).map(row).join('')}</tbody></table></div>
+      ${g.hint ? `<div class="hc-hint">${E(g.hint)}</div>` : ''}${g.key === 'name_diff' && isAdmin ? `<div style="margin:0 0 8px"><button class="nbtn2" id="hcNameSync">🔄 ${tr(`Use the Delivery name for ${g.items.length} machine(s)`,`Lấy tên Tiến độ cho ${g.items.length} máy`)}</button></div>` : ''}<div class="tablewrap"><table><tbody>${g.items.slice(0, 300).map(row).join('')}</tbody></table></div>
       ${g.items.length > 300 ? `<div class="hc-hint">${tr('showing first 300','đang hiện 300 dòng đầu')}</div>` : ''}</details>`).join('')}
     <div class="hc-ok">${ok.map(g=>`<span>✅ ${E(g.title)}</span>`).join('')}</div>`;
+  const ns = document.getElementById('hcNameSync'); if(ns) ns.onclick = syncLinkedNames;
+}
+/* chỉ đồng bộ TÊN cho máy đã liên kết: tên Danh mục = tên Tiến độ, tên cũ vào Tên gọi khác (qua CS.plan / CS.apply, chỉ giữ name + alias_names) */
+async function syncLinkedNames(){
+  const C = window.CS && CS.ctx && CS.ctx(); if(!C || !C.ready) return;
+  const T = typeof DATA !== 'undefined' ? DATA : [], tBy = new Map(T.map(t=>[t._id, t]));
+  const list = MM.machines.filter(x=>x.tracking_machine_id && tBy.has(x.tracking_machine_id))
+    .map(x=>{ const p = CS.plan(tBy.get(x.tracking_machine_id), C); return p.cat && p.set.name ? p : null; }).filter(Boolean);
+  if(!list.length) return;
+  confirmBox({ title:tr(`Use the Delivery name for ${list.length} machine(s)?`,`Lấy tên Tiến độ cho ${list.length} máy?`),
+    sub:tr('Only the name changes. The old catalog name is kept in "Other names". Delivery names are not changed.','Chỉ đổi tên. Tên cũ bên Danh mục được giữ ở "Tên gọi khác". Tên bên Tiến độ không đổi.'),
+    extra:`<div id="cvPrev" style="max-height:260px;overflow:auto;margin:4px 0 14px;border:1px solid var(--border);border-radius:8px">${list.map(p=>`<div class="cv-row" style="display:flex;gap:8px;padding:5px 10px;font-size:13px;border-top:1px solid var(--border);text-align:left"><span style="color:var(--muted)">${E(p.cat.name)}</span><span>→</span><b>${E(p.set.name)}</b></div>`).join('')}</div>`,
+    ok:tr('🔄 Update names','🔄 Đổi tên'), onOk: async ()=>{
+      window.__selfWritingM = true; let n = 0;
+      try{
+        for(const p of list){
+          const set = { name: p.set.name }; if('alias_names' in p.set) set.alias_names = p.set.alias_names;
+          await CS.apply(Object.assign({}, p, { action:'update', set, ms:[] }), C); n++;
+        }
+        await reload(); toast('✅ ' + tr('Names updated','Đã đổi tên') + `: <b>${n}</b>`);
+      }catch(ex){ await reload(); showNotice({ type:'error', title:tr(`Stopped after ${n} machines`,`Dừng sau ${n} máy`), sub:errText(ex) }); }
+      finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+    } });
 }
 window.libGo = k => { libKey = k; libQ = ''; drawLibrary(); };
 const need07 = () => `<div class="mm-empty">${tr('This library needs <code>supabase/07_library.sql</code> — ask an admin to run it in Supabase › SQL Editor.',
@@ -5788,7 +5818,7 @@ function codeRows(){
     .sort((a,b)=>String(a.machine_code).localeCompare(b.machine_code));
   libTb.innerHTML = rows.slice(0, 500).map(x=>`<tr>
       <td style="white-space:nowrap"><b>${E(x.machine_code)}</b>${x.code_temp ? `<span class="tag-temp">${tr('temporary','tạm')}</span>` : ''}</td>
-      <td style="color:var(--muted)">${T(x.legacy_code)}</td><td class="name" style="cursor:pointer" onclick="mmShow('${x.id}')">${E(x.name)}</td>
+      <td style="color:var(--muted)">${T(x.legacy_code)}</td><td class="name">${E(x.name)}</td>
       <td>${E(x.company_code)}</td><td>${badge(x.lifecycle_status)}</td>
       ${isAdmin ? `<td class="lib-act"><button onclick="libCode('${x.id}')">✏️</button></td>` : ''}</tr>`).join('')
     || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">${tr('No machines match.','Không có máy nào khớp.')}</td></tr>`;

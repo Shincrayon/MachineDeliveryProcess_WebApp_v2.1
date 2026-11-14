@@ -310,3 +310,9 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Không `location.reload()` sau xoá máy (`askDelete` → splice DATA + `quAfterSave`), khôi phục thùng rác (`refreshOne` + `quAfterSave`), nạp Excel
   (`window.__reloadDelivery()` đọc lại toàn bộ tại chỗ). Tab, bộ lọc, `pageNo` giữ nguyên. Chỉ tải lại trang khi người dùng tự bấm (🔄, đổi ngôn ngữ, đăng xuất, mã hoá…).
 - Danh mục `reload()`: giữ `scrollY`, `scrollTop` các `.tablewrap`, nhóm 🩺 đang mở. Test: `e2e_stay_put_test.py`.
+
+## Tên gọi khác dưới tên + Mã máy chỉ sửa mã + Lấy tên Tiến độ (2026-11-14)
+- Danh sách Danh mục: dòng nhỏ dưới tên = tên gọi khác (`aliasTxt(alias_names)` "a · b") + 🔗 nếu liên kết — KHÔNG còn model. Danh sách Tiến độ:
+  máy đã liên kết có tên gọi khác bên Danh mục thì hiện thay dòng công suất (không có thì giữ công suất). `window.__dRender` vẽ lại Tiến độ sau `reload()` Danh mục.
+- 📚 › 🏷 Mã máy: bấm tên không mở chi tiết nữa — chỉ ✏️ sửa mã.
+- 🩺 nhóm `name_diff` có nút "🔄 Lấy tên Tiến độ cho N máy" (`syncLinkedNames`): xem trước rồi `CS.apply` chỉ với `name` + `alias_names` (không đụng trường khác). Test: `e2e_alias_show_test.py`.
