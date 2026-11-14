@@ -284,3 +284,20 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Tiến độ: ô Công suất = `f_csv` (số) + `f_csu` (CB.select đơn vị); `f_cs` (hidden) vẫn là giá trị đọc/ghi/lưu "3000 kg/h"
   (setter `.value` tách ra 2 ô qua `__capSplit`, sửa 2 ô thì ghép lại). Không tách được (VD "khoảng 3 tấn") → giữ nguyên + dòng `#f_csOld` cho tới khi nhập số.
 - `CB.select`: khi gõ, dòng khớp nguyên văn → bắt đầu bằng → khớp không dấu (hoặc dòng đầu) được bôi sáng, Enter chọn luôn. Test: `e2e_units_test.py`.
+
+## Danh sách Danh mục phẳng (2026-11-13)
+- `renderList`: chế độ mặc định `sortK='__tree'` nay là danh sách PHẲNG (nhà máy → sort_order → mã máy), không thụt lề / không gom con dưới cha.
+  Máy cha: nhãn `.mm-kidtag` "🧩 N bộ phận con" (title = tên các máy con); máy con: `small.mm-of` "↳ thuộc: <máy cha>" (bấm mở máy cha).
+  Phân cấp cha-con chỉ xem / chỉnh ở 🧩 Sắp xếp và mục Bộ phận con trong chi tiết. `treeIdx` vẫn tính (không còn dùng cho danh sách). Test: `e2e_flat_list_test.py`.
+
+## Tổng quan Danh mục đếm theo máy cha + 🩺 Kiểm tra dữ liệu (2026-11-13)
+- `updOverview`: `all` = máy theo nhà máy; `rows` = chỉ máy gốc (`rootOf(x) === x`); bộ phận con không tính thành máy riêng (thẻ Tổng thiết bị ghi
+  "gồm N bộ phận con"). Giá trị nhánh (máy + bộ phận con) cộng vào máy gốc (`brVal`) cho treemap / nhóm; Tổng giá trị = mọi hồ sơ; Top NCC dùng
+  giá trị riêng từng hồ sơ (`ownVal`). Thẻ Chuyền = chuyền `is_active !== false` (+ "N ngừng").
+- Biểu đồ "Thiết bị theo nhóm": đủ nhóm thư viện theo `sort_order` (kể cả 0 máy) → nhóm lạ "⚠ …" → "(chưa có nhóm)"; nút Số máy / Giá trị
+  (`grMode`); bấm thanh → `mmGo({co, grp})` (`grp:'__none'` = chưa có nhóm). Ô lọc Nhóm ở Danh sách cũng theo thư viện + nhóm lạ + chưa có nhóm.
+- 📚 › 🩺 Kiểm tra dữ liệu (`LIB.health`, `admin:true` — tab ẩn với người không phải admin): `dataIssues()` (`window.__dataIssues`) rà dữ liệu đã giải mã,
+  chỉ đọc. Nhóm kiểm tra: máy cha mất / vòng lặp / con khác nhà máy / con khác chuyền với cha · chuyền / khu vực thuộc nhà máy khác · khu vực khác
+  xưởng của chuyền · máy vận hành trên chuyền ngừng · nhóm / loại / đơn vị không có trong thư viện · NCC mất · vận hành chưa có ngày NT · có ngày NT
+  mà trạng thái còn trước · trùng serial · chưa giải mã · liên kết Tiến độ mất / lệch nhà máy · máy Tiến độ đủ điều kiện chưa sang · trường lệch ·
+  Tiến độ không xác định nhà máy · Cần bổ sung. (Vai trò ⇔ máy cha đã được ràng buộc DB `mmtb_machines_check1` nên không kiểm.) Test: `e2e_overview_health_test.py`.

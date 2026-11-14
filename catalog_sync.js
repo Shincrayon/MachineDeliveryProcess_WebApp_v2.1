@@ -525,6 +525,6 @@ async function writeTrack(x, ch){
   } finally { setTimeout(() => { window.__selfWriting = false; }, 1500); }
 }
 
-window.CS = { WAIT_DAYS, parseCap, fold, ctx, plan, planAll, apply, syncMachines, afterSave, linkInfo, score, suggest, nameSim, pendingCount, writeTrack,
+window.CS = { WAIT_DAYS, FIELD_L, parseCap, fold, ctx, plan, planAll, apply, syncMachines, afterSave, linkInfo, score, suggest, nameSim, pendingCount, writeTrack,
               idle: () => chain.then(() => {}, () => {}) };
 })();
