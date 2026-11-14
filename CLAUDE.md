@@ -279,7 +279,7 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 ## 📏 Thư viện Đơn vị (2026-11-13, migration 20 `mmtb_units`)
 - Bảng `mmtb_units (name unique, sort_order)`, mọi người xem, admin sửa; nạp sẵn 10 đơn vị chuẩn (kg/h … m³). Loader → `MM.units`, `MM.hasUnits`.
   Chưa chạy 20: mọi ô đơn vị như cũ (Danh mục ô gõ combo; Tiến độ dùng danh sách chuẩn `CAP_STD`).
-- Tab 📚 › 📏 Đơn vị (`LIB.units`, `needs20`, tên `lockEdit` vì đơn vị trên máy nằm trong sec, không đổi hàng loạt được).
+- Tab 📚 › 📏 Đơn vị (`LIB.units`, `needs20`). Sửa được tên (2026-11-14): đổi tên → mã hoá lại từng máy Danh mục đang dùng (capacity_unit trong sec) + `mmtb_equipment_types.default_unit`; Tiến độ (congsuat mã hoá, dạng chữ) giữ nguyên.
 - Danh mục: có thư viện thì `m_capu` là `<select>` + `CB.select` (admin ➕ `libQuickAdd('unit')`); `unitOpts(sel, cur)` thêm đơn vị cũ
   của máy "(chưa có trong thư viện)" để không mất; đơn vị cũ viết khác (VD tấn/h) được nhận là đơn vị chuẩn (t/h) khi mở Sửa.
   Loại thiết bị: `default_unit` kiểu `unit` (select từ thư viện).

@@ -5388,7 +5388,7 @@ const LIB = {
     cols:['name','default_unit','sort_order'], uniq:['name'], used: r=>cnt(MM.machines, x=>x.equipment_type===r.name),
     sort:(a,b)=>(+a.sort_order || 0) - (+b.sort_order || 0) || String(a.name).localeCompare(b.name), needs11:true },
   units:     { icon:'📏', title:tr('Units','Đơn vị'), table:'mmtb_units', rows:()=>MM.units || [],
-    fields:[ {k:'name', l:tr('Unit (e.g. kg/h, t/h, m³/h, kW)','Đơn vị (VD kg/h, t/h, m³/h, kW)'), req:1, lockEdit:1}, {k:'sort_order', l:tr('Display order','Thứ tự hiển thị'), type:'number'} ],
+    fields:[ {k:'name', l:tr('Unit (e.g. kg/h, t/h, m³/h, kW)','Đơn vị (VD kg/h, t/h, m³/h, kW)'), req:1}, {k:'sort_order', l:tr('Display order','Thứ tự hiển thị'), type:'number'} ],
     cols:['name','sort_order'], uniq:['name'],
     used: r=>cnt(MM.machines, x=>x.capacity_unit===r.name) + cnt(MM.types || [], t=>t.default_unit===r.name) + cnt(DATA, x=>window.__capSplit && __capSplit(unescH(x.congsuat)).u===r.name),
     sort:(a,b)=>(+a.sort_order || 0) - (+b.sort_order || 0) || String(a.name).localeCompare(b.name), needs20:true },
@@ -5615,6 +5615,8 @@ window.libEdit = (k, id) => {
   const cur = id ? d.rows().find(r=>r.id===id) : null, v = cur || {};
   mTitle.textContent = (cur ? tr('✏️ Edit · ','✏️ Sửa · ') : tr('➕ Add · ','➕ Thêm · ')) + d.title;
   mSub.textContent = cur && d.used(cur) ? tr(`Used by ${d.used(cur)} machines.`, `Đang được ${d.used(cur)} máy sử dụng.`) : '';
+  if(k==='units' && cur) mSub.textContent += ' ' + tr('Renaming also updates catalog machines and equipment types using it; capacity text on the Delivery side is kept as typed.',
+    'Đổi tên sẽ đổi theo trên máy Danh mục và Loại thiết bị đang dùng; ô Công suất bên Tiến độ giữ nguyên chữ đã nhập.');
   mBody.innerHTML = `<form id="lfForm" novalidate><div class="add-grid">
       ${d.fields.map(f=>`<label${f.full?' class="full"':''}>${E(f.l)}${f.req?' *':''}${libInput(f, v[f.k] ?? (cur ? null : f.def), !!cur)}</label>`).join('')}</div>
     <div class="err" id="lfErr" style="color:var(--red);font-size:13px;min-height:1.2em"></div>
@@ -5654,6 +5656,15 @@ window.libEdit = (k, id) => {
         const { error } = await sb.from(d.table).update(sealed).eq('id', id); if(error) throw error;
         if(k==='groups' && obj.name !== cur.name){       // đổi tên nhóm -> đổi theo trên các máy
           const { error: e2 } = await sb.from('mmtb_machines').update({ group_name: obj.name }).eq('group_name', cur.name); if(e2) throw e2;
+        }
+        if(k==='units' && obj.name !== cur.name){        // đổi tên đơn vị -> đổi theo trên máy Danh mục (đơn vị nằm trong sec: mã hoá lại từng máy) + Loại thiết bị
+          const SF = SEC.mmtb_machines.f;
+          for(const x of MM.machines.filter(m=>m.capacity_unit === cur.name && !m.__locked)){
+            const pk = {}; SF.forEach(f=>{ if(f in x) pk[f] = x[f] ?? null; }); pk.capacity_unit = obj.name;
+            const { data: d3, error: e3 } = await sb.from('mmtb_machines').update(await window.__seal('mmtb_machines', pk)).eq('id', x.id).eq('version', x.version == null ? 1 : x.version).is('deleted_at', null).select('id');
+            if(e3) throw e3; if(!d3 || !d3.length) throw { code:'conflict' };
+          }
+          if(MM.hasTypes){ const { error: e4 } = await sb.from('mmtb_equipment_types').update({ default_unit: obj.name }).eq('default_unit', cur.name); if(e4) throw e4; }
         }
         if(k==='types' && obj.name !== cur.name){        // đổi tên loại -> đổi theo trên các máy (equipment_type không mã hoá)
           const { error: e2 } = await sb.from('mmtb_machines').update({ equipment_type: obj.name }).eq('equipment_type', cur.name); if(e2) throw e2;
