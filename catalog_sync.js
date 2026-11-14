@@ -143,7 +143,10 @@ function plan(x, C){
       cf('capacity', un(x.congsuat).trim(), (cv + ' ' + (cat.capacity_unit || '')).trim(), w.capacity, { value: cv, unit: cat.capacity_unit });
   }
   if(w.contract){
-    const ca = cat.contract_amount == null || cat.contract_amount === '' ? null : Number(cat.contract_amount);
+    let ca = cat.contract_amount == null || cat.contract_amount === '' ? null : Number(cat.contract_amount);
+    // máy đã ✂️ tách: giá trị Tiến độ là tổng cả cụm → cộng thêm phần giá trị của các máy tách ra (cùng loại tiền)
+    if(ca != null) (C.MM.machines || []).forEach(m => { if(m.id !== cat.id && String(m.source_ref || '').startsWith('Tách từ ' + cat.machine_code)
+      && m.contract_currency === cat.contract_currency && m.contract_amount != null && m.contract_amount !== '') ca += Number(m.contract_amount); });
     if(ca == null){ s.contract_amount = w.contract.amount; if(cat.contract_currency !== w.contract.currency) s.contract_currency = w.contract.currency; }
     else {
       const tv = cat.contract_currency === 'VND' ? w.vnd : cat.contract_currency === 'USD' ? w.usd : 0;    // EUR: không so

@@ -768,6 +768,8 @@ body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:
 #m_name.nm-lock{opacity:.8;cursor:not-allowed;background:var(--panel2)}
 .nm-lockmsg{font-size:12px;font-weight:400;color:var(--muted);margin-top:4px}
 .cs-rn{display:block;margin-bottom:2px}
+small.unit-p{display:block;font-size:11px;font-weight:500;color:var(--muted);white-space:nowrap}
+.price-tot{font-size:12px;color:var(--muted);margin-top:4px}.price-tot b{color:var(--txt)}
 td.name small.nm-alias{display:block;color:var(--muted);font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:360px}
 .hc-g{border:1px solid var(--border);border-radius:10px;margin:8px 0;padding:0 12px;background:var(--panel)}
 .hc-g.err{border-left:4px solid var(--st-bad)}.hc-g.warn{border-left:4px solid var(--st-over)}
@@ -1288,8 +1290,9 @@ label:has(> .cb-src){position:relative}
       <label id="f_htL" class="pt-off">Purchase type *<select id="f_ht"></select></label>
       <label>Model<input id="f_model" type="text"></label>
       <label>Serial number<input id="f_serial" type="text"></label>
-      <label>Total value (VND)<input id="f_vnd" type="text" inputmode="numeric" placeholder="e.g. 3,000,000,000"></label>
-      <label>Total value (USD)<input id="f_usd" type="text" inputmode="numeric" placeholder="e.g. 120,000"></label>
+      <label>Unit price per set (VND)<input id="f_vnd" type="text" inputmode="numeric" placeholder="e.g. 3,000,000,000"></label>
+      <label>Unit price per set (USD)<input id="f_usd" type="text" inputmode="numeric" placeholder="e.g. 120,000"></label>
+      <div class="full price-tot" id="f_tot" hidden></div>
       <label>Proposal approval date<input id="f_duyet" type="date"></label>
       <label>Order date<input id="f_dh" type="date"></label>
       <label>Advance-payment wait, plan (days)<input id="f_ctu" type="number" value="0"></label>
@@ -1652,9 +1655,28 @@ function fmtMoney(v){ return v ? Number(v).toLocaleString(NUMLOC) : ''; }
     el.addEventListener('input', ()=>{
       const digits = el.value.replace(/\D/g,'');
       el.value = fmtMoney(digits);
+      priceTot();
     });
   });
+  f_sl.addEventListener('input', priceTot);
 })();
+/* ô giá = ĐƠN GIÁ 1 set (user 2026-11-14); máy vẫn lưu TỔNG = đơn giá × SL.
+   Mở Sửa: đơn giá = tổng ÷ SL (giữ số chính xác trong dataset.exact để lưu lại không bị lệch do làm tròn). */
+const slOf = () => Math.max(1, Math.round(Number(f_sl.value) || 1));
+function unitSet(id, total, sl){
+  const el = document.getElementById(id), ex = total ? Number(total) / Math.max(1, sl || 1) : 0;
+  el.value = fmtMoney(Math.round(ex)); el.dataset.exact = ex ? String(ex) : ''; el.dataset.shown = el.value;
+}
+function totalOf(id){
+  const el = document.getElementById(id), u = el.value === el.dataset.shown && el.dataset.exact ? Number(el.dataset.exact) : parseMoney(el.value);
+  return Math.round(u * slOf());
+}
+function priceTot(){
+  const box = document.getElementById('f_tot'); if(!box) return;
+  const n = slOf(), v = totalOf('f_vnd'), u = totalOf('f_usd');
+  box.hidden = n < 2 || (!v && !u);
+  box.innerHTML = box.hidden ? '' : `${tr('Total for','Tổng cho')} <b>${n}</b> ${tr('sets','set')}: ${v ? '<b>' + fmtMoney(v) + ' ₫</b>' : ''}${v && u ? ' · ' : ''}${u ? '<b>$' + fmtMoney(u) + '</b>' : ''}`;
+}
 
 function isoToSerial(s){                              // 'YYYY-MM-DD' -> serial Excel
   if(!s) return 0; const p=s.split('-').map(Number);
@@ -1820,7 +1842,7 @@ function fillFromClone(x){
   const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = (v == null ? '' : v); };
   set('f_ten', unescH(x.ten)); set('f_pt', unescH(x.phutrach)); set('f_sl', x.sl || 1); set('f_cs', unescH(x.congsuat));
   siteFill(unescH(x.noilapdat)); set('f_th', unescH(x.thuong_hieu)); set('f_ncc', unescH(x.ncc)); set('f_xx', unescH(x.xuatxu)); set('f_model', unescH(x.model));
-  set('f_vnd', fmtMoney(x.vnd)); set('f_usd', fmtMoney(x.usd));
+  unitSet('f_vnd', x.vnd, x.sl); unitSet('f_usd', x.usd, x.sl); setTimeout(priceTot);   // ô giá = đơn giá 1 set (tổng ÷ SL)
   set('f_ctu', x.ctu || 0); set('f_dt', x.ditaukh || 0); set('f_lm', x.lanhkh || 0); set('f_ctm', x.sonagyctm || 0);
   set('f_wd', (x.workingday || 'no').toLowerCase() === 'yes' ? 'yes' : 'no');
   set('f_ht', x.hinh_thuc_mua || ''); f_ht.dataset.dom = x.hinh_thuc_mua === 'domestic' ? '1' : '';
@@ -1852,7 +1874,7 @@ async function submitAdd(){
     sl: Math.round(xlNum(val('f_sl')))||1,
     congsuat: val('f_cs'), noilapdat: val('f_nld'), ncc: val('f_ncc'), xuatxu: val('f_xx'),
     model: val('f_model'), serial: val('f_serial'),
-    vnd: parseMoney(val('f_vnd')), usd: parseMoney(val('f_usd')),
+    vnd: totalOf('f_vnd'), usd: totalOf('f_usd'),          // ô nhập là đơn giá 1 set → lưu tổng = đơn giá × SL
     duyet: val('f_duyet')||null, dathang: val('f_dh')||null,
     vekh: serialToISO(veKH), vedukienn: serialToISO(veNM),
     danhgia: dg, sonagyctm: Math.round(ctm), giaitrinh: val('f_gt'),
@@ -1880,6 +1902,7 @@ async function submitAdd(){
 
 function resetAddForm(){
   ['f_mamay','f_ten','f_pt','f_cs','f_th','f_ncc','f_xx','f_model','f_serial','f_vnd','f_usd','f_duyet','f_dh','f_tutt','f_xxg','f_ntkh','f_gt'].forEach(id=>document.getElementById(id).value='');
+  ['f_vnd','f_usd'].forEach(id=>{ const el = document.getElementById(id); el.dataset.exact = ''; el.dataset.shown = ''; }); priceTot();
   siteFill(''); CB.clearHints();
   ['f_duyet','f_dh','f_tutt','f_xxg','f_ntkh'].forEach(id=>{ if(window.fpickers && window.fpickers[id]) window.fpickers[id].clear(); });
   ['f_ctu','f_dt','f_lm','f_ctm'].forEach(id=>document.getElementById(id).value='0');
@@ -3157,8 +3180,8 @@ function render(){
     <td class="name">${x.ten}${alBy.get(x._id) ? `<small class="nm-alias" title="${escH(tr('Other names','Tên gọi khác'))}: ${escH(alBy.get(x._id))}">${escH(alBy.get(x._id))}</small>` : x.congsuat?`<small>${x.congsuat}</small>`:''}</td>
     <td>${x.sl}</td><td>${x.noilapdat}</td><td>${thCell(x)}</td><td>${ctT(x.xuatxu)}${ptSub(x)}</td>
     <td>${x.phutrach||'—'}</td>
-    <td class="money">${fmtM(x.vnd)} ₫</td>
-    <td class="money" style="color:var(--sky)">${fmtU(x.usd)}$</td>
+    <td class="money">${fmtM(x.vnd)} ₫${x.sl >= 2 && x.vnd ? `<small class="unit-p">${fmtM(x.vnd / x.sl)} ₫ / set</small>` : ''}</td>
+    <td class="money" style="color:var(--sky)">${fmtU(x.usd)}$${x.sl >= 2 && x.usd ? `<small class="unit-p">${fmtU(x.usd / x.sl)}$ / set</small>` : ''}</td>
     <td class="dt">${fmtD(x.dathang)}</td><td class="dt">${fmtD(x.vekh)}</td><td class="dt"><b>${fmtD(x.vedukienn)}</b>${x.vedukienn ? (x.venm_tt ? `<small class="nm-kind tt">${tr('Arrived at plant','Đã về NM')}</small>` : `<small class="nm-kind">${tr('Expected at plant','Dự kiến về NM')}</small>`) : ''}</td>
     <td>${stCell(x)}</td>
     <td><span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}">${dgT(x.danhgia)}${x.giaitrinh?' 📝':''}</span></td></tr>`).join('');
@@ -3260,7 +3283,7 @@ window.showDetail = i => {
       it('Model', T(x.model)),
       it(tr('Serial number','Số serial'), T(x.serial))])}
     ${sec(tr('Value','Giá trị'),[
-      it(tr('Total value (VND)','Tổng giá trị (VNĐ)'), x.vnd ? x.vnd.toLocaleString(NUMLOC)+' ₫' : '—','hl'),
+      it(tr('Total value (VND)','Tổng giá trị (VNĐ)'), (x.vnd ? x.vnd.toLocaleString(NUMLOC)+' ₫' : '—') + (x.sl >= 2 && x.vnd ? `<small class="unit-p">${tr('per set','đơn giá 1 set')}: ${Math.round(x.vnd / x.sl).toLocaleString(NUMLOC)} ₫${x.usd ? ' · $' + Math.round(x.usd / x.sl).toLocaleString('en-US') : ''}</small>` : ''),'hl'),
       it(tr('Total value (USD)','Tổng giá trị (USD)'), x.usd ? x.usd.toLocaleString('en-US')+' $' : '—','hl')])}
     ${sec(tr('Planned schedule','Tiến độ theo kế hoạch (KH)'),[
       it(tr('Proposal approval date','Ngày duyệt ĐXĐT'), fmtD(x.duyet)),
@@ -4187,7 +4210,7 @@ window.editMachine = i => {
   set('f_mamay', x.ma_may||''); set('f_ten', unescH(x.ten)); set('f_pt', unescH(x.phutrach)); set('f_sl', x.sl||1);
   set('f_cs', unescH(x.congsuat)); siteFill(unescH(x.noilapdat)); set('f_th', unescH(x.thuong_hieu)); set('f_ncc', unescH(x.ncc)); set('f_xx', unescH(x.xuatxu));
   set('f_model', unescH(x.model)); set('f_serial', unescH(x.serial));
-  set('f_vnd', fmtMoney(x.vnd)); set('f_usd', fmtMoney(x.usd));
+  unitSet('f_vnd', x.vnd, x.sl); unitSet('f_usd', x.usd, x.sl); setTimeout(priceTot);   // ô giá = đơn giá 1 set (tổng ÷ SL)
   set('f_ctu', x.ctu||0); set('f_dt', x.ditaukh||0); set('f_dttt', x.ditautt||'');     // TT = 0 -> ô trống = lấy theo KH
   set('f_lm', x.lanhkh||0); set('f_lmtt', x.lanhtt||''); set('f_ctm', x.sonagyctm||0);
   set('f_wd', (x.workingday||'no').toLowerCase()==='yes'?'yes':'no'); set('f_gt', unescH(x.giaitrinh));
@@ -4863,7 +4886,7 @@ function renderList(){
       <td class="name">${E(x.name)}${nk ? ` <span class="mm-kidtag" title="${E((kids.get(x.id) || []).map(c=>c.name).join(', '))}">🧩 ${nk} ${tr(nk > 1 ? 'sub-units' : 'sub-unit','bộ phận con')}</span>` : ''}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${aliasTxt(x.alias_names) || x.tracking_machine_id ? `<small class="nm-alias">${aliasTxt(x.alias_names) ? `<span title="${E(tr('Other names','Tên gọi khác'))}: ${E(aliasTxt(x.alias_names))}">${E(aliasTxt(x.alias_names))}</span>` : ''}${aliasTxt(x.alias_names) && x.tracking_machine_id ? ' · ' : ''}${x.tracking_machine_id ? `<span title="${tr('Linked to Delivery','Đã liên kết Tiến độ máy về')}">🔗</span>` : ''}</small>` : ''}${par ? `<small class="mm-of" onclick="event.stopPropagation();mmShow('${par.id}')" title="${tr('Open the parent machine','Mở máy cha')}">↳ ${tr('part of','thuộc')}: ${E(par.name)}</small>` : ''}</td>
       <td>${E(x.company_code)}</td><td>${T(x.area_name)}</td><td${x.line_notes ? ` title="${E(x.line_notes)}"` : ''}>${T(x.line_name)}${x.line_notes ? ' <span style="color:var(--muted)">ⓘ</span>' : ''}</td><td>${T(x.group_name)}</td>
       <td>${T(x.supplier_name)}</td><td>${T(x.manufacturer)}</td><td>${N(x.quantity || 1)}</td>
-      <td class="money">${money(x)}</td><td>${badge(x.lifecycle_status)}</td></tr>`; }).join('')
+      <td class="money">${money(x)}${(+x.quantity || 1) >= 2 && (LANG==='vi' ? x.value_vnd : x.value_usd) ? `<small class="unit-p">${LANG==='vi' ? N(x.value_vnd / x.quantity) + ' ₫' : '$' + N(x.value_usd / x.quantity)} / set</small>` : ''}</td><td>${badge(x.lifecycle_status)}</td></tr>`; }).join('')
     || `<tr><td colspan="${COLS.length}" style="text-align:center;color:var(--muted);padding:24px">${tr('No machines match the filters.','Không có máy nào khớp bộ lọc.')}</td></tr>`;
   const bm = bigMoney(rows);
   mmCnt.textContent = `${N(rows.length)} ${tr('machines','thiết bị')} · ${tr('Total','Tổng')}: ${bm.main}${bm.unit} (${bm.note}) · ${tr('Page','Trang')} ${pg}/${nP}`;
@@ -4909,7 +4932,8 @@ window.mmShow = id => {
         ? `<a style="color:var(--sky);cursor:pointer" onclick="mmShow('${x.parent_machine_id}')">${E(x.parent_code)} — ${E(x.parent_name)}</a>` : '—', 'full')])}
     ${sec(tr('Procurement & value','Mua sắm & giá trị'), [
       it(tr('Supplier','Nhà cung cấp'), T(x.supplier_name)), it(tr('Proposal approval date','Ngày duyệt ĐXĐT'), D(x.approved_date)),
-      it(tr('Contract amount','Giá trị hợp đồng'), x.contract_amount != null ? N(x.contract_amount, 2) + ' ' + x.contract_currency : '—'),
+      it(tr('Contract amount','Giá trị hợp đồng'), x.contract_amount != null ? N(x.contract_amount, 2) + ' ' + x.contract_currency
+        + ((+x.quantity || 1) >= 2 ? `<small class="unit-p">${tr('per set','đơn giá 1 set')}: ${N(x.contract_amount / x.quantity, 2)} ${x.contract_currency} × ${x.quantity}</small>` : '') : '—'),
       it(tr('Locked exchange rate','Tỷ giá khoá'), x.locked_rate != null ? N(x.locked_rate, 2) : '—'),
       it(tr('Value (VND)','Giá trị (VNĐ)'), x.value_vnd != null ? N(x.value_vnd) + ' ₫' : '—', 'hl'),
       it(tr('Value (USD)','Giá trị (USD)'), x.value_usd != null ? N(x.value_usd, 2) + ' $' : '—', 'hl'),
@@ -4924,7 +4948,7 @@ window.mmShow = id => {
     ${x.notes ? `<div class="dt-sec"><h5>${tr('Notes','Ghi chú')}</h5><div class="m-gt" style="white-space:pre-wrap">${E(x.notes)}</div></div>` : ''}
     <div class="dt-actions">
       ${canW ? `<button class="nbtn2 ghost" onclick="mmDelete('${x.id}')">${tr('🗑 Delete machine','🗑 Xoá máy')}</button>
-                <button class="nbtn2 ghost" onclick="mmSplit('${x.id}')" title="${tr('Split into separate machines (e.g. same model installed in 2 places)','Tách thành nhiều máy riêng (VD 2 máy giống nhau lắp ở 2 nơi)')}">${tr('✂️ Split','✂️ Tách máy')}</button>
+                ${splitMax(x) >= 2 ? `<button class="nbtn2 ghost" onclick="mmSplit('${x.id}')" title="${tr('Split into separate machines (e.g. same model installed in 2 places)','Tách thành nhiều máy riêng (VD 2 máy giống nhau lắp ở 2 nơi)')}">${tr('✂️ Split','✂️ Tách máy')}</button>` : ''}
                 <button class="nbtn2 ghost" onclick="mmClone('${x.id}')" title="${tr('Add a new machine pre-filled from this one','Thêm máy mới, điền sẵn từ máy này')}">${tr('📋 Clone','📋 Nhân bản')}</button>
                 <button class="nbtn2" onclick="mmEdit('${x.id}')">${tr('✏️ Edit','✏️ Sửa thông tin')}</button>` : ''}</div>
     <div class="dt-note">${tr('Source','Nguồn')}: ${T(x.source_ref)} · ${tr('Last edited','Sửa lần cuối')}: ${x.updated_at ? new Date(x.updated_at).toLocaleString(NUMLOC) : '—'}${x.updated_by ? ' · ' + E(x.updated_by) : ''}</div>
@@ -4982,7 +5006,7 @@ function buildForm(){
       ${L(tr('Origin','Xuất xứ'), `<input id="m_origin" type="text">`)}
       ${L(tr('Supplier','Nhà cung cấp'), `<select id="m_sup"></select>`)}
       ${L(tr('Currency','Tiền tệ'), `<select id="m_cur"><option>VND</option><option>USD</option><option>EUR</option></select>`)}
-      ${L(tr('Contract amount','Giá trị hợp đồng'), `<input id="m_amt" type="number" step="any" min="0">`)}
+      ${L(tr('Contract amount — unit price per set','Giá trị hợp đồng — đơn giá 1 set'), `<input id="m_amt" type="number" step="any" min="0"><div class="price-tot" id="m_tot" hidden></div>`)}
       ${L(tr('Locked exchange rate (VND per unit)','Tỷ giá khoá (VNĐ / 1 đơn vị)'), `<input id="m_rate" type="number" step="any" min="0" placeholder="${tr('empty = current rate','trống = tỷ giá hiện hành')}">`)}
       ${L(tr('Proposal approval date','Ngày duyệt ĐXĐT'), `<input id="m_appr" type="date">`)}
       ${L(tr('Manufacturing days (CTM)','Số ngày chế tạo máy (CTM)'), `<input id="m_ctm" type="number" min="0" step="1">`)}
@@ -5132,7 +5156,12 @@ function openForm(x, clone){
   if(MM.hasUnits) unitOpts(m_capu, v.capacity_unit);
   set('m_serial', v.serial_number); set('m_qty', v.quantity || 1); set('m_capv', v.capacity_value); set('m_capu', v.capacity_unit);
   set('m_group', v.group_name); set('m_type', v.equipment_type); set('m_origin', v.origin); set('m_sup', v.supplier_id);
-  set('m_cur', v.contract_currency || 'VND'); set('m_amt', v.contract_amount); set('m_rate', v.locked_rate);
+  set('m_cur', v.contract_currency || 'VND'); set('m_rate', v.locked_rate);
+  // ô giá = ĐƠN GIÁ 1 set; lưu tổng = đơn giá × SL (giữ số chính xác để lưu lại không lệch do làm tròn)
+  { const q = Math.max(1, +v.quantity || 1), ex = v.contract_amount != null && v.contract_amount !== '' ? Number(v.contract_amount) / q : null;
+    m_amt.value = ex == null ? '' : String(Math.round(ex * 100) / 100); m_amt.dataset.exact = ex == null ? '' : String(ex); m_amt.dataset.shown = m_amt.value;
+    if(!m_amt._tot){ m_amt._tot = true; [m_amt, m_qty, m_cur].forEach(e=>e.addEventListener('input', mmTot)); m_cur.addEventListener('change', mmTot); }
+    mmTot(); }
   set('m_ctm', v.manufacturing_days); set('m_st', v.lifecycle_status || 'planned'); set('m_eng', v.engineer); set('m_mgr', v.manager); set('m_notes', v.notes);
   if(v.role && v.role!=='sub_unit') m_role.value = v.role;
   if(window.m_needs) m_needs.checked = !!v.needs_info;
@@ -5160,44 +5189,72 @@ window.mmClone = id => { const c = byId.get(id); if(c) openForm(c, true); };
    Máy gốc giữ mọi thứ (mã, serial, giá trị hợp đồng, liên kết Tiến độ); chỉ đổi khu vực, chuyền, số lượng 1, ghi chú vị trí.
    Máy mới chép thông tin + ngày + trạng thái + mốc, mã tạm mới; để trống serial, mã tài sản, giá trị hợp đồng (giá trị nằm ở máy gốc,
    tổng không bị nhân đôi); không liên kết Tiến độ (UNIQUE) — nguồn ghi "Tách từ <mã>". Bên Tiến độ không đổi. */
+/* số máy tối đa tách được = lớn hơn giữa số lượng hiện tại (Danh mục) và SL Tiến độ − số máy đã tách ra từ máy này trước đó */
+function splitMax(x){
+  const trk = x.tracking_machine_id ? (window.__trackRows ? window.__trackRows() : []).find(t => t._id === x.tracking_machine_id) : null;
+  const done = MM.machines.filter(m=>m.id !== x.id && String(m.source_ref || '').startsWith(tr('Split from ','Tách từ ') + x.machine_code)).length;
+  // máy gốc sau khi tách đã giữ phần còn lại ở quantity; SL Tiến độ là tổng ban đầu nên trừ số máy đã tách
+  return Math.min(20, Math.max(+x.quantity || 1, (+(trk && trk.sl) || 0) - done));
+}
 window.mmSplit = id => {
   const x = byId.get(id); if(!x) return;
   const trk = x.tracking_machine_id ? (window.__trackRows ? window.__trackRows() : []).find(t => t._id === x.tracking_machine_id) : null;
-  const n0 = Math.min(10, Math.max(2, +(trk && trk.sl) || +x.quantity || 2));
+  const nMax = splitMax(x); if(nMax < 2) return;
+  const hasAmt = x.contract_amount != null && x.contract_amount !== '' && !isNaN(+x.contract_amount), T0 = hasAmt ? +x.contract_amount : 0;
+  const dec = (x.contract_currency || 'VND') === 'VND' ? 0 : 2;
+  /* chia giá trị: ô có nhập giữ nguyên, ô để trống chia đều phần còn lại (máy gốc nhận phần lẻ); null = tổng các ô vượt / không khớp */
+  const shares = vals => { const blank = vals.map((v, i)=>v == null ? i : -1).filter(i=>i >= 0), rem = T0 - vals.reduce((s, v)=>s + (v || 0), 0);
+    if(rem < -0.005 || (!blank.length && Math.abs(rem) > 0.005)) return null;
+    const f = Math.pow(10, dec), each = blank.length ? Math.floor(rem / blank.length * f) / f : 0, out = vals.slice();
+    blank.forEach(i=>{ out[i] = each; }); if(blank.length) out[blank[0]] = Math.round((out[blank[0]] + rem - each * blank.length) * f) / f; return out; };
+  const n0 = nMax;
   const ar = MM.areas.filter(a=>a.company_id===x.company_id).sort((a,b)=>String(a.name).localeCompare(b.name));
   const ln = MM.lines.filter(l=>l.company_id===x.company_id).sort((a,b)=>String(a.name).localeCompare(b.name));
   const opt = (list, v, lbl) => `<option value="">—</option>` + list.map(o=>`<option value="${E(o.id)}"${o.id===v?' selected':''}>${E(lbl(o))}</option>`).join('');
   const row = i => `<div class="sp-card" data-i="${i}"><div class="sp-h">${i ? `✂️ ${tr('New machine','Máy mới')} ${i} <small>${tr('new temporary code','mã tạm mới')}</small>` : `<b>${E(x.machine_code)}</b> <small>${tr('original','máy gốc')}</small>`}</div>
       <div class="add-grid sp-g"><label>${tr('Area','Khu vực')}<select class="sp-area">${opt(ar, x.area_id, a=>a.name)}</select></label>
       <label>${tr('Line','Chuyền')}<select class="sp-line">${opt(ln, x.line_id, l=>lineLbl(l))}</select></label>
-      <label>${tr('Location note','Ghi chú vị trí')}<input class="sp-loc" type="text" placeholder="${tr('e.g. next to warehouse B','VD cạnh kho B')}"></label></div></div>`;
+      <label>${tr('Location note','Ghi chú vị trí')}<input class="sp-loc" type="text" placeholder="${tr('e.g. next to warehouse B','VD cạnh kho B')}"></label>
+      ${hasAmt ? `<label>${tr('Contract amount','Giá trị hợp đồng')} (${E(x.contract_currency || '')}) <small style="font-weight:400">${tr('empty = auto split','trống = tự chia')}</small><input class="sp-val" type="number" step="any" min="0"></label>` : ''}</div></div>`;
   mTitle.textContent = tr('✂️ Split machine · ','✂️ Tách máy · ') + x.name;
   mSub.innerHTML = trk ? tr(`Linked to Delivery <b>${E(trk.ma_may || '')}</b> · quantity there: <b>${+trk.sl || 1}</b>`, `Đang liên kết Tiến độ <b>${E(trk.ma_may || '')}</b> · số lượng bên đó: <b>${+trk.sl || 1}</b>`) : '';
   mBody.innerHTML = `<form id="spForm" novalidate>
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px">${tr('Number of machines after splitting','Số máy sau khi tách')}
-        <select id="spN" style="width:auto">${[2,3,4,5,6,7,8,9,10].map(k=>`<option${k===n0?' selected':''}>${k}</option>`).join('')}</select></label>
+        <select id="spN" style="width:auto">${Array.from({ length:nMax - 1 }, (_, i)=>i + 2).map(k=>`<option${k===n0?' selected':''}>${k}</option>`).join('')}</select>
+        <small style="color:var(--muted);font-weight:400">${tr(`max ${nMax} (quantity)`,`tối đa ${nMax} (theo số lượng)`)}</small></label>
       <div id="spRows"></div>
-      <div class="lib-note" style="margin-top:10px">${tr('The original keeps its code, serial, contract value and Delivery link. New machines copy the details, dates and status, get a new temporary code, and leave serial, asset code and contract value empty (so totals are not doubled). Each machine gets quantity 1. Delivery progress is not changed.',
-        'Máy gốc giữ mã, serial, giá trị hợp đồng và liên kết Tiến độ. Máy mới chép thông tin, ngày, trạng thái, nhận mã tạm mới; để trống serial, mã tài sản và giá trị hợp đồng (để tổng không bị nhân đôi). Mỗi máy số lượng 1. Bên Tiến độ không đổi.')}</div>
+      <div class="lib-note" style="margin-top:10px">${tr('The original keeps its code, serial and Delivery link. New machines copy the details, dates and status, get a new temporary code, and leave serial and asset code empty. Contract amount: empty boxes share the rest equally; the total always equals the original amount. New machines get quantity 1; the original keeps the remaining quantity. Delivery progress is not changed.',
+        'Máy gốc giữ mã, serial và liên kết Tiến độ. Máy mới chép thông tin, ngày, trạng thái, nhận mã tạm mới; để trống serial và mã tài sản. Giá trị hợp đồng: ô nào để trống thì chia đều phần còn lại, tổng luôn bằng giá trị ban đầu. Máy mới số lượng 1; máy gốc giữ phần số lượng còn lại. Bên Tiến độ không đổi.')}</div>
       <div id="spErr" style="color:var(--red);font-size:13px;min-height:1.2em;margin-top:6px"></div>
       <div class="add-actions"><button type="button" class="nbtn2 ghost" onclick="mBg.classList.remove('show')">${tr('Cancel','Hủy')}</button>
         <button type="submit" class="nbtn2" id="spGo">${tr('✂️ Split','✂️ Tách máy')}</button></div></form>`;
-  const keep = () => [...spRows.querySelectorAll('.sp-card')].map(r=>({ a:r.querySelector('.sp-area').value, l:r.querySelector('.sp-line').value, n:r.querySelector('.sp-loc').value }));
+  const keep = () => [...spRows.querySelectorAll('.sp-card')].map(r=>({ a:r.querySelector('.sp-area').value, l:r.querySelector('.sp-line').value, n:r.querySelector('.sp-loc').value,
+    v: r.querySelector('.sp-val') ? r.querySelector('.sp-val').value.trim() : '' }));
+  const valsOf = rows => rows.map(o=>o.v === '' ? null : Number(o.v));
+  const hint = () => { if(!hasAmt) return; const rows = keep(), sh = shares(valsOf(rows));
+    spRows.querySelectorAll('.sp-val').forEach((e, i)=>{ e.placeholder = sh ? '≈ ' + N(sh[i], dec) : ''; });
+    spErr.textContent = sh ? '' : tr(`The amounts must add up to ${N(T0, dec)} ${x.contract_currency}.`, `Tổng các ô phải bằng ${N(T0, dec)} ${x.contract_currency}.`); };
   const drawRows = () => { const old = keep(); const n = +spN.value;
     spRows.innerHTML = Array.from({ length:n }, (_, i)=>row(i)).join('');
-    [...spRows.querySelectorAll('.sp-card')].forEach((r, i)=>{ const o = old[i]; if(!o) return; r.querySelector('.sp-area').value = o.a; r.querySelector('.sp-line').value = o.l; r.querySelector('.sp-loc').value = o.n; });
+    [...spRows.querySelectorAll('.sp-card')].forEach((r, i)=>{ const o = old[i]; if(!o) return; r.querySelector('.sp-area').value = o.a; r.querySelector('.sp-line').value = o.l; r.querySelector('.sp-loc').value = o.n; if(r.querySelector('.sp-val')) r.querySelector('.sp-val').value = o.v; });
+    spRows.querySelectorAll('.sp-val').forEach(e=>e.addEventListener('input', hint)); hint();
     spGo.textContent = tr(`✂️ Split into ${n} machines`, `✂️ Tách thành ${n} máy`); };
   spN.onchange = drawRows; drawRows(); openM();
   spForm.onsubmit = async e => {
     e.preventDefault();
     const rows = keep(), sb = window.__sb; if(!sb) return;
+    const amts = hasAmt ? shares(valsOf(rows)) : null;
+    if(hasAmt && !amts){ hint(); return; }
     spGo.disabled = true; window.__selfWritingM = true; let made = 0;
     const withLoc = (notes, loc) => [notes, loc ? tr('Location: ','Vị trí: ') + loc : ''].filter(Boolean).join('\n') || null;
     try{
       const SF = SEC.mmtb_machines.f.filter(k => k in x);
       // 1) máy gốc: khu vực, chuyền, số lượng 1, ghi chú vị trí (ghi chú nằm trong sec -> mã hoá lại cả gói)
-      const r0 = rows[0], upd = { area_id: r0.a || null, line_id: r0.l || null, quantity: 1 };
-      if(r0.n.trim()){ const s0 = {}; SF.forEach(k => { s0[k] = x[k] ?? null; }); s0.notes = withLoc(x.notes, r0.n.trim()); Object.assign(upd, await window.__seal('mmtb_machines', s0)); }
+      const r0 = rows[0], upd = { area_id: r0.a || null, line_id: r0.l || null, quantity: Math.max(1, nMax - (rows.length - 1)) };   // máy gốc giữ phần số lượng còn lại
+      if(r0.n.trim() || hasAmt){ const s0 = {}; SF.forEach(k => { s0[k] = x[k] ?? null; });
+        if(r0.n.trim()) s0.notes = withLoc(x.notes, r0.n.trim());
+        if(hasAmt) s0.contract_amount = amts[0];                 // máy gốc nhận phần giá trị của mình
+        Object.assign(upd, await window.__seal('mmtb_machines', s0)); }
       const { data:d0, error:e0 } = await sb.from('mmtb_machines').update(upd).eq('id', x.id).eq('version', x.version == null ? 1 : x.version).is('deleted_at', null).select('id');
       if(e0) throw e0; if(!d0 || !d0.length) throw { code:'conflict' };
       // 2) máy mới
@@ -5214,6 +5271,7 @@ window.mmSplit = id => {
         if('code_temp' in x) nr.code_temp = true;
         SF.forEach(k => { nr[k] = x[k] ?? null; });
         ['serial_number','asset_code','contract_amount'].forEach(k => { if(k in nr) nr[k] = null; });
+        if(hasAmt) nr.contract_amount = amts[i];                  // phần giá trị của máy mới (nhập tay hoặc tự chia đều)
         nr.notes = withLoc(x.notes, rows[i].n.trim());
         const { data, error } = await sb.from('mmtb_machines').insert(await window.__seal('mmtb_machines', nr)).select('id').single();
         if(error) throw error;
@@ -5257,6 +5315,17 @@ async function reload(){
   document.querySelectorAll('.page.active .tablewrap').forEach((e, i)=>{ if(tw[i] != null) e.scrollTop = tw[i]; });
   window.scrollTo(0, y); requestAnimationFrame(()=>window.scrollTo(0, y));
 }
+const mmQty = () => Math.max(1, Math.round(Number(m_qty.value) || 1));
+function mmTotal(){
+  if(m_amt.value.trim() === '') return null;
+  const u = m_amt.value === m_amt.dataset.shown && m_amt.dataset.exact ? Number(m_amt.dataset.exact) : Number(m_amt.value);
+  return Math.round(u * mmQty() * 100) / 100;
+}
+function mmTot(){
+  const t = mmTotal(), n = mmQty(), box = document.getElementById('m_tot'); if(!box) return;
+  box.hidden = n < 2 || t == null;
+  box.innerHTML = box.hidden ? '' : `${tr('Total for','Tổng cho')} <b>${n}</b> ${tr('sets','set')}: <b>${N(t, 2)} ${E(m_cur.value)}</b>`;
+}
 async function save(){
   const val = id => (document.getElementById(id).value || '').trim();
   const num = id => { const s = val(id); return s==='' ? null : Number(s); };
@@ -5268,7 +5337,7 @@ async function save(){
     manufacturer: val('m_brand') || null, model: val('m_model') || null, serial_number: val('m_serial') || null,
     quantity: Math.max(1, Math.round(num('m_qty') || 1)), capacity_value: num('m_capv'), capacity_unit: val('m_capu') || null,
     materials: [...document.querySelectorAll('.m_mat:checked')].map(c=>c.value),
-    contract_currency: m_cur.value, contract_amount: num('m_amt'), locked_rate: num('m_rate'),
+    contract_currency: m_cur.value, contract_amount: mmTotal(), locked_rate: num('m_rate'),
     lifecycle_status: m_st.value, commissioned_date: dt('m_comm'), approved_date: dt('m_appr'),
     manufacturing_days: num('m_ctm') == null ? null : Math.round(num('m_ctm')),
     group_name: val('m_group') || null, equipment_type: val('m_type') || null, origin: val('m_origin') || null,
@@ -6056,6 +6125,7 @@ const STATIC_VI = new Map([
   ['e.g. 3000 kg/h','VD: 3000 kg/h'],
   ['Installation site','Nơi lắp đặt'],
   ['Total value (VND)','Tổng giá trị (VNĐ)'],
+  ['Unit price per set (VND)','Đơn giá 1 set (VNĐ)'], ['Unit price per set (USD)','Đơn giá 1 set (USD)'],
   ['e.g. 3,000,000,000','VD: 3.000.000.000'],
   ['Total value (USD)','Tổng giá trị (USD)'],
   ['e.g. 120,000','VD: 120.000'],

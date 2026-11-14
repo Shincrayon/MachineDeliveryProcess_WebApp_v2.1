@@ -270,7 +270,8 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 `20261031_06_machine_code_not_null.sql` đã bỏ (chưa từng chạy) — thay bằng 08.
 
 ## ✂️ Tách máy Danh mục (2026-11-13, `mmSplit`)
-- Nút ✂️ Tách máy trong chi tiết máy Danh mục (cùng quyền với Nhân bản). Chọn số máy (2–10, mặc định = SL bên Tiến độ nếu đã liên kết),
+- Nút ✂️ Tách máy trong chi tiết máy Danh mục (cùng quyền với Nhân bản), chỉ hiện khi `splitMax(x)` ≥ 2. `splitMax` = max(quantity Danh mục,
+  SL Tiến độ − số máy đã tách từ máy này [source_ref "Tách từ <mã>"]) (2026-11-14). Chọn số máy 2…splitMax; máy gốc giữ quantity = splitMax − (n−1),
   mỗi máy chọn Khu vực / Chuyền / Ghi chú vị trí (nối vào notes "Vị trí: …").
 - Máy gốc: giữ mã, serial, giá trị hợp đồng, liên kết `tracking_machine_id`; đổi area/line, quantity 1 (notes trong sec → mã hoá lại cả gói `SEC.mmtb_machines.f`).
 - Máy mới: chép cột + trường sec, mã tạm `randCode`, `code_temp`, chép mốc `delivery_milestones`; để trống serial, asset_code, contract_amount
@@ -316,3 +317,11 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
   máy đã liên kết có tên gọi khác bên Danh mục thì hiện thay dòng công suất (không có thì giữ công suất). `window.__dRender` vẽ lại Tiến độ sau `reload()` Danh mục.
 - 📚 › 🏷 Mã máy: bấm tên không mở chi tiết nữa — chỉ ✏️ sửa mã.
 - 🩺 nhóm `name_diff` có nút "🔄 Lấy tên Tiến độ cho N máy" (`syncLinkedNames`): xem trước rồi `CS.apply` chỉ với `name` + `alias_names` (không đụng trường khác). Test: `e2e_alias_show_test.py`.
+
+## Đơn giá 1 set + chia giá trị khi tách máy (2026-11-14)
+- Ô giá trong form = ĐƠN GIÁ 1 set; DB vẫn lưu TỔNG (= đơn giá × SL) nên báo cáo / Excel / đồng bộ không đổi. Dữ liệu cũ (user xác nhận) là tổng.
+  Tiến độ: `f_vnd` / `f_usd` (`unitSet`, `totalOf`, `priceTot` → `#f_tot` "Tổng cho N set"); Danh mục: `m_amt` (`mmTotal`, `mmTot` → `#m_tot`).
+  Mở Sửa: đơn giá = tổng ÷ SL, số chính xác giữ ở `dataset.exact` → lưu lại không đổi gì thì tổng giữ nguyên (không lệch do làm tròn).
+- Hiển thị: SL ≥ 2 thì dưới giá tổng có `small.unit-p` "… / set" (danh sách Tiến độ: VNĐ + USD; danh sách Danh mục; chi tiết 2 phân hệ).
+- ✂️ Tách máy: mỗi máy có ô Giá trị hợp đồng (`.sp-val`); ô trống chia đều phần còn lại (máy gốc / ô trống đầu nhận phần lẻ), gợi ý "≈ …";
+  tổng các ô phải bằng giá trị ban đầu. Đồng bộ (`plan`): so giá trị Tiến độ với tổng máy gốc + các máy "Tách từ <mã>" cùng loại tiền. Test: `e2e_unit_price_test.py`.
