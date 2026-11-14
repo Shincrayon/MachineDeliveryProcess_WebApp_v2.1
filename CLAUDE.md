@@ -303,3 +303,10 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
   xưởng của chuyền · máy vận hành trên chuyền ngừng · nhóm / loại / đơn vị không có trong thư viện · NCC mất · vận hành chưa có ngày NT · có ngày NT
   mà trạng thái còn trước · trùng serial · chưa giải mã · liên kết Tiến độ mất / lệch nhà máy · máy Tiến độ đủ điều kiện chưa sang · trường lệch ·
   Tiến độ không xác định nhà máy · Cần bổ sung. (Vai trò ⇔ máy cha đã được ràng buộc DB `mmtb_machines_check1` nên không kiểm.) Test: `e2e_overview_health_test.py`.
+
+## Popup chỉ đóng bằng ✕ + không tải lại trang (2026-11-14)
+- Popup có ô nhập / sửa chỉ đóng bằng ✕ hoặc Hủy: `addBg` (form Tiến độ) và `mmBg` (form Danh mục) bỏ hẳn đóng-khi-bấm-ngoài; `mBg` (popup chung)
+  chỉ đóng khi bấm ngoài nếu `window.mBgEditing()` = false (không có form / textarea / select / input). Popup chỉ xem (chi tiết, xem trước) vẫn đóng khi bấm ngoài.
+- Không `location.reload()` sau xoá máy (`askDelete` → splice DATA + `quAfterSave`), khôi phục thùng rác (`refreshOne` + `quAfterSave`), nạp Excel
+  (`window.__reloadDelivery()` đọc lại toàn bộ tại chỗ). Tab, bộ lọc, `pageNo` giữ nguyên. Chỉ tải lại trang khi người dùng tự bấm (🔄, đổi ngôn ngữ, đăng xuất, mã hoá…).
+- Danh mục `reload()`: giữ `scrollY`, `scrollTop` các `.tablewrap`, nhóm 🩺 đang mở. Test: `e2e_stay_put_test.py`.

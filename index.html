@@ -1259,7 +1259,7 @@ label:has(> .cb-src){position:relative}
 
 </div>
 
-<div class="modal-bg" id="mBg" onclick="if(event.target===this)this.classList.remove('show')">
+<div class="modal-bg" id="mBg" onclick="if(event.target===this && !(window.mBgEditing && window.mBgEditing()))this.classList.remove('show')">
   <div class="modal" id="mCard" style="position:relative">
     <button class="m-close" onclick="mBg.classList.remove('show')">✕</button>
     <h4 id="mTitle"></h4>
@@ -1604,7 +1604,8 @@ async function applyBuffer(buf){
     onOk: async ()=>{
       try{
         await importMachines(data, known);
-        showNotice({ type:'success', count:data.length, last:escH((data[data.length-1]||{}).ten), onOk:()=>location.reload() });
+        await window.__reloadDelivery();      // đọc lại tại chỗ, không đưa về trang đầu
+        showNotice({ type:'success', count:data.length, last:escH((data[data.length-1]||{}).ten) });
       }catch(err){ showNotice({type:'error', title:tr('Could not save the data','Chưa lưu được dữ liệu'), sub:dbErrText(err)}); }
       finally{ btnPick.textContent=tr('📂 Import','📂 Nạp Excel'); }
     }
@@ -1616,7 +1617,9 @@ btnPick.onclick = ()=> fileUpd.click();
 /* ===== form nhập máy mới ===== */
 btnAdd.onclick = ()=>{ window.__editId=null; CLONE_SRC = null; resetAddForm(); cloneHl(f_nld, false); addClonePicker(); addTitle.textContent=tr('➕ Add new machine','➕ Nhập máy mới'); addSubmit.textContent=tr('➕ Add machine','➕ Thêm máy'); addBg.classList.add('show'); };
 function closeAdd(){ addBg.classList.remove('show'); }
-addBg.onclick = e=>{ if(e.target===addBg) closeAdd(); };
+/* popup có ô nhập / sửa (form, ô chữ, ô chọn, ô tick): chỉ đóng bằng ✕ hoặc Hủy — bấm ra ngoài không đóng (user 2026-11-14).
+   Popup chỉ để xem (chi tiết máy, xem trước…) vẫn đóng khi bấm ra ngoài. Form Thêm/Sửa máy (addBg, mmBg) luôn chỉ đóng bằng ✕ / Hủy. */
+window.mBgEditing = function(){ return !!mBg.querySelector('form, textarea, select, input:not([type=hidden])'); }
 
 /* === Lịch chọn ngày (flatpickr): bấm để chọn, khoá gõ tay ===
    Dùng altInput: ô hiển thị dạng dd/mm/yyyy còn giá trị thật vẫn là YYYY-MM-DD
@@ -3631,6 +3634,16 @@ async function quSaveOne(x,ch){
   return (!had && x.ma_may) ? x.ma_may : '';          // mã vừa được trigger cấp (lưu ngày về NM TT lần đầu)
 }
 const quCodeMsg = c => c ? tr(` · Code assigned: <b>${c}</b>`,` · Đã cấp mã <b>${c}</b>`) : '';
+/* đọc lại toàn bộ máy Tiến độ tại chỗ (không tải lại trang): giữ tab, bộ lọc, trang danh sách đang xem */
+window.__reloadDelivery = async () => {
+  const sb = window.__sb; if(!sb) return;
+  const { data, error } = await sb.from('machines').select('*').is('deleted_at', null).order('sort_order', { ascending:true });
+  if(error) throw error;
+  const rows = await Promise.all((data || []).map(r=>window.__open(r)));
+  const list = rows.map(r=>{ const o = window.__cleanMachine(r); if(r.__locked && !o.ten) o.ten = '🔒'; return o; }).filter(x=>x.ten).map(setArrival);
+  DATA.length = 0; DATA.push(...list);
+  quAfterSave();
+};
 function quAfterSave(){
   render();
   try{ OV_HOOKS.forEach(f=>f()); }catch(e){}
@@ -4199,7 +4212,9 @@ window.askDelete = i => {
         const { data, error } = await window.__sb.rpc('soft_delete_machine', { p_id: x._id, p_version: x._ver });
         if(error) throw error;
         if(data !== true) throw {code:'conflict'};
-        location.reload();
+        const k = DATA.findIndex(d=>d._id===x._id); if(k >= 0) DATA.splice(k, 1);     // bỏ khỏi danh sách tại chỗ, giữ trang đang xem
+        mBg.classList.remove('show'); quAfterSave();
+        quToast('🗑 ' + tr('Moved to the trash','Đã chuyển vào thùng rác') + ': <b>' + escH(x.ten) + '</b>');
       }catch(err){ showNotice({type:'error', title:tr('Could not delete','Chưa xoá được'), sub:dbErrText(err)}); }
     }});
 };
@@ -4432,7 +4447,9 @@ window.restoreTrash = async j => {
     const { data, error } = await window.__sb.rpc('restore_machine', { p_id: t.id });
     if(error) throw error;
     if(data !== true) throw {code:'conflict'};
-    location.reload();
+    await refreshOne(t.id);                    // đưa máy trở lại danh sách tại chỗ, giữ trang đang xem
+    mBg.classList.remove('show'); quAfterSave();
+    quToast('♻️ ' + tr('Restored','Đã khôi phục') + ': <b>' + escH(t.ten || '') + '</b>');
   }catch(err){ showNotice({type:'error', title:tr('Could not restore','Chưa khôi phục được'), sub:dbErrText(err)}); }
 };
 window.purgeTrash = j => {
@@ -4974,7 +4991,7 @@ function buildForm(){
     <div class="add-actions"><button class="nbtn2 ghost" onclick="mmClose()">${tr('Cancel','Hủy')}</button><button class="nbtn2" id="mmSave"></button></div>
   </div>`;
   document.body.appendChild(bg);
-  bg.onclick = e=>{ if(e.target===bg) mmClose(); };
+  // form Thêm / Sửa máy Danh mục: chỉ đóng bằng ✕ hoặc Hủy (bấm ra ngoài không đóng)
   if(window.flatpickr){
     const o = { dateFormat:'Y-m-d', altInput:true, altFormat:'d/m/Y', allowInput:false, disableMobile:true,
                 locale:(LANG==='vi' && flatpickr.l10ns && flatpickr.l10ns.vn) ? 'vn' : 'default' };
@@ -5219,6 +5236,9 @@ window.__mmReload = () => reload();      // catalog_sync.js: vẽ lại Danh m�
 /* arrange.js (🧩 Sắp xếp) đọc dữ liệu + hàm dùng chung qua đây */
 window.__mmCtx = () => ({ MM, canW, reload, badge, mmShow: window.mmShow, emptyHTML, lcl: LCL, lcc: LCC });
 async function reload(){
+  // giữ chỗ đang xem: vị trí cuộn trang + các bảng, nhóm 🩺 đang mở (vẽ lại không đưa về đầu)
+  const y = window.scrollY, tw = [...document.querySelectorAll('.page.active .tablewrap')].map(e=>e.scrollTop);
+  const hcOpen = document.querySelector('.hc-g') ? [...document.querySelectorAll('.hc-g[open]')].map(d=>d.dataset.k) : null;
   const fresh = window.__loadMmtb ? await window.__loadMmtb() : null;
   if(fresh && !fresh.err){ MM = fresh; window.__MMTB = MM; }
   index(); updHeaderTs();
@@ -5226,6 +5246,9 @@ async function reload(){
   listDrawn = false; if(document.getElementById('c2').classList.contains('active')) drawList();
   if(document.getElementById('c3').classList.contains('active')) drawLibrary();
   if(document.getElementById('c4').classList.contains('active') && window.ARR) ARR.draw();
+  if(hcOpen) document.querySelectorAll('.hc-g').forEach(d=>{ d.open = hcOpen.includes(d.dataset.k); });
+  document.querySelectorAll('.page.active .tablewrap').forEach((e, i)=>{ if(tw[i] != null) e.scrollTop = tw[i]; });
+  window.scrollTo(0, y); requestAnimationFrame(()=>window.scrollTo(0, y));
 }
 async function save(){
   const val = id => (document.getElementById(id).value || '').trim();
