@@ -30,9 +30,10 @@ body{background:var(--bg)}
 
 /* ===== Dot 1: thanh tren cung ===== */
 .topbar{padding:8px 16px;gap:10px;background:var(--panel);backdrop-filter:none;flex-wrap:nowrap;align-items:center}
-.brand .logo{display:inline-flex!important;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:var(--accent);font-size:15px;flex:none}
-.brand .logo .ico{width:16px;height:16px;vertical-align:0;color:var(--on-accent)}
-.brand h1{font-size:15px;font-weight:700;letter-spacing:0}
+.brand .logo{display:inline-flex!important;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:var(--accent);background-image:linear-gradient(145deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#000));box-shadow:0 1px 2px rgba(0,0,0,.2);font-size:15px;flex:none}
+.brand .logo .ico{width:20px;height:20px;vertical-align:0;color:var(--on-accent);stroke-width:1.9}
+.brand{flex:none}
+.brand h1{margin:0;font-size:inherit;font-weight:inherit;letter-spacing:0}
 .mods{padding:2px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);flex:none}
 .mod{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted)}
 .mod.active{background:var(--panel);box-shadow:0 0 0 1px var(--border);color:var(--txt)}
@@ -53,19 +54,31 @@ body{background:var(--bg)}
 /* man hinh hep: chu an thi icon nam giua (bo margin cua .ico-t) */
 @media(max-width:1760px){body[data-mod="delivery"] .mod:not(.active) .ico.ico-t{margin-right:0}}
 @media(max-width:1500px){body[data-mod="delivery"] #btnPick .ico.ico-t{margin-right:0}}
+/* khoi thuong hieu (ten 19px) + 5 tab co icon khong vua 1 dong duoi ~1690px (do: tabs 577 > 574 o 1680, 462 o 1500): Tien do bo icon trong tab */
+@media(max-width:1700px){body[data-mod="delivery"] .tab .ico{display:none}}
 @media(max-width:1440px){
   body[data-mod="delivery"] .tab{font-size:12.5px;padding:0 7px;gap:5px}
   body[data-mod="delivery"] .topbar{gap:8px}}
 /* o sang truot (motion.js) cho tab: nen accent-soft, khong gradient tim */
 .tab-ink{background:var(--accent-soft);border:0;border-radius:8px 8px 0 0}
 .tab{flex:none}
-@media(max-width:1760px){body[data-mod="mmtb"] .brand h1{display:none}}
+/* khối thương hiệu: tên 19px luôn hiện + dòng phụ (tên phân hệ đang mở, màu nhấn) */
+.brand .bt{display:flex;flex-direction:column;line-height:1.1;white-space:nowrap}
+.brand .bt b{font-size:19px;font-weight:750;letter-spacing:-.2px;color:var(--txt)}
+.brand .bt span{font-size:11.5px;font-weight:400;color:var(--muted);margin-top:3px}
+.brand .bt i{font-style:normal;font-weight:600;color:var(--accent)}
+.brand .bt em{font-style:normal}
+/* dien thoai: thu nho de khoi thuong hieu khong chen nut gat phan he */
+@media(max-width:640px){.brand .bt b{font-size:16px}.brand .bt span{font-size:11px;margin-top:2px}.brand .logo{width:30px;height:30px}.brand .logo .ico{width:18px;height:18px}}
+/* nút gạt phân hệ chỉ còn icon: chữ ẩn-nhìn (vẫn trong innerText), tên hiện ở tooltip (title) */
+.mod .mod-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.mod .ico.ico-t{margin-right:0}
+.mod{padding:0 9px}
 /* <=1360px: nut phan he khong chon chi con icon, tab/nut gon lai de thanh van 1 dong */
 @media(max-width:1360px){
   .topbar{padding:8px 12px;gap:6px}
-  .mod:not(.active) .mod-t{display:none}
-  .mod:not(.active) .ico.ico-t{margin-right:0}
-  .mod{padding:0 8px}
+  .brand .bt em{display:none}
+  .topbar .tab .ico{display:none}
   body[data-mod] .tab{padding:0 5px;gap:4px;font-size:12.5px}
   .topbar .tabs{flex:none}
   .ico.ico-t{margin-right:4px}
@@ -75,10 +88,25 @@ body{background:var(--bg)}
   .topbar .updated{flex-direction:column;align-items:flex-start;gap:0;line-height:1.15!important}
   .topbar .updated .ico{display:none}
   .topbar .updated #updTime{display:block!important;font-size:10.5px!important}}
+/* 1240-1300px (ca EN): them cho cho khoi thuong hieu */
+@media(max-width:1300px){
+  .topbar{gap:4px;padding-left:8px;padding-right:8px}
+  .topbar .tabs{gap:0}
+  .upd-btn,#btnUpd,#btnTrash,#btnPw,#btnLogout,#btnUsers{padding-left:5px;padding-right:5px;min-width:28px}}
 /* man hinh nho (dien thoai / may tinh bang doc): cho phep xuong dong, tab cuon ngang */
 @media(max-width:1239px){
   .topbar{flex-wrap:wrap}
   .topbar .tabs{flex:1 1 100%;order:10;overflow-x:auto;margin-left:0}}
+
+/* the dang nhap / mo khoa / tao mat khau du lieu (card() trong index.html): dau the = khoi thuong hieu, chan the = ghi chu ma hoa */
+.lg-brand{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.lg-brand .logo{display:grid;place-items:center;width:46px;height:46px;border-radius:12px;background:var(--focus);background-image:linear-gradient(145deg,var(--focus),color-mix(in srgb,var(--focus) 70%,#000));color:var(--on-accent);box-shadow:0 1px 2px rgba(0,0,0,.2);flex:none}
+.lg-brand .logo .ico{width:26px;height:26px;stroke-width:1.9}
+.lg-brand b{display:block;font-size:22px;font-weight:750;line-height:1.15;color:var(--txt)}
+.lg-brand span:not(.logo){display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+.login-card .brand-dup{display:none}
+.login-card button:not(.pw-eye){background:var(--focus);color:var(--on-accent)}
+.login-card .lg-ft{font-size:11px;color:var(--muted);text-align:center}
 
 /* thuoc tinh hidden phai thang display cua cac nut/khoi da dat display */
 .topbar [hidden]{display:none!important}

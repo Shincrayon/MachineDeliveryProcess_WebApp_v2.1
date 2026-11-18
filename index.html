@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Machine Delivery Tracker</title>
+<title>Machinery &amp; Equipment</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Cg transform='translate(4 4) scale(1)' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 21V10l5 3V10l5 3V5h3l1 3h4v13z'/%3E%3Cpath d='M7 17h2M12 17h2M17 17h2'/%3E%3C/g%3E%3C/svg%3E">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -748,10 +749,6 @@ td.qu-c input,th.qu-h input{width:16px;height:16px;vertical-align:middle;accent-
 .mod.active{background:linear-gradient(160deg,rgba(52,211,153,.24),rgba(34,211,238,.16));color:var(--strong);box-shadow:inset 0 0 0 1px rgba(52,211,153,.35)}
 body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:none!important}
 /* phân hệ Tiến độ nhiều nút hơn: màn hình hẹp thì thu tên app về logo, nút phân hệ không chọn chỉ còn icon */
-@media(max-width:1760px){
-  body[data-mod="delivery"] .brand h1{display:none}
-  body[data-mod="delivery"] .brand .logo{display:inline}
-  body[data-mod="delivery"] .mod:not(.active) .mod-t{display:none}}
 @media(max-width:1500px){body[data-mod="delivery"] #btnPick .btn-t{display:none}}
 /* thêm tab Kế hoạch: màn hình ≤ 1440px thu nhỏ chữ tab / nút để header phân hệ Tiến độ vẫn 1 dòng */
 @media(max-width:1440px){body[data-mod="delivery"] .tab{font-size:12.5px;padding:8px 6px;gap:5px}
@@ -1103,7 +1100,7 @@ label:has(> .cb-src){position:relative}
 <body>
 
 <div class="topbar">
-  <div class="brand"><span class="logo">🏭</span><h1>Machinery &amp; Equipment</h1></div>
+  <div class="brand"><span class="logo">🏭</span><h1 class="bt"><b>Machinery &amp; Equipment</b><span><i></i><em> · Duy Tân Recycling</em></span></h1></div>
   <div class="mods" id="mods">
     <button class="mod" data-m="mmtb" title="Machinery catalog">🏭 <span class="mod-t">Catalog</span></button>
     <button class="mod" data-m="delivery" title="Machine delivery tracking">🚢 <span class="mod-t">Delivery</span></button>
@@ -6086,10 +6083,16 @@ showPage = function(id){
   if(id==='c3') drawLibrary();
   if(window.ARR){ if(id==='c4') ARR.draw(); else ARR.leave(); }
 };
+/* dòng phụ khối thương hiệu: tên phân hệ đang mở (chỉ hiển thị) */
+function brandSub(){
+  const i = document.querySelector('.brand .bt i');
+  if(i) i.textContent = document.body.dataset.mod === 'delivery' ? tr('Delivery','Tiến độ máy về') : tr('Catalog','Danh mục MMTB');
+}
 function setMod(m){
   document.body.dataset.mod = m;
   try{ localStorage.setItem('tdmv_mod', m); }catch(e){}
   document.querySelectorAll('.mod').forEach(b=>b.classList.toggle('active', b.dataset.m===m));
+  brandSub();
   updHeaderTs();
   showPage(last[m]);
 }
@@ -6703,10 +6706,17 @@ window.encryptExisting = async () => {
     });
     return mm;
   }
+  /* logo nhà xưởng (cùng đường vẽ với ICONS 'logo' trong icons.js) — nhúng sẵn để thẻ không phụ thuộc icons.js nạp sau */
+  const LOGO_SVG = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V10l5 3V10l5 3V5h3l1 3h4v13z"/><path d="M7 17h2M12 17h2M17 17h2"/></svg>';
   function card(inner){
     let bg = document.getElementById('loginBg');
     if(!bg){ bg = document.createElement('div'); bg.id='loginBg'; bg.className='login-bg'; document.body.appendChild(bg); }
-    bg.innerHTML = '<div class="login-card">' + inner + '</div>';
+    /* chỉ phần trình bày: đầu thẻ = khối thương hiệu, chân thẻ = ghi chú mã hoá; nội dung/nút/id của từng thẻ giữ nguyên */
+    bg.innerHTML = '<div class="login-card"><div class="lg-brand"><span class="logo">' + LOGO_SVG + '</span><div><b>' + tr('Machinery & Equipment','Thông tin MMTB') + '</b><span>'
+      + tr('Machinery & equipment tracking · Duy Tân Recycling','Theo dõi máy móc thiết bị · Duy Tân Recycling') + '</span></div></div>'
+      + inner + '<div class="lg-ft">' + tr('Data is encrypted in your browser','Dữ liệu được mã hoá ngay trên trình duyệt') + '</div></div>';
+    const h2 = bg.querySelector('.login-card > h2');   // thẻ đăng nhập tự có tiêu đề là tên app: ẩn cho khỏi trùng
+    if(h2 && /Machinery & Equipment|Thông tin MMTB/.test(h2.textContent)) h2.classList.add('brand-dup');
     return bg;
   }
 
