@@ -19,12 +19,12 @@ const S = { co: '', q: '', fq: '', sel: new Set(), open: new Set(), tab: 'tree',
 const X = () => window.__mmCtx();
 const E = v => escH(v == null ? '' : v);
 const L = (en, vi) => tr(en, vi);
-const AREA_COLS = ['#60a5fa', '#a78bfa', '#34d399', '#f472b6', '#22d3ee', '#fb923c', '#facc15', '#c084fc', '#2dd4bf', '#f87171'];
+const AREA_FAM = ['blue', 'violet', 'aqua', 'magenta', 'orange', 'yellow', 'green', 'red', 'gray', 'slate'];   /* họ màu của VZ (chart_theme.js) — theo sáng/tối */
+const areaCol = i => VZ.fam(AREA_FAM[i % AREA_FAM.length]);
 
 /* ---------- CSS ---------- */
 const css = `
-#c4{--ar-main:#fbbf24;--ar-aux:#2dd4bf;--ar-sub:#94a3b8;--ar-ln:rgba(148,163,184,.32)}
-[data-theme="light"] #c4{--ar-main:#d97706;--ar-aux:#0d9488;--ar-sub:#64748b;--ar-ln:rgba(100,116,139,.35)}
+#c4{--ar-main:var(--lci-installing);--ar-aux:var(--lci-shipping);--ar-sub:var(--muted);--ar-ln:color-mix(in srgb,var(--muted) 32%,transparent)}
 #c4 .ar-head{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin-bottom:14px}
 #c4 .ar-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 #c4 .ar-ctl .search{flex:1 1 220px;min-width:170px}
@@ -34,8 +34,8 @@ const css = `
 #c4 .ar-ib.pri{border-color:var(--sky);color:var(--sky)}
 #c4 .ar-prog{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-top:12px;font-size:12.5px;color:var(--muted)}
 #c4 .ar-prog .lbl b{color:var(--txt);font-size:15px}
-#c4 .ar-bar{flex:1 1 180px;height:8px;border-radius:99px;background:rgba(148,163,184,.16);overflow:hidden;min-width:120px}
-#c4 .ar-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--sky),var(--green));transition:width .5s}
+#c4 .ar-bar{flex:1 1 180px;height:8px;border-radius:99px;background:color-mix(in srgb,var(--muted) 16%,transparent);overflow:hidden;min-width:120px}
+#c4 .ar-bar i{display:block;height:100%;border-radius:99px;background:var(--focus);transition:width .5s}
 #c4 .ar-pct{font-weight:800;color:var(--txt);font-size:14px}
 #c4 .ar-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;border:1px solid var(--border);font-size:12px;color:var(--muted);background:transparent;cursor:default}
 #c4 .ar-chip b{color:var(--txt)}
@@ -48,18 +48,18 @@ const css = `
 /* thẻ chuyền */
 #c4 .ar-line{position:relative;border:1px solid var(--border);border-radius:14px;margin-bottom:10px;background:var(--panel);overflow:hidden;transition:border-color .15s,box-shadow .15s}
 #c4 .ar-line::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ac)}
-#c4 .ar-line.open{box-shadow:0 6px 22px rgba(0,0,0,.18)}
+#c4 .ar-line.open{box-shadow:var(--shadow-1)}
 #c4 .ar-lh{display:flex;align-items:center;gap:12px;padding:11px 14px 11px 16px;cursor:pointer;user-select:none}
-#c4 .ar-lh:hover{background:rgba(148,163,184,.05)}
+#c4 .ar-lh:hover{background:color-mix(in srgb,var(--muted) 5%,transparent)}
 #c4 .ar-lic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px;flex:none;background:color-mix(in srgb,var(--ac) 16%,transparent)}
 #c4 .ar-lt{min-width:0;flex:1}
 #c4 .ar-lt b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #c4 .ar-lt small{color:var(--muted);font-size:11.5px}
 #c4 .ar-lt small.ar-ln{display:block;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #c4 .ar-cnt{display:flex;gap:5px;flex:none}
-#c4 .ar-cnt i{font-style:normal;font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(148,163,184,.1)}
+#c4 .ar-cnt i{font-style:normal;font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:99px;background:color-mix(in srgb,var(--muted) 10%,transparent)}
 #c4 .ar-cnt .m{color:var(--ar-main)} #c4 .ar-cnt .a{color:var(--ar-aux)} #c4 .ar-cnt .s{color:var(--ar-sub)}
-#c4 .ar-mini{display:flex;width:64px;height:6px;border-radius:99px;overflow:hidden;background:rgba(148,163,184,.14);flex:none}
+#c4 .ar-mini{display:flex;width:64px;height:6px;border-radius:99px;overflow:hidden;background:color-mix(in srgb,var(--muted) 14%,transparent);flex:none}
 #c4 .ar-mini i{display:block;height:100%}
 #c4 .ar-lw{color:var(--st-over);font-size:13px;flex:none}
 #c4 .ar-chev{color:var(--muted);transition:transform .2s;flex:none}
@@ -74,7 +74,7 @@ const css = `
 #c4 ul.ar-kids>li:last-child::before{bottom:auto;height:19px}
 #c4 ul.ar-kids>li::after{content:'';position:absolute;left:0;top:19px;width:15px;border-top:1.5px solid var(--ar-ln);border-bottom-left-radius:6px}
 #c4 .ar-row{position:relative;display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:10px;font-size:13px;line-height:1.25;border:1px solid transparent;transition:background .15s,border-color .15s}
-#c4 .ar-row:hover{background:rgba(148,163,184,.07)}
+#c4 .ar-row:hover{background:color-mix(in srgb,var(--muted) 7%,transparent)}
 #c4 .ar-row.main,#c4 .ar-row.auxiliary{margin-top:6px;background:var(--panel2);border-color:var(--border);padding:8px 10px}
 #c4 .ar-row.main{border-color:color-mix(in srgb,var(--ar-main) 30%,var(--border))}
 #c4 .ar-row.sel{background:color-mix(in srgb,var(--sky) 15%,transparent)!important;border-color:color-mix(in srgb,var(--sky) 55%,transparent)!important}
@@ -101,7 +101,7 @@ const css = `
 #c4 .ar-row.dragging{opacity:.4}
 /* vùng thả */
 #c4 .drop{outline:2px solid var(--sky);outline-offset:-2px;background:color-mix(in srgb,var(--sky) 10%,transparent)!important}
-#c4 .drop::after{content:attr(data-dl);position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:3;background:var(--sky);color:#04122b;
+#c4 .drop::after{content:attr(data-dl);position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:3;background:var(--sky);color:var(--on-accent);
   font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;pointer-events:none;white-space:nowrap}
 #c4 .ar-line.drop::after{top:22px}
 /* hộp chờ xếp */
@@ -116,18 +116,18 @@ const css = `
 #c4 .ar-iss .t{flex:1;min-width:0} #c4 .ar-iss .t b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #c4 .ar-iss .t small{color:var(--muted)}
 #c4 .ar-iss button{flex:none;padding:4px 10px;border-radius:8px;border:1px solid var(--st-over);background:transparent;color:var(--st-over);font-weight:700;font-size:11.5px;cursor:pointer}
-#c4 .ar-iss button:hover{background:var(--st-over);color:#1a0f05}
+#c4 .ar-iss button:hover{background:var(--st-over);color:var(--bg)}
 #c4 .ar-tabs{display:none;gap:6px;margin-bottom:12px}
 #c4 .ar-tabs button{flex:1;padding:9px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-weight:700;cursor:pointer}
 #c4 .ar-tabs button.on{background:var(--panel2);color:var(--txt);border-color:var(--sky)}
 /* thanh thao tác nổi */
 .ar-act{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(160%);z-index:60;display:flex;gap:6px;align-items:center;
   background:var(--panel2);border:1px solid color-mix(in srgb,var(--sky) 60%,transparent);border-radius:999px;padding:6px 6px 6px 8px;
-  box-shadow:0 14px 40px rgba(0,0,0,.4);transition:transform .25s cubic-bezier(.2,.9,.3,1.2);max-width:calc(100vw - 24px);overflow-x:auto}
+  box-shadow:var(--shadow-2);transition:transform .25s cubic-bezier(.2,.9,.3,1.2);max-width:calc(100vw - 24px);overflow-x:auto}
 .ar-act.show{transform:translateX(-50%) translateY(0)}
-.ar-act .n{background:var(--sky);color:#04122b;border-radius:999px;padding:6px 12px;font-weight:800;font-size:12.5px;white-space:nowrap}
+.ar-act .n{background:var(--sky);color:var(--on-accent);border-radius:999px;padding:6px 12px;font-weight:800;font-size:12.5px;white-space:nowrap}
 .ar-act button{padding:8px 13px;border-radius:999px;border:0;background:transparent;color:var(--txt);font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap}
-.ar-act button:hover{background:rgba(148,163,184,.14)}
+.ar-act button:hover{background:color-mix(in srgb,var(--muted) 14%,transparent)}
 .ar-act button.pri{background:color-mix(in srgb,var(--sky) 20%,transparent);color:var(--sky)}
 .ar-act .x{color:var(--muted);padding:8px 11px}
 /* hộp Đưa vào */
@@ -137,7 +137,7 @@ const css = `
 .ar-dlg .opt:has(input:checked){border-color:var(--sky);background:color-mix(in srgb,var(--sky) 8%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--sky) 15%,transparent)}
 .ar-dlg .opt>input[type=radio]{position:absolute;top:8px;right:8px;width:1px;height:1px;opacity:0;margin:0;pointer-events:none}
 .ar-dlg .opt .hd{display:flex;align-items:center;gap:10px}
-.ar-dlg .opt .big{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-size:18px;flex:none;background:rgba(148,163,184,.12)}
+.ar-dlg .opt .big{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-size:18px;flex:none;background:color-mix(in srgb,var(--muted) 12%,transparent)}
 .ar-dlg .opt b{font-size:13px} .ar-dlg .opt small{display:block;color:var(--muted);font-size:11.5px;font-weight:500}
 .ar-dlg .opt select,.ar-dlg .opt input[type=text]{width:100%}
 .ar-dlg .opt input[type=text]{box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--txt);font:inherit;font-size:13px;outline:none}
@@ -148,15 +148,15 @@ const css = `
 .ar-dlg .pk div{padding:7px 10px;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--border)}
 .ar-dlg .pk div:last-child{border-bottom:0}
 .ar-dlg .pk div small{color:var(--muted)}
-.ar-dlg .pk div:hover{background:rgba(148,163,184,.08)}
+.ar-dlg .pk div:hover{background:color-mix(in srgb,var(--muted) 8%,transparent)}
 .ar-dlg .pk div.on{background:color-mix(in srgb,var(--sky) 20%,transparent)}
 .ar-dlg .pv{grid-column:1/-1;padding:10px 12px;border-radius:12px;background:var(--panel2);font-size:12.5px;border:1px dashed var(--border)}
 .ar-dlg .pv b{color:var(--sky)}
 .ar-dlg .btns{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end}
 .ar-dlg .btns button{padding:9px 16px;border-radius:11px;border:1px solid var(--border);background:transparent;color:var(--txt);font-weight:700;cursor:pointer}
-.ar-dlg .btns button.pri{background:var(--sky);border-color:var(--sky);color:#04122b}
+.ar-dlg .btns button.pri{background:var(--sky);border-color:var(--sky);color:var(--on-accent)}
 .ar-toast{position:fixed;left:16px;right:16px;margin:0 auto;width:fit-content;bottom:84px;z-index:61;background:var(--panel2);border:1px solid var(--border);border-radius:14px;
-  padding:10px 14px;font-size:13px;box-shadow:0 12px 32px rgba(0,0,0,.38);display:none;gap:12px;align-items:center;max-width:calc(100vw - 32px)}
+  padding:10px 14px;font-size:13px;box-shadow:var(--shadow-3);display:none;gap:12px;align-items:center;max-width:calc(100vw - 32px)}
 .ar-toast.show{display:flex;animation:arUp .25s ease-out}
 @keyframes arUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .ar-toast button{background:transparent;border:1px solid var(--sky);color:var(--sky);border-radius:9px;padding:4px 11px;font-weight:700;cursor:pointer;white-space:nowrap}
@@ -212,7 +212,7 @@ function model(){
 /* ---------- vẽ ---------- */
 const ROLE_IC = { main: '⭐', auxiliary: '◇', sub_unit: '↳' };
 const ROLE_T = () => ({ main: L('Main machine', 'Máy chính'), auxiliary: L('Auxiliary machine', 'Máy phụ'), sub_unit: L('Sub-unit', 'Máy con') });
-const lc = s => (X().lcc || {})[s] || '#94a3b8';
+const lc = s => (X().lcc || {})[s] || 'var(--muted)';
 const ll = s => (X().lcl || {})[s] || s || '';
 function hit(x){ const q = S.q; return !!q && [x.name, x.model, x.manufacturer, x.machine_code, x.serial_number].some(v => v && String(v).toLowerCase().includes(q)); }
 function nodeHTML(M, x, can){
@@ -231,7 +231,7 @@ const treeHTML = (M, list, can) => `<ul class="ar-ul">${list.map(x => nodeHTML(M
 function lineHTML(M, l, can){
   const r = M.inLine.get(l.id), all = r.flatMap(M.all), op = S.open.has(l.id), util = l.code === UTIL_CODE;
   const ai = M.areas.findIndex(a => a.id === l.area_id), area = ai >= 0 ? M.areas[ai] : null;
-  const ac = util ? 'var(--ar-aux)' : ai >= 0 ? AREA_COLS[ai % AREA_COLS.length] : 'var(--ar-sub)';
+  const ac = util ? 'var(--ar-aux)' : ai >= 0 ? areaCol(ai) : 'var(--ar-sub)';
   const nM = all.filter(x => x.role === 'main').length, nA = all.filter(x => x.role === 'auxiliary').length, nS = all.length - nM - nA;
   const byS = {}; all.forEach(x => { byS[x.lifecycle_status] = (byS[x.lifecycle_status] || 0) + 1; });
   const mini = Object.entries(byS).map(([s, n]) => `<i style="width:${n / all.length * 100}%;background:${lc(s)}" title="${E(ll(s))}: ${n}"></i>`).join('');

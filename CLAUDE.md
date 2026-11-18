@@ -340,3 +340,12 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Danh mục: `#m_conv` "≈ … ₫ / $ theo tỷ giá …" (tỷ giá khoá nếu có, không thì mới nhất).
 - 📚 › 💱 Tỷ giá (`LIB.rates`, bảng `exchange_rates` có sẵn, admin sửa): loại tiền / tỷ giá / ngày áp dụng; `MM.xrates`. libInput thêm type `decimal`, `date`, `select`.
 - `.add-grid > div.full` chiếm cả hàng (trước chỉ `label.full`). Test: `e2e_currency_test.py`.
+
+## 🎨 Giao diện B1 — Slate + Xanh dương (2026-11-18, chỉ phần nhìn)
+- **2 file riêng, nạp sau `</style>` của index.html:** `theme.css` (bộ màu + kiểu mọi thành phần, chia mục Đợt 1–4) và `icons.js` (icon SVG cho thanh trên). Bỏ 2 dòng `<link>`/`<script>` này là về giao diện cũ.
+- **Token** (`:root` tối / `:root[data-theme="light"]` sáng): `--bg --panel --panel2 --border --txt --muted --accent --accent-soft --on-accent`; `--blue:var(--accent)`. Sáng `--muted:#646e82` (đạt 4.5:1 trên `--panel2`). Màu trạng thái `--st-* --lc-*` + bảng HEX/INK `chart_theme.js` **không đổi**.
+- **Trùng tên `--accent`:** app có biến `--accent` gắn inline từng thẻ (màu trạng thái). Màu nhấn thương hiệu trong form/popup/nút chính dùng **`--focus`** (khai ở :root nên không bị thẻ ghi đè). Số KPI chữ thường, chỉ `#dmK_ontime/#dmK_delayed` lấy màu trạng thái.
+- **icons.js:** `ICONS.svg(name)`, `ICONS.decorate()`; emoji/chữ cũ giữ trong `span.emo` (ẩn-nhìn, vẫn có trong innerText → test + bản dịch không đổi); MutationObserver trên `.topbar` + `data-theme` gắn lại icon khi app ghi đè `textContent`. **Thêm nút mới ở thanh trên → thêm ánh xạ trong `BTN`/`TAB` của icons.js.** Nút ngôn ngữ = cờ của ngôn ngữ sẽ chuyển sang (đang EN → cờ VN).
+- **`.topbar [hidden]{display:none!important}`** — CSS đặt `display` cho nút sẽ đè thuộc tính `hidden`; mọi phần tử bật/tắt bằng `hidden` mà có `display` riêng phải có rule `[hidden]` tương tự.
+- **Biểu đồ:** màu trục/lưới/tooltip lấy `VZ.axis()` (đọc token lúc vẽ). Thanh trên: 1 dòng từ 1240px, ≤1360px ngày+giờ xếp 2 dòng, ≤1239px xuống 2 hàng + tab cuộn ngang.
+- Test: `_dev_tests_TienDoMayVe/e2e_ui_b1_test.py` (6 phần, ảnh `shots/b1_*`, ảnh trước `b1_before_*`, trang so sánh `shots/b1_compare_dot{1..4}.html`). Spec/plan: repo dự phòng `docs/superpowers/`.

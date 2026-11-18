@@ -10,7 +10,7 @@
 }
 :root[data-theme="light"]{
   --bg:#f5f6f8; --panel:#ffffff; --panel2:#f1f3f6; --border:#e3e6eb;
-  --txt:#101828; --muted:#667085;
+  --txt:#101828; --muted:#646e82;
   --accent:#2563eb; --accent-soft:rgba(37,99,235,.09); --on-accent:#ffffff;
   --blue:var(--accent); --sky:var(--accent); --strong:#101828;
   --field:var(--panel); --thead:var(--panel2); --topbar:var(--panel);
@@ -75,7 +75,7 @@ body{background:var(--bg)}
   .topbar .updated .ico{display:none}
   .topbar .updated #updTime{display:block!important;font-size:10.5px!important}}
 /* man hinh nho (dien thoai / may tinh bang doc): cho phep xuong dong, tab cuon ngang */
-@media(max-width:1100px){
+@media(max-width:1239px){
   .topbar{flex-wrap:wrap}
   .topbar .tabs{flex:1 1 100%;order:10;overflow-x:auto;margin-left:0}}
 
@@ -120,7 +120,7 @@ tbody tr:hover{background:var(--accent-soft)}
 .add-grid input[required],.add-grid .req{border-color:color-mix(in srgb,var(--focus) 40%,var(--border))}
 .search input:focus,select:focus,.add-grid input:focus,.add-grid select:focus,.add-grid textarea:focus,
 .add-grid input[required]:focus,.add-grid .req:focus{border-color:var(--focus);box-shadow:0 0 0 3px var(--accent-soft)}
-.add-grid input::placeholder,.add-grid textarea::placeholder,.search input::placeholder{color:var(--muted);opacity:.8}
+.add-grid input::placeholder,.add-grid textarea::placeholder,.search input::placeholder{color:var(--muted);opacity:1}
 input.cur-auto{background:var(--panel2);opacity:.85}
 .add-grid input[readonly]:not(.flatpickr-input):not(.form-control),.add-grid input:disabled,.add-grid select:disabled{background:var(--panel2);color:var(--txt);opacity:.85}
 /* popup nhập / chi tiết: nền đặc --panel, viền mảnh, tiêu đề --txt */
@@ -160,3 +160,19 @@ span.flatpickr-weekday{color:var(--muted)}
 /* nút thao tác ở thanh công cụ Danh sách Tiến độ (Xuất dữ liệu / Xác nhận về / Gán mã / Danh mục): trung tính, viền --border (một màu nhấn) */
 .exp-open,.exp-open.ac-open,.exp-open.cs-open{border:1px solid var(--border)!important;color:var(--txt)!important;background:transparent}
 .exp-open:hover{background:var(--panel2);border-color:var(--border)!important}
+
+/* ===== Đợt 4 — Thư viện / Sắp xếp / Phân tích - Đánh giá - Kế hoạch / điện thoại ===== */
+/* (Đợt 3 sửa lại 1 dòng: placeholder bỏ opacity .8 để đạt >= 4.5:1 trên --panel ở chế độ sáng) */
+/* bóng đổ dùng chung cho thanh nổi / toast của Sắp xếp (arrange.js không còn rgba gõ cứng) */
+:root{--shadow-1:0 6px 22px rgba(0,0,0,.18); --shadow-2:0 14px 40px rgba(0,0,0,.4); --shadow-3:0 12px 32px rgba(0,0,0,.38)}
+:root[data-theme="light"]{--shadow-1:0 6px 22px rgba(16,24,40,.08); --shadow-2:0 14px 40px rgba(16,24,40,.18); --shadow-3:0 12px 32px rgba(16,24,40,.16)}
+/* Thư viện: tab con đang chọn = --focus (bản --accent ở :root) / --on-accent, các tab còn lại viền mảnh chữ --muted */
+.lib-tab{background:transparent;color:var(--muted);border-color:var(--border)}
+.lib-tab:hover{color:var(--txt);border-color:var(--focus)}
+.lib-tab.active{background:var(--focus);border-color:var(--focus);color:var(--on-accent)}
+.lib-tab.active small{opacity:.9}
+/* lịch chọn ngày: ô chọn tháng có nền --panel + chữ --txt (hộp xổ gốc không còn trắng-trên-trắng ở chế độ tối); "hôm nay" khi rê chuột theo theme */
+.flatpickr-current-month .flatpickr-monthDropdown-months{background:var(--panel);color:var(--txt)}
+.flatpickr-current-month .flatpickr-monthDropdown-months:hover{background:var(--panel2)}
+.flatpickr-current-month .flatpickr-monthDropdown-months .flatpickr-monthDropdown-month{background:var(--panel);color:var(--txt)}
+.flatpickr-day.today:hover,.flatpickr-day.today:focus{background:var(--accent-soft);border-color:var(--focus);color:var(--txt)}
