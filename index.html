@@ -1101,6 +1101,8 @@ label:has(> .cb-src){position:relative}
   #tb td.name{max-width:300px}
 }
 </style>
+<link rel="stylesheet" href="theme.css">
+<script src="icons.js" defer></script>
 </head>
 <body>
 
@@ -1122,9 +1124,9 @@ label:has(> .cb-src){position:relative}
     <button class="tab mod-delivery" data-p="p3">📋 Machines</button>
   </div>
   <button class="upd-btn" id="btnUpd" title="Refresh — reload the latest data">🔄</button>
-  <button class="upd-btn mod-mmtb" id="btnAddM" hidden style="border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.12);color:var(--blue)" title="Add a machine to the catalog">➕ Add</button>
+  <button class="upd-btn mod-mmtb" id="btnAddM" hidden title="Add a machine to the catalog">➕ Add</button>
   <button class="upd-btn mod-delivery" id="btnPick" title="Import an Excel file exported from the app: rows are matched by the System ID column (empty = new machine); the machine code column is read-only">📂 <span class="btn-t">Import</span></button>
-  <button class="upd-btn mod-delivery" id="btnAdd" style="border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.12);color:var(--blue)" title="Add a new machine">➕ Add</button>
+  <button class="upd-btn mod-delivery" id="btnAdd" title="Add a new machine">➕ Add</button>
   <button class="upd-btn mod-delivery" id="btnExport" hidden title="Download the full list as an Excel file; the last column (System ID) is the key when you import it back — do not change it">⬇️ Excel</button>
   <button class="upd-btn mod-delivery" id="btnTrash" hidden title="Deleted machines — restore or delete permanently">🗑</button>
   <button class="upd-btn" id="btnUsers" hidden title="Manage users">👥</button>
@@ -2272,8 +2274,8 @@ let KP = null;
     const n = parseInt(h.length === 3 ? h.replace(/./g, ch => ch + ch) : h, 16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; };
   const SEV = () => ({ ok:cssv('--st-ok'), warn:cssv('--st-warn'), bad:cssv('--st-bad'), done:cssv('--st-done') });
   const TS = d => new Date(d + 'T00:00:00').getTime();
-  const base = () => ({ textStyle:{ color:cssv('--muted'), fontFamily:'Segoe UI, system-ui, sans-serif' }, animationDuration:500 });
-  const tipBox = () => ({ backgroundColor:cssv('--panel2'), borderColor:cssv('--border'), textStyle:{ color:cssv('--txt'), fontSize:12 }, extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:10px' });
+  const base = () => ({ textStyle:{ color:VZ.axis().text, fontFamily:'Segoe UI, system-ui, sans-serif' }, animationDuration:500 });
+  const tipBox = () => ({ backgroundColor:VZ.axis().tipBg, borderColor:VZ.axis().tipBorder, textStyle:{ color:cssv('--txt'), fontSize:12 }, extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:10px' });
   const narrow = () => innerWidth < 640;
   const lblW = () => narrow() ? 100 : Math.round(Math.min(236, Math.max(120, (gnChart.clientWidth || 700) * .3)));
   const small = () => (fnChart.clientWidth || 400) < 440;
@@ -2345,10 +2347,10 @@ let KP = null;
     gn.setOption(Object.assign(base(), {
       grid:{ left: lblW() + 12, right: 18, top: 50, bottom: 10, containLabel:false },
       tooltip:Object.assign(tipBox(), { trigger:'item', confine:true, formatter:tip }),
-      xAxis:{ type:'time', position:'top', axisLabel:{ color:cssv('--muted'), fontSize:11, hideOverlap:true,
-              formatter:{ year:'{yyyy}', month:tr('{MMM}', 'T{M}'), day:'{dd}/{MM}' } }, axisLine:{ lineStyle:{ color:cssv('--border') } },
-              splitLine:{ show:true, lineStyle:{ color:cssv('--border') } } },
-      yAxis:{ type:'category', inverse:true, data:cats.map(c => c.t), axisTick:{ show:false }, axisLine:{ lineStyle:{ color:cssv('--border') } },
+      xAxis:{ type:'time', position:'top', axisLabel:{ color:VZ.axis().text, fontSize:11, hideOverlap:true,
+              formatter:{ year:'{yyyy}', month:tr('{MMM}', 'T{M}'), day:'{dd}/{MM}' } }, axisLine:{ lineStyle:{ color:VZ.axis().line } },
+              splitLine:{ show:true, lineStyle:{ color:VZ.axis().split } } },
+      yAxis:{ type:'category', inverse:true, data:cats.map(c => c.t), axisTick:{ show:false }, axisLine:{ lineStyle:{ color:VZ.axis().line } },
               axisLabel:{ width: lblW(), overflow:'truncate', fontSize:11.5, color:cssv('--txt'),
                           formatter:(v, i) => cats[i] && cats[i].h ? '{h|' + v + '}' : v,
                           rich:{ h:{ fontWeight:'bold', color:cssv('--strong'), fontSize:12 } } } },
@@ -2456,10 +2458,10 @@ function statusRings(){
   return {outer, inner, innerLbl, innerCol, total: rows.length};
 }
 /* Trạng thái thiết bị: thanh ngang theo trạng thái ngày về, chia đoạn theo đánh giá (thay biểu đồ tròn 2 vòng — cùng số liệu statusRings) */
-const ecTip = () => ({ backgroundColor:cssv('--panel2'), borderColor:cssv('--border'), textStyle:{ color:cssv('--txt'), fontSize:12 }, extraCssText:'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3)' });
+const ecTip = () => ({ backgroundColor:VZ.axis().tipBg, borderColor:VZ.axis().tipBorder, textStyle:{ color:cssv('--txt'), fontSize:12 }, extraCssText:'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3)' });
 const ecOf = el => echarts.getInstanceByDom(el) || echarts.init(el);
 function updateStatusChart(){
-  const r = statusRings(), rows = ovRows(), mu = cssv('--muted');
+  const r = statusRings(), rows = ovRows(), mu = VZ.axis().text;
   const seg = (g, i) => STS.map(st => r.inner[STS.indexOf(st) * DG.length + i]);
   const other = STS.map((st, k) => r.outer[k] - DG.reduce((a, g, i) => a + r.inner[k * DG.length + i], 0));
   const c = ecOf(chStatus);
@@ -2496,15 +2498,15 @@ function initP1(){
   }
   /* Máy về theo tháng (ECharts): cột chồng theo trạng thái ngày về + đường "Trễ" — 1 trục số máy */
   const drawMonth = () => {
-    const md = monthData(), mu = cssv('--muted'), c = ecOf(chMonth);
+    const md = monthData(), mu = VZ.axis().text, c = ecOf(chMonth);
     const bar = (k, s) => ({ name:LBL[s], type:'bar', stack:'s', barMaxWidth:30, itemStyle:{ color:C[s] },
       data:md[k].map((v, i) => ({ value:v, itemStyle:{ opacity:md.dim[i] ? .25 : 1, borderRadius:2 } })) });
     c.setOption({ aria:{ enabled:true, label:{ description:tr('Machines arriving per month, by arrival status, with late machines as a line', 'Số máy về mỗi tháng theo trạng thái ngày về, đường đỏ là số máy trễ') } },
       legend:{ bottom:0, textStyle:{ color:mu, fontSize:11 }, itemWidth:12, itemHeight:8 },
       grid:{ left:6, right:8, top:10, bottom:chMonth.clientWidth < 420 ? 58 : 36, containLabel:true },
       tooltip:Object.assign(ecTip(), { trigger:'axis', axisPointer:{ type:'shadow' }, formatter:ps => `<b>${ps[0].name}</b><br>` + ps.filter(p => p.value).map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b> ${tr('machines', 'thiết bị')}`).join('<br>') }),
-      xAxis:{ type:'category', data:md.labels, axisTick:{ show:false }, axisLabel:{ color:mu, fontSize:11 }, axisLine:{ lineStyle:{ color:'rgba(148,163,184,.3)' } } },
-      yAxis:{ type:'value', minInterval:1, axisLabel:{ color:mu, fontSize:10.5 }, splitLine:{ lineStyle:{ color:'rgba(148,163,184,.1)' } } },
+      xAxis:{ type:'category', data:md.labels, axisTick:{ show:false }, axisLabel:{ color:mu, fontSize:11 }, axisLine:{ lineStyle:{ color:VZ.axis().line } } },
+      yAxis:{ type:'value', minInterval:1, axisLabel:{ color:mu, fontSize:10.5 }, splitLine:{ lineStyle:{ color:VZ.axis().split } } },
       series:[bar('arr', 'arrived'), bar('over', 'overdue'), bar('soon', 'soon'), bar('wait', 'waiting'),
         { name:tr('Late', 'Trễ'), type:'line', smooth:.35, symbol:'circle', symbolSize:7, data:md.late, z:5,
           lineStyle:{ width:2.5, color:VZ.evalc('Trễ') }, itemStyle:{ color:VZ.evalc('Trễ'), borderColor:cssv('--panel'), borderWidth:1.5 } }] }, true);
@@ -2783,7 +2785,7 @@ function drawScMatrix(){
   if(!el._ro){ el._ro = new ResizeObserver(() => c.resize()); el._ro.observe(el); }
   if(!pts.length){ c.clear(); el.dataset.empty = '1'; c.setOption({ graphic:{ type:'text', left:'center', top:'middle', style:{ text:tr('No supplier with 2+ deliveries yet','Chưa NCC nào đủ 2 lần giao'), fill:cssv('--muted'), fontSize:12 } } }); return; }
   delete el.dataset.empty;
-  const ink = cssv('--txt'), mu = cssv('--muted'), GC = { A:cssv('--st-ok'), B:cssv('--st-warn'), C:cssv('--st-bad') };
+  const ink = cssv('--txt'), mu = VZ.axis().text, GC = { A:cssv('--st-ok'), B:cssv('--st-warn'), C:cssv('--st-bad') };
   const maxD = Math.max(...pts.map(r => r.delivered)), yMax = Math.max(14, Math.ceil(Math.max(...pts.map(r => r.avgLateDays || 0)) * 1.15 / 7) * 7);
   const size = n => 12 + Math.sqrt(n / maxD) * 26;
   const key = r => Math.round(r.onTimePct * 1000) + '|' + Math.round((r.avgLateDays || 0) * 10), grp = new Map();
@@ -2791,12 +2793,12 @@ function drawScMatrix(){
   const q = (x0, x1, y0, y1, name, pos, tint) => [{ xAxis:x0, yAxis:y0, name, itemStyle:{ color:tint }, label:{ position:pos, color:mu, fontSize:11, fontWeight:600 } }, { xAxis:x1, yAxis:y1 }];
   c.setOption({
     grid:{ left:44, right:16, top:14, bottom:40 },
-    tooltip:{ backgroundColor:cssv('--panel2'), borderColor:cssv('--border'), textStyle:{ color:ink, fontSize:12 }, extraCssText:'border-radius:10px',
+    tooltip:{ backgroundColor:VZ.axis().tipBg, borderColor:VZ.axis().tipBorder, textStyle:{ color:ink, fontSize:12 }, extraCssText:'border-radius:10px',
       formatter:p => { const r = p.data.r, g = grp.get(key(r)); return (g.length > 1 ? `<span style="color:${mu}">${tr('Same position','Cùng vị trí')}: ${g.map(o => ovEsc(unescH(o.name))).join(', ')}</span><br>` : '') + `<b>${ovEsc(unescH(r.name))}</b> · ${tr('grade','hạng')} <b>${r.grade}</b><br>${tr('On time','Đúng hạn')}: ${dmN(r.onTimePct * 100)}% (${r.onTimeNum}/${r.onTimeDen})<br>${tr('Avg days late','TB ngày trễ')}: ${r.avgLateDays == null ? 0 : '+' + dmN(r.avgLateDays, 0)}<br>${tr('Delivered','Đã giao')}: ${r.delivered}<br><span style="color:${mu}">${tr('click for the machine list','bấm để xem danh sách máy')}</span>`; } },
     xAxis:{ type:'value', min:0, max:100, interval:20, name:tr('On-time %','% đúng hạn'), nameLocation:'middle', nameGap:24, nameTextStyle:{ color:mu, fontSize:11 },
-      axisLabel:{ color:mu, fontSize:10.5, formatter:'{value}%' }, splitLine:{ lineStyle:{ color:'rgba(148,163,184,.1)' } }, axisLine:{ lineStyle:{ color:'rgba(148,163,184,.3)' } } },
+      axisLabel:{ color:mu, fontSize:10.5, formatter:'{value}%' }, splitLine:{ lineStyle:{ color:VZ.axis().split } }, axisLine:{ lineStyle:{ color:VZ.axis().line } } },
     yAxis:{ type:'value', min:0, max:yMax, inverse:true, name:tr('Avg days late','TB ngày trễ'), nameLocation:'middle', nameGap:30, nameTextStyle:{ color:mu, fontSize:11 },
-      axisLabel:{ color:mu, fontSize:10.5, formatter:v => v ? '+' + v : '0' }, splitLine:{ lineStyle:{ color:'rgba(148,163,184,.1)' } } },
+      axisLabel:{ color:mu, fontSize:10.5, formatter:v => v ? '+' + v : '0' }, splitLine:{ lineStyle:{ color:VZ.axis().split } } },
     series:[{ type:'scatter', data:pts.map(r => ({ value:[r.onTimePct * 100, r.avgLateDays || 0], r, symbolSize:size(r.delivered),
         itemStyle:{ color:GC[r.grade], opacity:.85, borderColor:cssv('--panel'), borderWidth:2 } })),
       label:{ show:true, position:'right', color:ink, fontSize:11, fontWeight:600, formatter:p => { const g = grp.get(key(p.data.r)); return g[0].name !== p.data.r.name ? '' : unescH(g[0].name) + (g.length > 1 ? ` +${g.length - 1}` : ''); } }, labelLayout:{ hideOverlap:true },
@@ -4780,7 +4782,7 @@ function updOverview(){
   const ownVal = x => LANG==='vi' ? (+x.value_vnd || 0) : (+x.value_usd || 0);
   const vTxt = v => LANG==='vi' ? VZ.money(v) : VZ.money(v, 'USD');      // tiền rút gọn chung (chart_theme.js)
   const ink = { txt:cssv('--txt'), muted:cssv('--muted'), panel:cssv('--panel'), border:cssv('--border') };
-  const tip = () => ({ backgroundColor:cssv('--panel2'), borderColor:ink.border, textStyle:{ color:ink.txt, fontSize:12 }, extraCssText:'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3)' });
+  const tip = () => ({ backgroundColor:VZ.axis().tipBg, borderColor:VZ.axis().tipBorder, textStyle:{ color:ink.txt, fontSize:12 }, extraCssText:'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3)' });
   const chart = id => { const el = document.getElementById(id); return echarts.getInstanceByDom(el) || echarts.init(el); };
 
   // 1. Vòng đời: 1 thanh phân đoạn theo thứ tự giai đoạn (thay biểu đồ tròn) — bấm đoạn → Danh sách lọc trạng thái

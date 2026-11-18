@@ -1,0 +1,98 @@
+/* Theme B1 - bo mau xanh duong, nen phang (khong anh nen, khong gradient) */
+:root{
+  --bg:#0e131b; --panel:#151b25; --panel2:#1b2230; --border:rgba(255,255,255,.08);
+  --txt:#e7ebf2; --muted:#8d97a8;
+  --accent:#5b9bff; --accent-soft:rgba(91,155,255,.14); --on-accent:#0e131b;
+  --blue:var(--accent); --sky:var(--accent); --strong:#ffffff;
+  --field:var(--panel); --thead:var(--panel2); --topbar:var(--panel);
+  --ov1:var(--bg); --ov2:var(--bg);
+}
+:root[data-theme="light"]{
+  --bg:#f5f6f8; --panel:#ffffff; --panel2:#f1f3f6; --border:#e3e6eb;
+  --txt:#101828; --muted:#667085;
+  --accent:#2563eb; --accent-soft:rgba(37,99,235,.09); --on-accent:#ffffff;
+  --blue:var(--accent); --sky:var(--accent); --strong:#101828;
+  --field:var(--panel); --thead:var(--panel2); --topbar:var(--panel);
+  --ov1:var(--bg); --ov2:var(--bg);
+}
+body{background:var(--bg)}
+.brand h1,[data-theme="light"] .brand h1{background:none;background-image:none;color:var(--txt);-webkit-text-fill-color:currentColor}
+.kpi,.card,.modal,[data-theme="light"] .notice,.notice{background:var(--panel)}
+
+/* ===== icon SVG (icons.js) ===== */
+.topbar .mod,.topbar .tab,.topbar .upd-btn{position:relative}
+.emo{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ico{width:16px;height:16px;flex:none;vertical-align:-3px}
+.ico.ico-t{margin-right:6px}
+.ico.flag{width:20px;height:14px;border-radius:2px;vertical-align:-2px}
+
+/* ===== Dot 1: thanh tren cung ===== */
+.topbar{padding:8px 16px;gap:10px;background:var(--panel);backdrop-filter:none;flex-wrap:nowrap;align-items:center}
+.brand .logo{display:inline-flex!important;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:var(--accent);font-size:15px;flex:none}
+.brand .logo .ico{width:16px;height:16px;vertical-align:0;color:var(--on-accent)}
+.brand h1{font-size:15px;font-weight:700;letter-spacing:0}
+.mods{padding:2px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);flex:none}
+.mod{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted)}
+.mod.active{background:var(--panel);box-shadow:0 0 0 1px var(--border);color:var(--txt)}
+.topbar .tabs{margin-left:auto;gap:2px;min-width:0}
+.tab{height:32px;padding:0 12px;border-radius:8px 8px 0 0;border:0;font-size:13px;white-space:nowrap}
+.tab:hover{background:var(--panel2);color:var(--txt)}
+.tab.active{background:var(--accent-soft);box-shadow:inset 0 -2px 0 var(--accent);color:var(--txt)}
+.upd-btn{display:inline-flex;align-items:center;justify-content:center;height:32px;min-width:32px;padding:0 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;flex:none}
+.upd-btn:hover{background:var(--panel2);color:var(--txt);transform:none}
+#btnAdd,#btnAddM{background:var(--accent);color:var(--on-accent);border-color:transparent;padding:0 12px}
+#btnAdd:hover,#btnAddM:hover{background:var(--accent);color:var(--on-accent);filter:brightness(1.08)}
+#btnUpd,#btnTrash,#btnPw,#btnLogout,#btnUsers{padding-left:8px;padding-right:8px}
+.topbar .updated{position:relative;display:flex;align-items:center;gap:6px;flex:none;border:0;background:transparent;padding:0 0 0 4px;border-radius:0;text-align:left!important;line-height:1.2!important;white-space:nowrap;font-size:12px;color:var(--muted)}
+.topbar .updated b{color:var(--txt);font-weight:600}
+.topbar .updated #updTime{display:inline!important;margin:0;font-size:12px!important;color:var(--muted)!important}
+.topbar .updated .ico{color:var(--muted)}
+/* man hinh hep: chu an thi icon nam giua (bo margin cua .ico-t) */
+@media(max-width:1760px){body[data-mod="delivery"] .mod:not(.active) .ico.ico-t{margin-right:0}}
+@media(max-width:1500px){body[data-mod="delivery"] #btnPick .ico.ico-t{margin-right:0}}
+@media(max-width:1440px){
+  body[data-mod="delivery"] .tab{font-size:12.5px;padding:0 7px;gap:5px}
+  body[data-mod="delivery"] .topbar{gap:8px}}
+/* o sang truot (motion.js) cho tab: nen accent-soft, khong gradient tim */
+.tab-ink{background:var(--accent-soft);border:0;border-radius:8px 8px 0 0}
+.tab{flex:none}
+@media(max-width:1760px){body[data-mod="mmtb"] .brand h1{display:none}}
+/* <=1360px: nut phan he khong chon chi con icon, tab/nut gon lai de thanh van 1 dong */
+@media(max-width:1360px){
+  .topbar{padding:8px 12px;gap:6px}
+  .mod:not(.active) .mod-t{display:none}
+  .mod:not(.active) .ico.ico-t{margin-right:0}
+  .mod{padding:0 8px}
+  body[data-mod] .tab{padding:0 5px;gap:4px;font-size:12.5px}
+  .topbar .tabs{flex:none}
+  .ico.ico-t{margin-right:4px}
+  .upd-btn{padding:0 6px;min-width:30px}
+  #btnAdd,#btnAddM{padding:0 8px}
+  .topbar .updated{gap:4px;padding-left:0}
+  .topbar .updated{flex-direction:column;align-items:flex-start;gap:0;line-height:1.15!important}
+  .topbar .updated .ico{display:none}
+  .topbar .updated #updTime{display:block!important;font-size:10.5px!important}}
+/* man hinh nho (dien thoai / may tinh bang doc): cho phep xuong dong, tab cuon ngang */
+@media(max-width:1100px){
+  .topbar{flex-wrap:wrap}
+  .topbar .tabs{flex:1 1 100%;order:10;overflow-x:auto;margin-left:0}}
+
+/* thuoc tinh hidden phai thang display cua cac nut/khoi da dat display */
+.topbar [hidden]{display:none!important}
+
+/* ===== Đợt 2 — Tổng quan (2 phân hệ): thẻ KPI / thẻ biểu đồ phẳng, bảng Cần chú ý ===== */
+/* Lưu ý: app dùng biến riêng --accent theo từng thẻ (đặt inline) — trùng tên token gốc.
+   Thẻ KPI: số = --txt; chỉ Tỷ lệ đúng hạn / Đang trễ giữ màu trạng thái (JS đặt --accent inline = màu trạng thái). */
+.kpi,.card{background:var(--panel);background-image:none;border:1px solid var(--border);border-radius:12px;box-shadow:none}
+.kpi::before,.kpi::after{display:none}
+.kpi:hover,[data-theme="light"] .kpi:hover{box-shadow:none;border-color:color-mix(in srgb,var(--txt) 18%,var(--border))}
+.kpi .lbl{font-size:11px;font-weight:600;letter-spacing:.8px;color:var(--muted)}
+.kpi .val{color:var(--txt);font-weight:700}
+#dmK_ontime .val,#dmK_delayed .val{color:var(--accent)}
+.kpi .ic{opacity:.55}
+.card h3 .dot{box-shadow:none;width:7px;height:7px}
+[data-theme="light"] .notice{box-shadow:0 24px 60px rgba(16,24,40,.18)}
+/* bảng Cần chú ý */
+.dm-att th{background:var(--panel2);color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;border-bottom:0}
+.dm-att td{border-top:1px solid var(--border);border-bottom:0}
+.dm-att tbody tr:hover{background:var(--accent-soft)}
