@@ -6,6 +6,7 @@
   --blue:var(--accent); --sky:var(--accent); --strong:#ffffff;
   --field:var(--panel); --thead:var(--panel2); --topbar:var(--panel);
   --ov1:var(--bg); --ov2:var(--bg);
+  --focus:var(--accent);
 }
 :root[data-theme="light"]{
   --bg:#f5f6f8; --panel:#ffffff; --panel2:#f1f3f6; --border:#e3e6eb;
@@ -14,6 +15,7 @@
   --blue:var(--accent); --sky:var(--accent); --strong:#101828;
   --field:var(--panel); --thead:var(--panel2); --topbar:var(--panel);
   --ov1:var(--bg); --ov2:var(--bg);
+  --focus:var(--accent);
 }
 body{background:var(--bg)}
 .brand h1,[data-theme="light"] .brand h1{background:none;background-image:none;color:var(--txt);-webkit-text-fill-color:currentColor}
@@ -96,3 +98,65 @@ body{background:var(--bg)}
 .dm-att th{background:var(--panel2);color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;border-bottom:0}
 .dm-att td{border-top:1px solid var(--border);border-bottom:0}
 .dm-att tbody tr:hover{background:var(--accent-soft)}
+
+/* ===== Đợt 3 — Danh sách / form / popup ===== */
+/* --focus: bản sao của --accent đặt ở :root. Vì var() được thay giá trị ngay tại :root nên thẻ nào tự đặt --accent
+   (màu trạng thái, inline) cũng không làm đổi màu viền focus / nút chính. Dùng --focus cho form + popup. */
+/* bảng: khung phẳng nền --panel, th nhỏ hoa trên --panel2, kẻ ngang --border, dòng cao >= 40px */
+.tablewrap{background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:none}
+thead th{background:var(--panel2);color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.6px;border-bottom:1px solid var(--border)}
+tbody td{padding-top:13px;padding-bottom:13px;border-bottom:1px solid var(--border)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--accent-soft)}
+/* nhãn trạng thái: viên thuốc tô nhạt (màu nghĩa giữ nguyên, lấy từ --st-* / .b-*) */
+.badge{font-weight:600;letter-spacing:.1px}
+/* bộ lọc + phân trang: mục đang chọn = --accent / --on-accent (nút lọc theo trạng thái giữ màu trạng thái) */
+.fbtn.active:not(.g):not(.a):not(.r):not(.o):not(.ins):not(.tst):not(.op):not(.w),
+.pbtn.cur:not(:disabled){background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:700}
+.fbtn:hover,.pbtn:hover:not(:disabled){border-color:var(--focus)}
+.pbtn,.fbtn{background:transparent}
+/* ô nhập / chọn: nền --panel, viền 1px --border, focus = viền --focus + vòng --accent-soft */
+.search input,select,.add-grid input,.add-grid select,.add-grid textarea{background:var(--panel);border-color:var(--border)}
+.add-grid input[required],.add-grid .req{border-color:color-mix(in srgb,var(--focus) 40%,var(--border))}
+.search input:focus,select:focus,.add-grid input:focus,.add-grid select:focus,.add-grid textarea:focus,
+.add-grid input[required]:focus,.add-grid .req:focus{border-color:var(--focus);box-shadow:0 0 0 3px var(--accent-soft)}
+.add-grid input::placeholder,.add-grid textarea::placeholder,.search input::placeholder{color:var(--muted);opacity:.8}
+input.cur-auto{background:var(--panel2);opacity:.85}
+.add-grid input[readonly]:not(.flatpickr-input):not(.form-control),.add-grid input:disabled,.add-grid select:disabled{background:var(--panel2);color:var(--txt);opacity:.85}
+/* popup nhập / chi tiết: nền đặc --panel, viền mảnh, tiêu đề --txt */
+.modal{background:var(--panel);background-image:none;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.modal h4{color:var(--txt);font-weight:700}
+.calc-box h5{color:var(--muted)}
+.m-close:hover{color:var(--txt)}
+/* nút chính trong popup / hộp thông báo: phẳng --accent, không gradient, không bóng màu */
+.nbtn2,.notice .nbtn{background:var(--focus);background-image:none;color:var(--on-accent);box-shadow:none}
+.nbtn2:hover,.notice .nbtn:hover{box-shadow:none;filter:brightness(1.08)}
+.nbtn2.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.nbtn2.ghost:hover{color:var(--txt);border-color:var(--focus);filter:none}
+.notice.err .nbtn{background:var(--st-bad);background-image:none;color:#1a0b0b;box-shadow:none}
+:root[data-theme="light"] .notice.err .nbtn{color:#fff}
+.notice .ic-core{background:color-mix(in srgb,var(--nc,#34d399) 14%,transparent)}
+.notice h4{color:var(--txt)}
+:root[data-theme="light"] .modal,[data-theme="light"] .modal{box-shadow:0 20px 50px rgba(16,24,40,.18)}
+/* ô chọn gõ tìm (combo.js) */
+.cb-pop{background:var(--panel);box-shadow:0 12px 28px rgba(0,0,0,.35)}
+:root[data-theme="light"] .cb-pop{box-shadow:0 12px 28px rgba(16,24,40,.16)}
+.cb-it.on{background:var(--accent-soft)}
+.cb-add{border-color:var(--focus);color:var(--focus);background:var(--accent-soft)}
+.cb-hint button{color:var(--focus)}
+/* toast "Đã lưu" */
+.mm-toast{background:var(--panel);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+/* lịch chọn ngày (flatpickr) theo màu app */
+.flatpickr-calendar{background:var(--panel);border:1px solid var(--border);box-shadow:0 12px 28px rgba(0,0,0,.35);color:var(--txt)}
+.flatpickr-calendar:before,.flatpickr-calendar:after{display:none}
+.flatpickr-months .flatpickr-month,.flatpickr-current-month .flatpickr-monthDropdown-months,.flatpickr-current-month input.cur-year,span.flatpickr-weekday{background:transparent;color:var(--txt);fill:var(--txt)}
+span.flatpickr-weekday{color:var(--muted)}
+.flatpickr-months .flatpickr-prev-month,.flatpickr-months .flatpickr-next-month{color:var(--txt);fill:var(--txt)}
+.flatpickr-day{color:var(--txt);border-color:transparent}
+.flatpickr-day.prevMonthDay,.flatpickr-day.nextMonthDay,.flatpickr-day.flatpickr-disabled{color:var(--muted);opacity:.6}
+.flatpickr-day:hover{background:var(--accent-soft);border-color:transparent}
+.flatpickr-day.today{border-color:var(--focus)}
+.flatpickr-day.selected,.flatpickr-day.selected:hover{background:var(--focus);border-color:var(--focus);color:var(--on-accent)}
+/* nút thao tác ở thanh công cụ Danh sách Tiến độ (Xuất dữ liệu / Xác nhận về / Gán mã / Danh mục): trung tính, viền --border (một màu nhấn) */
+.exp-open,.exp-open.ac-open,.exp-open.cs-open{border:1px solid var(--border)!important;color:var(--txt)!important;background:transparent}
+.exp-open:hover{background:var(--panel2);border-color:var(--border)!important}
