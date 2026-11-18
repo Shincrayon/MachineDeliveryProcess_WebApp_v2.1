@@ -542,5 +542,10 @@ function toast(html, canUndo){
 }
 function hideToast(){ const t = document.querySelector('.ar-toast'); if(t) t.classList.remove('show'); }
 
+/* đổi sáng/tối: màu thanh khu vực + chấm trạng thái được ghi sẵn lúc vẽ → vẽ lại từ trạng thái S, giữ cuộn */
+document.addEventListener('themechange', () => { const h = document.getElementById('c4'); if(!h || !h.querySelector('.ar-head') || S.busy) return;
+  const els = []; for(let e = h; e; e = e.parentElement) els.push(e);
+  const top = els.map(e => e.scrollTop), wx = window.scrollX, wy = window.scrollY;
+  draw(); els.forEach((e, k) => { e.scrollTop = top[k]; }); window.scrollTo(wx, wy); });
 window.ARR = { draw, state: S, leave: () => { const b = document.querySelector('.ar-act'); if(b) b.classList.remove('show'); } };
 })();

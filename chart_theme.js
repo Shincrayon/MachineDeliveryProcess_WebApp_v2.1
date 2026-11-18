@@ -68,7 +68,7 @@ const VZ = {
   cat: i => hex(CAT[i % CAT.length]),         // chỉ dùng khi ≤ 8 nhóm; nhóm thứ 9+ gộp "Khác"
   /* màu trục / lưới / tooltip biểu đồ: đọc từ token CSS tại lúc vẽ → theo chế độ sáng/tối */
   axis: () => { const v = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-    return { text: v('--muted'), line: v('--border'), split: v('--border'), tipBg: v('--panel2'), tipBorder: v('--border') }; },
+    return { text: v('--muted'), line: v('--border'), split: v('--border'), tipBg: v('--panel2'), tipBorder: v('--border'), shadow: mode() === 'light' ? '0 8px 24px rgba(15,23,42,.12)' : '0 8px 24px rgba(0,0,0,.35)' }; },
   one: () => hex('blue'),                     // biểu đồ 1 chuỗi: 1 màu
   /* thang 1 tông xanh dương (palette.md sequential): t = 0 lớn nhất (nổi nhất) → 1 nhỏ nhất. Chữ trắng đọc được trên mọi bước dùng ở đây. */
   seq: t => { const L = ['#184f95','#1c5cab','#256abf','#2a78d6','#3987e5'], D = ['#5598e7','#3987e5','#2a78d6','#256abf','#1c5cab'];
