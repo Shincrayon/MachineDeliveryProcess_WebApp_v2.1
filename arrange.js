@@ -255,7 +255,7 @@ function draw(){
     const n = c => C.MM.machines.filter(x => x.company_id === c.id).length;
     S.co = (cos.slice().sort((a, b) => n(b) - n(a))[0] || {}).id || '';
   }
-  const M = model(), can = !!C.canW;
+  const M = model(), can = !!C.canW && !!window.PERM && PERM.act('mmtb', 'arrange');   // kéo thả / nút ghi: theo quyền Sắp xếp từng người
   if(S.q) M.lines.forEach(l => { if(M.inLine.get(l.id).some(x => M.all(x).some(hit))) S.open.add(l.id); });
   const nFree = M.free.reduce((a, x) => a + M.count(x), 0), nIn = M.ms.length - nFree, pct = M.ms.length ? Math.round(nIn / M.ms.length * 100) : 0;
   const fq = S.fq, fm = x => !fq || [x.name, x.model, x.manufacturer].some(v => v && String(v).toLowerCase().includes(fq));

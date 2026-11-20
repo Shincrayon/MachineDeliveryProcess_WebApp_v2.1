@@ -30,6 +30,11 @@ const DEF = [
 /* nhãn / bảng dịch giá trị do index.html (mainSrc) đưa ra qua window.__expCtx() */
 const CTX = () => (window.__expCtx && window.__expCtx()) || { labels:{}, LBL:{}, dgT:v=>v, ctT:v=>v };
 const TYPE = Object.fromEntries(DEF.map(([k,t])=>[k,t]));
+/* phân quyền trường (perms.js): trường / cột tính thuộc nhóm không được xem thì không có trong danh sách, không xuất.
+   Cột tính → nhóm nguồn; trường thật → nhóm của nó trong PERM.REG (vd vnd/usd → value). */
+const SEEK = { status:'status', install_status:'status', arrival_kind:'dates', daysleft:'dates', tamung_days:'dates', wait_install_days:'dates',
+               install_accept_days:'dates', accept_delay_days:'dates', company:'location', sysid:'code' };
+const okF = k => !window.PERM || PERM.see('delivery', SEEK[k] || k);
 function label(k){
   const L = CTX().labels;
   const extra = { status: tr('Status','Trạng thái'), company: tr('Company','Công ty'), daysleft: tr('Days to arrival','Số ngày còn lại'),
@@ -87,7 +92,7 @@ function calcAdvanceDays(row){
 }
 
 /* ---------- trạng thái lựa chọn ---------- */
-const defaults = () => DEF.map(([k,,on])=>({ k, on: !!on }));
+const defaults = () => DEF.filter(([k])=>okF(k)).map(([k,,on])=>({ k, on: !!on }));
 /* lựa chọn / mẫu đã lưu từ bản cũ: bỏ trường lạ; trường mới (bỏ chọn) chèn ngay sau trường đứng trước nó trong DEF,
    vd "Số ngày tạm ứng" vào sau "Ngày tạm ứng TT" theo đúng thứ tự của mẫu đó */
 function normalize(list){
@@ -102,7 +107,7 @@ function normalize(list){
     if(i === 0) at = 0;
     out.splice(at, 0, { k, on:false }); seen.add(k);
   });
-  return out;
+  return out.filter(f=>okF(f.k));
 }
 let S = null, Q = '', VIEW = null, dragK = null;
 const save = () => lsSet(LS_CUR, S);

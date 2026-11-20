@@ -10,7 +10,8 @@
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const low = v => String(v == null ? '' : v).trim().toLowerCase();
   const el = id => document.getElementById(id);
-  const ROLES = () => [['viewer', tr('Viewer', 'Chỉ xem')], ['catalog_editor', tr('Catalog editor', 'Sửa Danh mục')], ['editor', tr('Editor', 'Sửa cả 2 phân hệ')], ['admin', 'Admin']];
+  /* 3 cấp. catalog_editor cũ chỉ hiện ở dòng của người đang là catalog_editor (rowHtml), không chọn được cho người khác */
+  const ROLES = () => [['viewer', tr('Viewer', 'Chỉ xem')], ['editor', 'Editor'], ['admin', 'Admin']];
   const fmtTime = s => { const d = new Date(s); return isNaN(d) ? '' : d.toLocaleString(tr('en-GB', 'vi-VN'), { dateStyle: 'short', timeStyle: 'short' }); };
 
   const MSG = {
@@ -93,26 +94,207 @@
     };
   }
 
+    /* ---------- Bảng tick quyền từng người (perms.js: PERM.REG / PERM.defaults) ----------
+     Lưu qua RPC admin_set_perms (đổi cả role + perms 1 lần; bảng app_users không ghi thẳng được).
+     Đổi quyền ở ô chọn của dòng vẫn đi qua manage-users như trước (không đụng perms). */
+  const MODS = ['mmtb', 'delivery'];
+  const PART = { tab: 'tabs', act: 'actions', view: 'view', edit: 'edit' };
+  const REG = () => window.PERM.REG;
+  const validKeys = (m, part) => part === 'view' || part === 'edit' ? REG()[m].groups.map(g => g.k) : REG()[m][part].map(x => x.k);
+  const WRITE_KEYS = m => REG()[m].actions.filter(a => a.write).map(a => a.k);
+  const MOD_NAME = { mmtb: () => tr('MMTB Catalog', 'Danh mục MMTB'), delivery: () => tr('Delivery progress', 'Tiến độ máy về') };
+  let permRows = {};            // email thường -> { role, perms } đọc từ app_users (admin đọc được mọi dòng theo RLS)
+  let permsOk = true;           // false: DB chưa có cột perms (chưa chạy migration 22) -> ẩn bảng tick
+  let pm = null;                // bảng đang mở: { email, role, origRole, wasNull, st }
+
+  /* perms (đối tượng, có thể có "*") -> { mod: { tabs, actions, view, edit } } là các Set khoá thật */
+  function toState(perms) {
+    const st = {};
+    MODS.forEach(m => {
+      const mp = perms && typeof perms === 'object' && !Array.isArray(perms) && perms[m] && typeof perms[m] === 'object' ? perms[m] : {};
+      st[m] = {};
+      Object.keys(PART).forEach(p => {
+        const key = PART[p], v = mp[key], valid = validKeys(m, key);
+        st[m][key] = new Set(Array.isArray(v) ? (v.includes('*') ? valid : v.filter(k => typeof k === 'string' && valid.includes(k))) : []);
+      });
+      st[m].edit.forEach(k => st[m].view.add(k));
+    });
+    return st;
+  }
+  /* quyền hiệu lực của 1 người: perms null -> theo role (đúng như app đang áp) */
+  const effState = (role, perms) => toState(role === 'admin' ? window.PERM.defaults('admin') : perms == null ? window.PERM.defaults(role) : perms);
+  /* ngược lại: ghi "*" khi tick đủ (nhóm / tab thêm sau này tự được tính); viewer: bỏ Sửa + nút ghi */
+  function toPerms(st, role) {
+    const out = {};
+    MODS.forEach(m => {
+      const s = st[m], view = new Set(s.view);
+      let edit = new Set(s.edit), act = new Set(s.actions);
+      if (role === 'viewer') { edit = new Set(); WRITE_KEYS(m).forEach(k => act.delete(k)); }
+      edit.forEach(k => view.add(k));
+      const arr = (set, key) => { const valid = validKeys(m, key); return valid.every(k => set.has(k)) ? ['*'] : valid.filter(k => set.has(k)); };
+      out[m] = { tabs: arr(s.tabs, 'tabs'), actions: arr(act, 'actions'), view: arr(view, 'view'), edit: arr(edit, 'edit') };
+    });
+    return out;
+  }
+  const lbl = o => window.PERM.label(o);
+
+  function fieldsHtml(m, viewer) {
+    const rows = REG()[m].groups.map(g => `<tr><td>${esc(lbl(g))}</td>
+        <td><input type="checkbox" data-m="${m}" data-part="view" data-k="${g.k}" aria-label="${esc(lbl(g))} — ${tr('View', 'Xem')}"></td>
+        ${viewer ? '' : `<td><input type="checkbox" data-m="${m}" data-part="edit" data-k="${g.k}" aria-label="${esc(lbl(g))} — ${tr('Edit', 'Sửa')}"></td>`}</tr>`).join('');
+    const bulk = (part, name) => `<span class="pm-bulk-g">${name}:
+        <button type="button" class="pm-bulk" data-m="${m}" data-part="${part}" data-v="1" aria-label="${esc(`${tr('Select all', 'Chọn hết')} — ${MOD_NAME[m]()} — ${name}`)}">${tr('Select all', 'Chọn hết')}</button>
+        <button type="button" class="pm-bulk" data-m="${m}" data-part="${part}" data-v="0" aria-label="${esc(`${tr('Clear all', 'Bỏ hết')} — ${MOD_NAME[m]()} — ${name}`)}">${tr('Clear all', 'Bỏ hết')}</button></span>`;
+    return `<table><thead><tr><th>${tr('Field group', 'Nhóm trường')}</th><th>${tr('View', 'Xem')}</th>${viewer ? '' : `<th>${tr('Edit', 'Sửa')}</th>`}</tr></thead><tbody>${rows}</tbody></table>
+      <div class="pm-bulks">${bulk('view', tr('View', 'Xem'))}${viewer ? '' : bulk('edit', tr('Edit', 'Sửa'))}</div>`;
+  }
+  function modHtml(m, viewer) {
+    const tabs = REG()[m].tabs.map(t => `<label class="pm-i"><input type="checkbox" data-m="${m}" data-part="tab" data-k="${t.k}"> ${esc(lbl(t))}</label>`).join('');
+    const acts = REG()[m].actions.map(a => `<label class="pm-i${a.write ? ' pm-w' : ''}"${a.write ? ` title="${tr('Writes data (editor only)', 'Ghi dữ liệu (chỉ editor)')}"` : ''}>
+        <input type="checkbox" data-m="${m}" data-part="act" data-k="${a.k}"${a.write ? ' data-w="1"' : ''}> ${esc(lbl(a))}${a.write ? ' <i class="pm-wm">✎</i>' : ''}</label>`).join('');
+    return `<section class="pm-mod" data-mod="${m}"><h4>${MOD_NAME[m]()}</h4>
+      <div class="pm-sec pm-tabs"><h5>${tr('Tabs', 'Tab')}</h5><div class="pm-chk">${tabs}</div></div>
+      <div class="pm-sec pm-acts"><h5>${tr('Action buttons', 'Nút thao tác')}</h5><div class="pm-chk">${acts}</div>
+        ${viewer ? `<small class="pm-hint">${tr('A viewer can never write: write buttons are locked.', 'Viewer không bao giờ ghi được: các nút ghi bị khoá.')}</small>` : `<small class="pm-hint">✎ = ${tr('writes data', 'ghi dữ liệu')}</small>`}</div>
+      <div class="pm-sec pm-fields"><h5>${tr('Fields', 'Trường')}</h5>${fieldsHtml(m, viewer)}</div></section>`;
+  }
+  function panelHtml() {
+    const viewer = pm.role === 'viewer';
+    const opts = [['viewer', tr('Viewer (view only)', 'Chỉ xem (viewer)')], ['editor', tr('Editor (per ticks below)', 'Editor (theo các ô tick dưới)')]].map(([v, l]) => `<option value="${v}"${v === pm.role ? ' selected' : ''}>${esc(l)}</option>`).join('');
+    const src = Object.keys(permRows).filter(e => e !== low(pm.email) && e !== low(window.__userEmail) && permRows[e].role).sort()
+      .map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join('');
+    return `<div class="pm-head"><b>${esc(pm.email)}</b>
+        ${pm.wasNull ? `<span class="ua-tag pm-badge" id="pmBadge">${tr('not configured', 'chưa cấu hình')}</span>` : ''}
+        <label class="pm-lv">${tr('Permission', 'Quyền')} <select id="pmRole" aria-label="${tr('Permission', 'Quyền')}">${opts}</select></label>
+        <span class="pm-copy"><label>📋 ${tr('Copy permissions from', 'Sao chép quyền từ')}: <select id="pmCopy" aria-label="${tr('Copy permissions from', 'Sao chép quyền từ')}">${src}</select></label>
+          <button type="button" class="pm-cp" id="pmCopyBtn"${src ? '' : ' disabled'}>${tr('Copy', 'Chép')}</button></span></div>
+      ${pm.unsaved ? `<div class="pm-unsaved" id="pmUnsaved">${tr('Not saved yet: check the ticks, then press 💾 Save permissions.', 'Chưa lưu — kiểm tra các ô tick rồi bấm 💾 Lưu quyền.')}</div>` : ''}
+      ${pm.origRole === 'catalog_editor' ? `<div class="pm-old">${tr('Currently "Editor (old: Catalog only)". Saving turns this person into a plain Editor with the ticks below (Delivery is not writable unless you tick it).', 'Hiện là "Editor (cũ: chỉ sửa Danh mục)". Khi Lưu, người này thành Editor thường với đúng các ô tick dưới đây (Tiến độ không ghi được nếu bạn không tick).')}</div>` : ''}
+      <div class="pm-mods">${MODS.map(m => modHtml(m, viewer)).join('')}</div>
+      ${pm.role === 'editor' && pm.wasNull && (pm.origRole === 'editor' || pm.origRole === 'catalog_editor') ? `<div class="pm-old pm-c3" id="pmC3">${tr('After saving, this person no longer sees the 📚 Library tab (admin only).', 'Sau khi lưu, người này không còn thấy tab 📚 Thư viện (chỉ admin).')}</div>` : ''}
+      <div class="pm-foot"><div class="pm-warn" id="pmWarn" hidden>${tr('This editor cannot edit anything yet (no Edit tick and no write button). You can still save.', 'Editor này chưa được sửa gì (chưa tick Sửa, chưa có nút ghi). Vẫn có thể lưu.')}</div>
+      <p class="pm-note">${tr('Hiding a field keeps the screen tidy and avoids slips. It is not a way to keep secrets.', 'Ẩn trường để giao diện gọn và tránh thao tác nhầm, không phải để giữ bí mật.')}
+        ${tr('Library, sync, normalize, 🩺 data check, 👥 users and Trash stay admin only.', 'Thư viện, đồng bộ, chuẩn hoá, 🩺 kiểm tra dữ liệu, 👥 và Thùng rác vẫn chỉ dành cho admin.')}</p>
+      <div class="pm-save-row"><button type="button" class="nbtn2 pm-save" id="pmSave">${tr('💾 Save permissions', '💾 Lưu quyền')}</button></div></div>`;
+  }
+  /* đồng bộ ô tick với trạng thái; viewer: nút ghi khoá và hiện như chưa tick */
+  function syncPanel() {
+    const box = el('uaPerm'); if (!box) return;
+    const viewer = pm.role === 'viewer';
+    box.querySelectorAll('input[data-part]').forEach(i => {
+      const w = i.dataset.w === '1';
+      i.disabled = viewer && w;
+      i.checked = !i.disabled && pm.st[i.dataset.m][PART[i.dataset.part]].has(i.dataset.k);
+    });
+    const w = el('pmWarn');
+    if (w) w.hidden = !(pm.role === 'editor' && MODS.every(m => pm.st[m].edit.size === 0 && !WRITE_KEYS(m).some(k => pm.st[m].actions.has(k))));
+  }
+  function setTick(m, part, k, on) {
+    const s = pm.st[m], set = s[PART[part]];
+    on ? set.add(k) : set.delete(k);
+    if (part === 'edit' && on) s.view.add(k);            // Sửa ⇒ Xem
+    if (part === 'view' && !on) s.edit.delete(k);        // bỏ Xem ⇒ bỏ Sửa
+  }
+  function bulk(m, part, on) {
+    validKeys(m, PART[part]).forEach(k => setTick(m, part, k, on));
+  }
+  function closePanel() {
+    pm = null;
+    document.querySelectorAll('#uaList tr.ua-prow').forEach(r => r.remove());
+    document.querySelectorAll('#uaList tr.pm-open').forEach(r => r.classList.remove('pm-open'));
+  }
+  function renderPanel() {
+    const box = el('uaPerm'); box.innerHTML = panelHtml(); syncPanel();
+    box.onchange = e => {
+      const i = e.target;
+      if (i.matches && i.matches('input[data-part]')) { setTick(i.dataset.m, i.dataset.part, i.dataset.k, i.checked); syncPanel(); }
+      else if (i.id === 'pmRole') { pm.role = i.value; renderPanel(); }
+    };
+    box.onclick = e => {
+      const b = e.target.closest && e.target.closest('button');
+      if (!b || !box.contains(b)) return;
+      if (b.classList.contains('pm-bulk')) { bulk(b.dataset.m, b.dataset.part, b.dataset.v === '1'); syncPanel(); }
+      else if (b.id === 'pmCopyBtn') copyFrom(el('pmCopy').value);
+      else if (b.id === 'pmSave') savePerms(b);
+    };
+  }
+  function copyFrom(email) {
+    const s = permRows[email]; if (!s) return;
+    pm.st = effState(s.role, s.perms);
+    renderPanel();
+    setMsg(tr('Copied. Not saved yet: press Save permissions.', 'Đã chép. Chưa lưu: hãy bấm Lưu quyền.'), 'warn');
+  }
+  function openPanel(email, keep, newRole) {
+    closePanel();
+    const tr_ = document.querySelector(`#uaList tr[data-em="${CSS.escape(email)}"]`), r = permRows[low(email)];
+    if (!tr_ || !r) return;
+    const u = users.find(x => x.email === email) || { role: r.role };
+    const role = r.role || u.role;
+    tr_.classList.add('pm-open');
+    tr_.insertAdjacentHTML('afterend', `<tr class="ua-prow"><td colspan="5"><div id="uaPerm" class="pm"></div></td></tr>`);
+    if (role === 'admin') {
+      pm = null;
+      el('uaPerm').innerHTML = `<div class="pm-admin">${tr('Admin has full permissions: there is no tick table. Change the level in the Permission box of this row.', 'Admin có toàn quyền: không có bảng tick. Muốn đổi cấp, dùng ô Quyền ở dòng này.')}</div>`;
+      return;
+    }
+    pm = keep || { email, role: role === 'viewer' ? 'viewer' : 'editor', origRole: role, wasNull: r.perms == null, st: effState(role, r.perms) };
+    if (newRole) { pm.role = newRole; pm.unsaved = true; }     // chọn cấp mới ở dòng: chưa lưu, tick sẵn theo quyền HIỆU LỰC của cấp cũ
+    renderPanel();
+    tr_.scrollIntoView({ block: 'nearest' });
+  }
+  const SAVE_ERR = (error) => {
+    const c = error && error.code, m = String(error && error.message || '');
+    return c === '42501' ? tr('Only an admin can do this (and not on your own account).', 'Chỉ admin làm được việc này (và không làm trên chính tài khoản của bạn).')
+      : c === 'P0001' ? tr('You cannot remove the last admin.', 'Không thể hạ quyền admin cuối cùng.')
+      : c === 'P0002' ? MSG.not_found()
+      : c === 'PGRST202' || /admin_set_perms|schema cache|does not exist/i.test(m) ? tr('Permission table is not set up yet: run migration 22 in Supabase.', 'Chưa có chức năng bảng quyền: hãy chạy migration 22 trên Supabase.')
+      : tr('Could not save permissions. Check your connection and try again.', 'Chưa lưu được quyền. Hãy kiểm tra mạng rồi thử lại.');
+  };
+  async function savePerms(btn) {
+    const cur = pm; if (!cur) return;
+    btn.disabled = true;
+    let res;
+    try { res = await window.__sb.rpc('admin_set_perms', { p_email: cur.email, p_role: cur.role, p_perms: toPerms(cur.st, cur.role) }); }
+    catch (e) { res = { error: e }; }
+    btn.disabled = false;
+    if (res.error) { setMsg(SAVE_ERR(res.error)); return; }
+    setMsg(tr('Permissions saved.', 'Đã lưu quyền.'), 'ok');
+    pm = null;
+    await loadList();
+    openPanel(cur.email);
+  }
+  async function loadPerms() {
+    permRows = {}; permsOk = true;
+    const { data, error } = await window.__sb.from('app_users').select('email, role, perms');
+    if (error) { permsOk = false; return; }
+    (data || []).forEach(r => { const k = low(r.email); if (!permRows[k] || r.email === k) permRows[k] = { role: r.role, perms: r.perms == null ? null : r.perms }; });
+  }
+
   function rowHtml(u) {
     const self = low(u.email) === low(window.__userEmail);
-    const opts = (u.role ? '' : `<option value="" selected>—</option>`) + ROLES().map(([v, l]) => `<option value="${v}"${v === u.role ? ' selected' : ''}>${esc(l)}</option>`).join('');
+    const roles = ROLES(); if (u.role === 'catalog_editor') roles.splice(2, 0, ['catalog_editor', tr('Editor (old: Catalog only)', 'Editor (cũ: chỉ sửa Danh mục)')]);
+    const opts = (u.role ? '' : `<option value="" selected>—</option>`) + roles.map(([v, l]) => `<option value="${v}"${v === u.role ? ' selected' : ''}>${esc(l)}</option>`).join('');
+    const pr = permsOk ? permRows[low(u.email)] : null;
+    const badge = pr && u.role && u.role !== 'admin' && pr.perms == null ? `<small class="ua-tag pm-badge">${tr('not configured', 'chưa cấu hình')}</small>` : '';
     const tag = u.status === 'no_account' ? `<small class="ua-tag">${tr('no account yet', 'chưa có tài khoản')}</small>`
               : u.status === 'no_role' ? `<small class="ua-tag">${tr('no permission yet', 'chưa có quyền')}</small>` : '';
     const btn = (act, label) => `<button type="button" data-act="${act}" data-label="${esc(label)}">${esc(label)}</button>`;
     const acts = self ? `<small class="ua-tag">${tr('you', 'bạn')}</small>`
-      : (u.status === 'no_account' ? `<button type="button" data-act="create">${tr('Create account', 'Tạo tài khoản')}</button>` : '')
+      : (pr ? `<button type="button" class="ua-pbtn">${tr('⚙ Permissions', '⚙ Phân quyền')}</button>` : '')
+      + (u.status === 'no_account' ? `<button type="button" data-act="create">${tr('Create account', 'Tạo tài khoản')}</button>` : '')
       + (u.status === 'ok' ? btn('reset_password', tr('Reset password', 'Đặt lại mật khẩu')) : '')
       + btn('revoke', tr('Revoke', 'Thu hồi'));
     return `<tr data-em="${esc(u.email)}">
-      <td data-l="Email">${esc(u.email)}${tag}</td>
+      <td data-l="Email" class="ua-em${!self && pr ? ' ua-em-go' : ''}">${esc(u.email)}${tag}</td>
       <td data-l="${tr('Name', 'Họ tên')}">${esc(u.ho_ten || '')}</td>
-      <td data-l="${tr('Permission', 'Quyền')}"><select data-old="${esc(u.role || '')}"${self ? ' disabled' : ''} aria-label="${tr('Permission', 'Quyền')}">${opts}</select></td>
+      <td data-l="${tr('Permission', 'Quyền')}"><select data-old="${esc(u.role || '')}"${self ? ' disabled' : ''} aria-label="${tr('Permission', 'Quyền')}">${opts}</select>${badge}</td>
       <td data-l="${tr('Last sign-in', 'Đăng nhập gần nhất')}">${u.last_sign_in_at ? esc(fmtTime(u.last_sign_in_at)) : '—'}</td>
       <td class="act">${acts}</td></tr>`;
   }
   async function loadList() {
     const r = await UA.call('list');
     const box = el('uaList'); if (!box) return;
+    const keep = pm; pm = null; await loadPerms();
     if (r.code) { box.innerHTML = ''; setMsg(MSG[r.code]()); return; }
     users = r.data.users;
     box.innerHTML = `<table><thead><tr><th>Email</th><th>${tr('Name', 'Họ tên')}</th><th>${tr('Permission', 'Quyền')}</th><th>${tr('Last sign-in', 'Đăng nhập gần nhất')}</th><th></th></tr></thead>
@@ -121,11 +303,21 @@
       const tr_ = box.querySelector(`tr[data-em="${CSS.escape(u.email)}"]`); if (!tr_) return;
       const sel = tr_.querySelector('select');
       sel.onchange = () => changeRole(u, sel);
+      const go = tr_.querySelector('.ua-pbtn');
+      if (go) { go.onclick = () => (pm && pm.email === u.email) || tr_.classList.contains('pm-open') ? closePanel() : openPanel(u.email);
+                tr_.querySelector('td.ua-em').onclick = go.onclick; }
       tr_.querySelectorAll('button[data-act]').forEach(b => { b.onclick = () => rowAction(u, b); });
     });
+    if (keep && permRows[low(keep.email)]) openPanel(keep.email, keep);     // không mất các ô đang tick dở khi bảng tải lại
   }
   async function changeRole(u, sel, sure) {
     const role = sel.value;
+    /* viewer <-> editor (và catalog_editor cũ) của người không phải admin: không lưu ngay, mở bảng tick với cấp mới để admin duyệt rồi lưu role + perms cùng lúc */
+    if (permsOk && permRows[low(u.email)] && u.role && u.role !== 'admin' && (role === 'viewer' || role === 'editor') && role !== u.role) {
+      sel.value = sel.dataset.old; setMsg('');
+      openPanel(u.email, null, role);
+      return;
+    }
     /* hạ 1 trong 2 admin cuối: hỏi lại — 2026-11-07 đã hạ admin cũ khi admin mới chưa đăng nhập được, phải sửa bằng SQL */
     if (!sure && u.role === 'admin' && role !== 'admin' && users.filter(x => x.role === 'admin').length === 2) {
       sel.value = sel.dataset.old;
@@ -184,7 +376,7 @@
     const box = el('uaLogB');
     const { data, error } = await window.__sb.from('user_admin_log').select('*').order('at', { ascending: false }).limit(50);
     if (error) { box.textContent = tr('Could not load the log. Migration 15 may not have been run.', 'Không tải được nhật ký. Có thể chưa chạy migration 15.'); return; }
-    const LBL = { create: tr('Added', 'Thêm'), set_role: tr('Changed permission', 'Đổi quyền'), reset_password: tr('Reset password', 'Đặt lại mật khẩu'), revoke: tr('Revoked', 'Thu hồi') };
+    const LBL = { create: tr('Added', 'Thêm'), set_role: tr('Changed permission', 'Đổi quyền'), set_perms: tr('Set permissions', 'Đặt quyền chi tiết'), reset_password: tr('Reset password', 'Đặt lại mật khẩu'), revoke: tr('Revoked', 'Thu hồi') };
     box.innerHTML = (data || []).map(x => { const d = x.detail || {};
       return `<div>${esc(fmtTime(x.at))} · ${esc(x.actor_email)} · ${esc(LBL[x.action] || x.action)} · <b>${esc(x.target_email)}</b>${d.to ? ` (${esc(d.from || '—')} → ${esc(d.to)})` : ''}</div>`; }).join('')
       || tr('No entries yet.', 'Chưa có dòng nào.');

@@ -14,6 +14,7 @@
 <script>try{if(localStorage.getItem('tdmv_theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
+<script src="perms.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
 <script src="chart_theme.js"></script>
 <script src="metrics.js"></script>
@@ -55,6 +56,13 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .upd-btn{padding:8px 15px;border-radius:999px;border:1px solid rgba(52,211,153,.4);background:rgba(52,211,153,.12);
   color:var(--green);font-size:12.5px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
 .upd-btn:hover{background:rgba(52,211,153,.25);transform:translateY(-1px)}
+.upd-btn[hidden],.exp-open[hidden]{display:none!important}
+/* phân quyền trường: ô chỉ xem (khoá) + ô ẩn trong form; cột / thẻ ẩn theo data-pd / data-pm do permCss() sinh */
+.perm-ro{position:relative}
+.perm-ro::after{content:'🔒';position:absolute;top:0;right:2px;font-size:11px;opacity:.8}
+.perm-ro input,.perm-ro select,.perm-ro textarea{pointer-events:none;opacity:.7;cursor:not-allowed;background:var(--panel2)}
+.perm-ro button{pointer-events:none;opacity:.4}
+.pg-hide{display:none!important}
 .updated{font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--border);padding:7px 13px;border-radius:999px;white-space:nowrap}
 .updated b{color:var(--cyan)}
 
@@ -1145,7 +1153,7 @@ label:has(> .cb-src){position:relative}
     <div class="ov-top">
     <div class="dm-filters" id="dmFilters">
       <span class="dm-lbl" id="fLbl"></span>
-      <select id="fCo"></select><select id="fSup"></select><select id="fSt"></select>
+      <select id="fCo"></select><select id="fSup" data-pd="supplier"></select><select id="fSt"></select>
       <select id="ovMonth"></select><select id="ovYear"></select>
       <button id="fReset" hidden></button>
       <button class="dm-link" id="fLink"></button>
@@ -1162,7 +1170,7 @@ label:has(> .cb-src){position:relative}
         <div class="dm-legend" id="gnLegend"></div><div class="dm-gwrap"><div id="gnChart"></div></div><div id="gnEmpty" class="dm-hint" hidden></div></div>
       <div class="card dm-att ov-att" style="--accent:var(--st-bad)"><h3><span class="dot"></span><span id="attTitle"></span><small id="attSub"></small><span class="sel"><span class="gv-btn on" id="attModeL"></span><span class="gv-btn" id="attModeV"></span></span></h3><div id="attBox"></div></div>
       <div class="ov-sub">
-        <div class="card ov-fn" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="fnTitle"></span><span class="sel"><span class="gv-btn on" id="fnCnt"></span><span class="gv-btn" id="fnVal"></span></span></h3><div id="fnChart"></div></div>
+        <div class="card ov-fn" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="fnTitle"></span><span class="sel"><span class="gv-btn on" id="fnCnt"></span><span class="gv-btn" id="fnVal" data-pd="value"></span></span></h3><div id="fnChart"></div></div>
         <div class="card ov-ms" style="--accent:#60a5fa"><h3><span class="dot"></span><span id="msTitle"></span><span class="sel"><span class="gv-btn on" id="msMon"></span><span class="gv-btn" id="msSt"></span></span></h3>
           <div class="chartbox" id="boxMon"><div id="chMonth" class="ec-fill"></div></div><div class="chartbox" id="boxSt" style="display:none"><div id="chStatus" class="ec-fill"></div></div></div>
       </div>
@@ -1173,21 +1181,21 @@ label:has(> .cb-src){position:relative}
   <div class="page" id="p2">
     <div class="kpis an-kpis" id="anKpis"></div>
     <div class="an-grid">
-      <div class="card" style="--accent:var(--vz-one)"><h3><span class="dot"></span><span id="anNccT"></span><span class="sel"><span class="gv-btn on" id="anNccV"></span><span class="gv-btn" id="anNccN"></span></span></h3>
+      <div class="card" style="--accent:var(--vz-one)" data-pd="supplier"><h3><span class="dot"></span><span id="anNccT"></span><span class="sel"><span class="gv-btn on" id="anNccV" data-pd="value"></span><span class="gv-btn" id="anNccN"></span></span></h3>
         <div class="hb" id="anNcc"></div></div>
       <div class="card" style="--accent:#22d3ee"><h3><span class="dot"></span><span id="anGeoT"></span><span class="sel"><span class="gv-btn on" id="anListBtn"></span><span class="gv-btn" id="anMapBtn"></span></span></h3>
-        <div class="an-geo" id="anGeo"><div><div class="an-cap" id="anOrgT"></div><div class="hb" id="anOrigin"></div></div>
+        <div class="an-geo" id="anGeo"><div data-pd="origin"><div class="an-cap" id="anOrgT"></div><div class="hb" id="anOrigin"></div></div>
           <div><div class="an-cap" id="anSiteT"></div><div class="hb" id="anSite"></div><div class="dm-legend" id="anSiteL"></div></div></div>
-        <div class="an-maps" id="anMaps" hidden><div class="an-map"><div id="mapOrigin"></div></div><div class="an-map"><div id="mapLoc"></div></div></div></div>
+        <div class="an-maps" id="anMaps" hidden><div class="an-map" data-pd="origin"><div id="mapOrigin"></div></div><div class="an-map"><div id="mapLoc"></div></div></div></div>
     </div>
-    <div class="card an-inst" style="--accent:var(--st-inst)"><h3><span class="dot"></span><span id="inTitle"></span><small id="inSub"></small><span class="sel"><span class="gv-btn on" id="inCoBtn"></span><span class="gv-btn" id="inSupBtn"></span></span></h3>
+    <div class="card an-inst" style="--accent:var(--st-inst)"><h3><span class="dot"></span><span id="inTitle"></span><small id="inSub"></small><span class="sel"><span class="gv-btn on" id="inCoBtn"></span><span class="gv-btn" id="inSupBtn" data-pd="supplier"></span></span></h3>
       <div class="in-flow" id="inFlow"></div>
-      <div class="in-tbl" id="inByCo"></div><div class="in-tbl" id="inBySup" hidden></div></div>
+      <div class="in-tbl" id="inByCo"></div><div class="in-tbl" id="inBySup" hidden data-pd="supplier"></div></div>
   </div>
 
   <!-- ============ PAGE 4: ĐÁNH GIÁ ============ -->
   <div class="page" id="p4">
-    <div class="card sc-card" style="--accent:#f0abfc"><h3><span class="dot"></span><span id="scTitle"></span><small id="scSub"></small>
+    <div class="card sc-card" style="--accent:#f0abfc" data-pd="supplier"><h3><span class="dot"></span><span id="scTitle"></span><small id="scSub"></small>
       <span class="sel ev-per"><span>Evaluation period:</span>
         <select id="evMonth"><option value="">Month: All</option></select>
         <select id="evYear"><option value="">Year: All</option></select>
@@ -1195,7 +1203,7 @@ label:has(> .cb-src){position:relative}
       <div class="sc-wrap"><div class="sc-tbl" id="scTable"></div>
         <div class="sc-mx"><div class="sc-mx-h"><b id="scMxT"></b><small id="scMxS"></small></div><div id="scMx"></div></div></div>
       <div class="sc-note" id="scNote"></div></div>
-    <div class="card pic-card" style="--accent:#2dd4bf;margin-top:12px"><h3><span class="dot"></span><span id="picTitle"></span><small id="picSub" style="font-weight:500;color:var(--muted);font-size:12px;margin-left:8px"></small></h3>
+    <div class="card pic-card" style="--accent:#2dd4bf;margin-top:12px" data-pd="person"><h3><span class="dot"></span><span id="picTitle"></span><small id="picSub" style="font-weight:500;color:var(--muted);font-size:12px;margin-left:8px"></small></h3>
       <div class="sc-tbl pic-tbl" id="picTable"></div><div class="dm-legend" id="picNote" style="margin:8px 0 0"></div></div>
   </div>
 
@@ -1205,7 +1213,7 @@ label:has(> .cb-src){position:relative}
       <div class="card pl-mta" style="--accent:var(--blue)"><h3><span class="dot"></span><span id="plMtaT"></span><small id="plMtaS"></small><span class="sel"><button class="gv-btn" id="plPickBtn"></button></span></h3>
         <div class="pl-pick" id="plPick" hidden></div>
         <div id="plMta"></div><div class="dm-hint" id="plMtaE" hidden></div><div class="pl-note" id="plMtaN"></div></div>
-      <div class="card pl-cash" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="plCashT"></span><small id="plCashS"></small>
+      <div class="card pl-cash" style="--accent:var(--violet)" data-pd="value"><h3><span class="dot"></span><span id="plCashT"></span><small id="plCashS"></small>
         <span class="sel"><span class="gv-btn on" id="plCmM"></span><span class="gv-btn" id="plCmS"></span></span></h3>
         <div id="plCash"></div><div class="dm-hint" id="plCashE" hidden></div><div class="pl-due" id="plDue"></div></div>
       <div class="card pl-look" style="--accent:var(--st-warn)"><h3><span class="dot"></span><span id="plLookT"></span><small id="plLookS"></small></h3>
@@ -1218,22 +1226,22 @@ label:has(> .cb-src){position:relative}
     <div class="toolbar">
       <div class="search"><input id="q" type="text" placeholder="Search by machine code, name, supplier..."></div>
       <button class="fbtn active" data-f="all">All</button>
-      <button class="fbtn g" data-f="arrived">✅ Arrived</button>
-      <button class="fbtn a" data-f="soon">🚢 Arriving soon</button>
-      <button class="fbtn" data-f="waiting">⏳ Awaiting</button>
-      <button class="fbtn o" data-f="overdue">⚠ Overdue – unconfirmed</button>
-      <button class="fbtn ins" data-f="installing">🔧 Installing</button>
-      <button class="fbtn tst" data-f="testing">🧪 Testing</button>
-      <button class="fbtn op" data-f="in_operation">🏁 Commissioned</button>
-      <button class="fbtn w" data-f="wait_install">⏰ Arrived – not installed</button>
-      <button class="fbtn r" data-f="late_accept">⚠ Late commissioning</button>
-      <button class="fbtn r" data-f="delay">⚠️ Delay notes</button>
-      <select id="fLoc"><option value="">Site: All</option></select>
-      <select id="fOrigin"><option value="">Origin: All</option></select>
-      <select id="fHT" class="pt-off"></select>
-      <select id="fPIC"><option value="">Person in charge: All</option></select>
-      <select id="fMon" title="Month of arrival at plant"><option value="">Month: All</option></select>
-      <select id="fYr" title="Year of arrival at plant"><option value="">Year: All</option></select>
+      <button class="fbtn g" data-f="arrived" data-pd="status">✅ Arrived</button>
+      <button class="fbtn a" data-f="soon" data-pd="status">🚢 Arriving soon</button>
+      <button class="fbtn" data-f="waiting" data-pd="status">⏳ Awaiting</button>
+      <button class="fbtn o" data-f="overdue" data-pd="status">⚠ Overdue – unconfirmed</button>
+      <button class="fbtn ins" data-f="installing" data-pd="status">🔧 Installing</button>
+      <button class="fbtn tst" data-f="testing" data-pd="status">🧪 Testing</button>
+      <button class="fbtn op" data-f="in_operation" data-pd="status">🏁 Commissioned</button>
+      <button class="fbtn w" data-f="wait_install" data-pd="status">⏰ Arrived – not installed</button>
+      <button class="fbtn r" data-f="late_accept" data-pd="status">⚠ Late commissioning</button>
+      <button class="fbtn r" data-f="delay" data-pd="notes">⚠️ Delay notes</button>
+      <select id="fLoc" data-pd="location"><option value="">Site: All</option></select>
+      <select id="fOrigin" data-pd="origin"><option value="">Origin: All</option></select>
+      <select id="fHT" class="pt-off" data-pd="purchase"></select>
+      <select id="fPIC" data-pd="person"><option value="">Person in charge: All</option></select>
+      <select id="fMon" title="Month of arrival at plant" data-pd="dates"><option value="">Month: All</option></select>
+      <select id="fYr" title="Year of arrival at plant" data-pd="dates"><option value="">Year: All</option></select>
       <button type="button" class="exp-open" id="btnExp" onclick="expOpen()">📤 Export data</button>
       <button type="button" class="exp-open ac-open" id="btnAc" hidden onclick="acOpen()">✅ Confirm arrivals</button>
       <button type="button" class="exp-open ac-open" id="btnMc" hidden onclick="mcOpen()">🏷 Assign machine codes</button>
@@ -1244,11 +1252,11 @@ label:has(> .cb-src){position:relative}
       <table>
         <thead><tr>
           <th class="qu-h" id="quTh" hidden><input type="checkbox" id="quAll"></th>
-          <th data-s="ten">Machine</th><th data-s="sl">Qty</th><th data-s="noilapdat">Site</th>
-          <th data-s="ncc" id="thNcc">Supplier</th><th data-s="xuatxu">Origin</th><th data-s="phutrach">Person in charge</th>
-          <th data-s="vnd">Unit price (VND)</th><th data-s="usd">Unit price (USD)</th>
-          <th data-s="dathang">Order date</th><th data-s="vekh">Planned arrival</th><th data-s="vedukienn">Expected at plant</th>
-          <th data-s="status">Status</th><th data-s="danhgia">Rating</th>
+          <th data-s="ten" data-pd="name">Machine</th><th data-s="sl" data-pd="qty">Qty</th><th data-s="noilapdat" data-pd="location">Site</th>
+          <th data-s="ncc" id="thNcc" data-pd="supplier">Supplier</th><th data-s="xuatxu" data-pd="origin">Origin</th><th data-s="phutrach" data-pd="person">Person in charge</th>
+          <th data-s="vnd" data-pd="value">Unit price (VND)</th><th data-s="usd" data-pd="value">Unit price (USD)</th>
+          <th data-s="dathang" data-pd="dates">Order date</th><th data-s="vekh" data-pd="dates">Planned arrival</th><th data-s="vedukienn" data-pd="dates">Expected at plant</th>
+          <th data-s="status" data-pd="status">Status</th><th data-s="danhgia" data-pd="status">Rating</th>
         </tr></thead>
         <tbody id="tb"></tbody>
       </table>
@@ -1320,6 +1328,63 @@ label:has(> .cb-src){position:relative}
   </div>
 </div>
 <script type="text/plain" id="mainSrc">
+/* start() chỉ chạy sau đăng nhập, lúc đó đã PERM.init theo người dùng thật và đặt window.__perms (null hoặc object). Chưa đặt = chạy thử / mock không máy chủ: quyền theo role mặc định (không role = admin) như trước */
+if(window.__perms === undefined) PERM.init(window.__role || 'admin', null);
+const dW = a => window.__canWrite !== false && PERM.act('delivery', a);   // nút ghi của Tiến độ: có quyền tick VÀ không bị tắt ghi (viewer)
+/* ===== phân quyền TRƯỜNG (perms.js): dS = được xem, dE = được sửa (khoá nhóm hoặc tên trường thật của Tiến độ) =====
+   Phần tử gắn data-pd="<nhóm>" (Tiến độ) / data-pm="<nhóm>" (Danh mục) tự ẩn khi không được xem nhóm đó (permCss).
+   Admin + người cũ chưa cấu hình (perms null) xem được mọi nhóm → không có quy tắc ẩn nào, giao diện y như trước.
+   THÊM CỘT / Ô / THẺ MỚI phụ thuộc một nhóm trường → gắn data-pd / data-pm hoặc kiểm dS()/mS() khi vẽ. */
+const dS = f => PERM.see('delivery', f), dE = f => PERM.edit('delivery', f);
+const mS = f => PERM.see('mmtb', f);
+const pgOf = (m, f) => (PERM.REG[m].groups.find(g => g.k === f || g.fields.includes(f)) || {}).k || '';   // tên trường → khoá nhóm (cho data-pd / data-pm)
+/* dòng nhỏ dưới tên máy trong các danh sách popup: phụ trách · công ty · NCC (bỏ phần bị ẩn) */
+const dSub = x => [dS('person') && (ovEsc(unescH(x.phutrach)) || '—'), dS('location') && (DM.companyCode(x.noilapdat) || ovEsc(unescH(x.noilapdat))),
+  dS('ncc') && (ovEsc(unescH(x.ncc)) || '—')].filter(Boolean).join(' · ');
+(function permCss(){
+  const r = [];
+  ['delivery','mmtb'].forEach(m=>PERM.REG[m].groups.forEach(g=>{ if(!PERM.see(m, g.k)) r.push(`[data-p${m==='delivery'?'d':'m'}~="${g.k}"]`); }));
+  let st = document.getElementById('permCss'); if(!st){ st = document.createElement('style'); st.id = 'permCss'; document.head.appendChild(st); }
+  st.textContent = r.length ? r.join(',') + '{display:none!important}' : '';
+})();
+/* form theo quyền trường. map = [[id ô, nhóm], …]: không được xem → ẩn cả ô (.pg-hide); xem mà không sửa → khoá (.perm-ro + readOnly/disabled).
+   isNew (Thêm / Nhân bản): ô không được sửa để trống — máy mới không chép giá trị người dùng không được sửa (khi lưu permKeep cũng bỏ). */
+function permForm(mod, map, isNew){
+  if(PERM.isAdmin()) return;
+  map.forEach(([id, g])=>{
+    const el = document.getElementById(id); if(!el) return;
+    const box = el.closest('label') || el;
+    if(!PERM.see(mod, g)){ box.classList.add('pg-hide'); }
+    if(PERM.edit(mod, g)) return;
+    box.classList.add('perm-ro'); box.title = tr('View only — you do not have permission to edit this field','Chỉ xem — bạn không có quyền sửa trường này');
+    const ctl = box.matches('input,select,textarea') ? [box] : [...box.querySelectorAll('input,select,textarea')];
+    ctl.forEach(c=>{
+      if(c.type === 'hidden') return;
+      if(c.tagName === 'SELECT' || c.type === 'radio' || c.type === 'checkbox') c.disabled = true; else c.readOnly = true;
+      c.tabIndex = -1;
+    });
+    if(isNew) ctl.forEach(c=>{ if(c._flatpickr) c._flatpickr.clear(); else if(c.type === 'radio' || c.type === 'checkbox') c.checked = false; else c.value = ''; });
+  });
+}
+/* LƯU theo quyền trường (Review Focus #1): window.__seal chỉ niêm phong trường có trên dòng → thiếu / trống là MẤT dữ liệu mã hoá.
+   Trường thuộc nhóm KHÔNG được sửa: Sửa → lấy giá trị cũ của bản ghi (old(k), đã giải mã); máy mới (old = null) → bỏ khỏi dòng (giá trị mặc định).
+   Kể cả ô bị sửa ép qua DOM cũng không ghi. Trường không thuộc nhóm nào (cột hệ thống) giữ nguyên. Admin: không đổi gì. */
+/* khoá hệ thống (ID hệ thống khớp dòng khi nạp Excel, mã máy do DB cấp): không bao giờ thay — DATA chỉ có _id, thay sysid = mất khớp → nạp thành máy MỚI */
+const SYS_KEYS = new Set(['sysid', 'ma_may']);
+function permKeep(mod, row, old, canEd){
+  if(PERM.isAdmin()) return row;
+  const F = new Set(PERM.REG[mod].groups.flatMap(g=>g.fields));
+  const ok = canEd || (k => PERM.edit(mod, k));
+  Object.keys(row).forEach(k=>{ if(!F.has(k) || SYS_KEYS.has(k) || ok(k)) return; if(old) row[k] = old(k); else delete row[k]; });
+  return row;
+}
+/* ô form Thêm / Sửa Tiến độ → nhóm quyền (f_rate, radio f_cur, f_tot không có cột riêng: thuộc nhóm value qua #f_curRow / #f_tot) */
+const D_FORM = [['f_mamay','code'],['f_ten','name'],['f_pt','person'],['f_sl','qty'],['f_csv','capacity'],['f_nld','location'],['f_th','supplier'],['f_ncc','supplier'],
+  ['f_xx','origin'],['f_ht','purchase'],['f_model','model'],['f_serial','model'],['f_curRow','value'],['f_vnd','value'],['f_usd','value'],['f_tot','value'],
+  ['f_duyet','dates'],['f_dh','dates'],['f_ctu','dates'],['f_tutt','dates'],['f_dt','dates'],['f_dttt','dates'],['f_lm','dates'],['f_lmtt','dates'],['f_vc','dates'],
+  ['f_xxg','dates'],['f_ctm','dates'],['f_ntkh','dates'],['f_wd','dates'],['addCalc','dates'],['f_gt','notes']];
+/* đánh giá (danhgia, nhóm status) là kết quả tính từ các ngày: sửa được ngày thì đánh giá theo ngày mới */
+const dEdRow = k => k === 'danhgia' ? (dE('dates') || dE('status')) : dE(k);
 let DATA = window.__DATA || [];
 if(window.MO) MO.ready();                // gỡ khung chờ lúc mở trang
 let DATA_TS = window.__DATA_TS || new Date().toISOString();
@@ -1620,10 +1685,10 @@ async function applyBuffer(buf){
   });
 }
 btnUpd.onclick  = ()=> location.reload();
-btnPick.onclick = ()=> fileUpd.click();
+btnPick.onclick = ()=>{ if(dW('import')) fileUpd.click(); };
 
 /* ===== form nhập máy mới ===== */
-btnAdd.onclick = ()=>{ window.__editId=null; CLONE_SRC = null; resetAddForm(); cloneHl(f_nld, false); addClonePicker(); addTitle.textContent=tr('➕ Add new machine','➕ Nhập máy mới'); addSubmit.textContent=tr('➕ Add machine','➕ Thêm máy'); addBg.classList.add('show'); };
+btnAdd.onclick = ()=>{ window.__editId=null; CLONE_SRC = null; resetAddForm(); cloneHl(f_nld, false); addClonePicker(); addTitle.textContent=tr('➕ Add new machine','➕ Nhập máy mới'); addSubmit.textContent=tr('➕ Add machine','➕ Thêm máy'); permForm('delivery', D_FORM, true); addBg.classList.add('show'); };
 function closeAdd(){ addBg.classList.remove('show'); }
 /* popup có ô nhập / sửa (form, ô chữ, ô chọn, ô tick): chỉ đóng bằng ✕ hoặc Hủy — bấm ra ngoài không đóng (user 2026-11-14).
    Popup chỉ để xem (chi tiết máy, xem trước…) vẫn đóng khi bấm ra ngoài. Form Thêm/Sửa máy (addBg, mmBg) luôn chỉ đóng bằng ✕ / Hủy. */
@@ -1885,20 +1950,21 @@ function fillFromClone(x){
   if(x.hinh_thuc_mua === 'domestic') set('f_vc', (x.ditaukh || 0) + (x.lanhkh || 0));
   ptSync(); updCalc();
   CLONE_SRC = x._id; addClonePicker(unescH(x.ten)); cloneHl(f_nld, true);
+  permForm('delivery', D_FORM, true);      // máy mới: ô không được sửa để trống, không chép từ máy nguồn
 }
 function addClonePicker(srcTitle){
-  clonePicker(document.getElementById('addClone'), () => DATA.map(x => ({ id: x._id, title: unescH(x.ten), sub: [DM.companyCode(unescH(x.noilapdat)) || unescH(x.noilapdat), unescH(x.ncc), unescH(x.model)].filter(Boolean).join(' · ') })),
+  clonePicker(document.getElementById('addClone'), !dW('clone') ? null : () => DATA.map(x => ({ id: x._id, title: unescH(x.ten), sub: [DM.companyCode(unescH(x.noilapdat)) || unescH(x.noilapdat), dS('ncc') && unescH(x.ncc), dS('model') && unescH(x.model)].filter(Boolean).join(' · ') })),
     id => { const x = DATA.find(d => d._id === id); if(x) fillFromClone(x); },
     () => { CLONE_SRC = null; resetAddForm(); cloneHl(f_nld, false); addClonePicker(); }, srcTitle);
 }
-window.cloneMachine = i => { const x = DATA[i]; if(!x) return; mBg.classList.remove('show'); btnAdd.onclick(); fillFromClone(x); };
+window.cloneMachine = i => { const x = DATA[i]; if(!x || !dW('clone')) return; mBg.classList.remove('show'); btnAdd.onclick(); fillFromClone(x); };
 
 async function submitAdd(){
   const val = id => (document.getElementById(id).value||'').trim();
   const ten = val('f_ten');
   if(!ten){ showNotice({type:'error', title:tr('Machine name missing','Thiếu tên máy'), sub:tr('Please enter the machine name before adding it.','Vui lòng nhập Tên máy trước khi thêm.')}); return; }
 
-  if(hasPT()){
+  if(hasPT() && dE('hinh_thuc_mua')){     // không được sửa Hình thức mua: giữ giá trị cũ, không bắt chọn
     if(!val('f_ht')){ showNotice({type:'error', title:tr('Purchase type missing','Thiếu hình thức mua'), sub:tr('Please choose Direct import, Through an agent or Domestic.','Vui lòng chọn Nhập khẩu trực tiếp, Qua đại lý hoặc Trong nước.')}); return; }
     const cur = window.__editId ? DATA.find(x=>x._id===window.__editId) : null;
     if(val('f_ht')==='domestic' && cur && (cur.tauchay_tt || cur.capcang_tt)){ showNotice({type:'error', title:tr('This machine has port dates','Máy đang có ngày tàu chạy / cập cảng'), sub:tr('Clear the sailing and port arrival dates in ⚡ Quick update before changing it to Domestic.','Xoá ngày tàu chạy và cập cảng ở ⚡ Cập nhật nhanh trước khi đổi sang Trong nước.')}); return; }
@@ -1971,13 +2037,16 @@ const ctT = v => (LANG==='en' && CTRY[v]) || v;
 
 /* ===== tab navigation, lazy chart init ===== */
 const inited = {};
-/* viewer chỉ xem Tổng quan + Danh sách (2 phân hệ): bỏ các tab khác; mở bằng đường khác thì về Tổng quan.
-   Chỉ là giao diện — lịch thanh toán / mặt bằng / lịch sử ngày được máy chủ chặn (migration 17). */
-const VIEW_TABS = ['c1','c2','p1','p3'];
-window.__tabOk = id => (window.__role !== 'viewer' || VIEW_TABS.includes(id)) ? id : (/^c/.test(id) ? 'c1' : 'p1');
-document.querySelectorAll('.tab').forEach(t=>{ if(window.__tabOk(t.dataset.p) !== t.dataset.p) t.remove(); });
+/* tab được xem theo PERM.tab (phân quyền từng người; admin thấy hết; người cũ chưa cấu hình = quy tắc theo role như trước, viewer chỉ Tổng quan + Danh sách).
+   Tab không có quyền bị gỡ khỏi trang; mở bằng đường khác (console, liên kết) thì về tab đầu tiên được phép của cùng phân hệ, không có thì không mở gì (null).
+   Chỉ là giao diện — lịch thanh toán / mặt bằng / lịch sử ngày được máy chủ chặn (migration 17, 22). */
+const TAB_ORDER = { mmtb:['c1','c2','c4','c3'], delivery:['p1','p2','p4','p5','p3'] };
+const tabMod = id => /^c/.test(id) ? 'mmtb' : 'delivery';
+window.__modOk = m => !!TAB_ORDER[m] && TAB_ORDER[m].some(k=>PERM.tab(m, k));   // phân hệ có ít nhất 1 tab được phép
+window.__tabOk = id => PERM.tab(tabMod(id), id) ? id : (TAB_ORDER[tabMod(id)].find(k=>PERM.tab(tabMod(id), k)) || null);
+document.querySelectorAll('.tab').forEach(t=>{ if(!PERM.tab(tabMod(t.dataset.p), t.dataset.p)) t.remove(); });
 function showPage(id){
-  id = window.__tabOk(id);
+  id = window.__tabOk(id); if(!id) return;
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id===id));
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.p===id));
   if(!inited[id]){ inited[id]=true; if(id==='p1') initP1(); if(id==='p2') initP2(); if(id==='p4') initP4(); if(id==='p5') initP5(); }
@@ -2013,7 +2082,7 @@ document.querySelectorAll('[data-count]').forEach(el=>{
     return;
   }
   const render = x =>
-    `<span class="ticker-item">⚙️ <b>${x.ten}</b> — ${tr('expected','dự kiến về')} ${x.vedukienn.split('-').reverse().join('/')} · <span class="d">${x.d===0?tr('TODAY','HÔM NAY'):tr('in '+x.d+(x.d===1?' day':' days'),'còn '+x.d+' ngày')}</span> (${x.noilapdat} · ${x.phutrach||'—'})</span>`;
+    `<span class="ticker-item">⚙️ <b>${x.ten}</b> — ${tr('expected','dự kiến về')} ${x.vedukienn.split('-').reverse().join('/')} · <span class="d">${x.d===0?tr('TODAY','HÔM NAY'):tr('in '+x.d+(x.d===1?' day':' days'),'còn '+x.d+' ngày')}</span> (${[PERM.see('delivery','location') && x.noilapdat, dS('person') && (x.phutrach||'—')].filter(Boolean).join(' · ')})</span>`;
   let ti = 0;
   const show = () => {
     tickerTrack.innerHTML = render(items[ti]);
@@ -2042,6 +2111,7 @@ const OVF = DM.parseQuery(location.search);
 const SUP = {};                                   // mã băm -> tên NCC
 DATA.forEach(x=>{ if(x.ncc) SUP[DM.supKey(x.ncc)] = x.ncc; });
 if(OVF.sup && !SUP[OVF.sup]) OVF.sup = '';
+if(!dS('supplier')) OVF.sup = '';                // không được xem NCC: bỏ lọc NCC từ link
 const ovFilter = noPeriod => Object.assign({}, OVF, { sup: SUP[OVF.sup] || '' }, noPeriod ? { m:'', y:'' } : {});
 const ovRows = () => DM.filter(DATA, ovFilter());
 const ovRowsAllTime = () => DM.filter(DATA, ovFilter(true));   // bỏ tháng/năm: cho biểu đồ theo tháng
@@ -2205,7 +2275,7 @@ let KP = null;
     KP = DM.kpis(rows, { ontimeWindow: period ? null : 90 });
     const o = KP.ontime, dl = KP.delayed;
     set('pipeline', 'var(--sky)', dmN(KP.pipeline.count),
-        VZ.money(KP.pipeline.vnd) + ' · ' + tr('not yet arrived at site', 'chưa về nhà máy') +
+        (dS('value') ? VZ.money(KP.pipeline.vnd) + ' · ' : '') + tr('not yet arrived at site', 'chưa về nhà máy') +
         (KP.pipeline.overdue ? ' · ' + tr('incl. ⚠ ', 'trong đó ⚠ ') + dmN(KP.pipeline.overdue) + tr(' overdue, unconfirmed', ' quá hạn chưa xác nhận') : ''));
     set('ontime', o.rate == null ? 'var(--st-done)' : o.rate >= .8 ? 'var(--st-ok)' : o.rate >= .6 ? 'var(--st-warn)' : 'var(--st-bad)',
         o.rate == null ? '—' : dmN(o.rate * 100) + '%',
@@ -2241,20 +2311,21 @@ let KP = null;
     }
     const H = tr(['No.', 'Machine', 'Company', 'Supplier', 'Delayed milestone', 'Days late', 'Note / reason', 'PIC'],
                  ['STT', 'Tên máy', 'Công ty', 'NCC', 'Mốc đang trễ', 'Số ngày trễ', 'Ghi chú / lý do', 'Phụ trách']);
-    attBox.innerHTML = `<table><thead><tr>${H.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${list.map(({x, d}) => {
+    const PD = ['', 'name', 'location', 'supplier', 'dates', 'dates', 'notes', 'person'], pd = i => PD[i] ? ` data-pd="${PD[i]}"` : '';
+    attBox.innerHTML = `<table><thead><tr>${H.map((h,i)=>`<th${pd(i)}>${h}</th>`).join('')}</tr></thead><tbody>${list.map(({x, d}) => {
       const sev = d.days > 14 ? 'bad' : 'warn';
       const when = d.unconfirmed ? tr('not confirmed · expected ', 'chưa xác nhận · dự kiến ') + dmD(d.forecast) + (d.planned ? ' · ' + tr('plan ', 'KH ') + dmD(d.planned) : '')
                  : d.overdue ? tr('overdue · plan ', 'quá hạn · KH ') + dmD(d.planned)
                              : tr('plan ', 'KH ') + dmD(d.planned) + ' → ' + tr('forecast ', 'dự kiến ') + dmD(d.forecast);
       return `<tr onclick="showDetail(${DATA.indexOf(x)})">` +
         `<td data-l="${H[0]}">${x._order || '—'}</td>` +
-        `<td data-l="${H[1]}" class="nm">${ovEsc(x.ten)}</td>` +
-        `<td data-l="${H[2]}">${DM.companyCode(x.noilapdat) || ovEsc(x.noilapdat) || '—'}</td>` +
-        `<td data-l="${H[3]}">${ovEsc(x.ncc) || '—'}</td>` +
-        `<td data-l="${H[4]}"><span>${OV_MS[d.milestone]}<small>${when}</small></span></td>` +
-        `<td data-l="${H[5]}"><span class="sev sev-${sev}">${d.unconfirmed ? '⚠ ' : ''}+${d.days} ${tr('d', 'ngày')}</span></td>` +
-        `<td data-l="${H[6]}" class="note">${ovEsc(x.giaitrinh) || '—'}</td>` +
-        `<td data-l="${H[7]}">${ovEsc(x.phutrach) || '—'}</td></tr>`;
+        `<td data-l="${H[1]}"${pd(1)} class="nm">${ovEsc(x.ten)}</td>` +
+        `<td data-l="${H[2]}"${pd(2)}>${DM.companyCode(x.noilapdat) || ovEsc(x.noilapdat) || '—'}</td>` +
+        `<td data-l="${H[3]}"${pd(3)}>${ovEsc(x.ncc) || '—'}</td>` +
+        `<td data-l="${H[4]}"${pd(4)}><span>${OV_MS[d.milestone]}<small>${when}</small></span></td>` +
+        `<td data-l="${H[5]}"${pd(5)}><span class="sev sev-${sev}">${d.unconfirmed ? '⚠ ' : ''}+${d.days} ${tr('d', 'ngày')}</span></td>` +
+        `<td data-l="${H[6]}"${pd(6)} class="note">${ovEsc(x.giaitrinh) || '—'}</td>` +
+        `<td data-l="${H[7]}"${pd(7)}>${ovEsc(x.phutrach) || '—'}</td></tr>`;
     }).join('')}</tbody></table>`;
   }
   OV_HOOKS.push(draw); draw();
@@ -2325,7 +2396,7 @@ let KP = null;
       const it = GN.items[p.value[3]];
       const row = (lbl, m) => `<tr><td style="padding-right:10px;color:${cssv('--muted')}">${lbl}</td><td>${dmD(m.planned)}</td><td>${dmD(m.forecast)}</td><td>${dmD(m.actual)}</td></tr>`;
       const d = it.delay;
-      return `<b>${ovEsc(it.x.ten)}</b><br><span style="color:${cssv('--muted')}">${ovEsc(it.x.ncc) || '—'} · ${it.group} · ${ovEsc(it.x.phutrach) || '—'}</span>` +
+      return `<b>${ovEsc(it.x.ten)}</b><br><span style="color:${cssv('--muted')}">${[dS('ncc') && (ovEsc(it.x.ncc) || '—'), it.group, dS('person') && (ovEsc(it.x.phutrach) || '—')].filter(Boolean).join(' · ')}</span>` +
         `<table style="margin-top:6px;font-size:12px;border-collapse:collapse"><tr style="color:${cssv('--muted')}"><td></td><td>${tr('Planned','Kế hoạch')}</td><td style="padding:0 8px">${tr('Forecast','Dự kiến')}</td><td>${tr('Actual','Thực tế')}</td></tr>` +
         it.milestones.map(m => row(OV_MS[m.milestone], m)).join('') +
         (it.x.venm_tt || it.x.nghiemthu_kh ? row(tr('Installation start', 'Bắt đầu lắp đặt'), { actual: it.x.lapdat_tt }) +
@@ -2383,7 +2454,7 @@ let KP = null;
     fn.setOption(Object.assign(base(), {
       grid:{ left: small() ? 118 : 160, right: small() ? 74 : 150, top:6, bottom:6 },
       tooltip:Object.assign(tipBox(), { trigger:'item', formatter:p => { const st = FN[p.dataIndex];
-        return `<b>${FNL[st.key]}</b><br>` + (st.available ? `${dmN(st.count)} ${tr('machines','máy')} · ${dmN(st.vnd)} ₫<br><span style="color:${cssv('--muted')}">${tr('Click to filter the page','Bấm để lọc cả trang')}</span>`
+        return `<b>${FNL[st.key]}</b><br>` + (st.available ? `${dmN(st.count)} ${tr('machines','máy')}${dS('value') ? ` · ${dmN(st.vnd)} ₫` : ''}<br><span style="color:${cssv('--muted')}">${tr('Click to filter the page','Bấm để lọc cả trang')}</span>`
                                                          : tr('No data yet — not tracked in the delivery table', 'Chưa có dữ liệu — bảng tiến độ chưa theo dõi')); } }),
       xAxis:{ type:'value', show:false, max:v => Math.max(v.max, 1) },
       yAxis:{ type:'category', inverse:true, data:FN.map(st => FNL[st.key]), axisTick:{ show:false }, axisLine:{ show:false },
@@ -2519,10 +2590,10 @@ function showMachines(title, rows){
   rows = [...rows].sort((a,b)=>{ const d=(PRIO[a.status]??9)-(PRIO[b.status]??9); if(d) return d; return (a.vedukienn??'')>(b.vedukienn??'')?1:-1; });
   const units = rows.reduce((s,x)=>s+x.sl,0), tre = rows.filter(x=>x.danhgia==='Trễ').length;
   mTitle.textContent = title;
-  mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')} · ${VZ.money(sumV(rows))} · ${tre} ${tr('late','trễ')}`;
+  mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')} · ${dS('value') ? VZ.money(sumV(rows)) + ' · ' : ''}${tre} ${tr('late','trễ')}`;
   mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(x=>`
     <div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
-      <span class="kn">${x.ten}${x.sl>=2?` <b style="color:var(--sky)">(x${x.sl})</b>`:''}<small>${x.noilapdat} · ${x.ncc} · ${fmtM(x.vnd)} ₫</small></span>
+      <span class="kn">${x.ten}${x.sl>=2?` <b style="color:var(--sky)">(x${x.sl})</b>`:''}<small>${[x.noilapdat, dS('ncc') && x.ncc, dS('value') && fmtM(x.vnd) + ' ₫'].filter(Boolean).join(' · ')}</small></span>
       <span class="kv">${fmtD(x.vedukienn)}<br>
         <span class="badge b-${x.status}" style="font-size:10.5px;padding:2px 8px">${LBL[x.status]||'—'}</span>
         <span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}" style="font-size:10.5px;padding:2px 8px">${dgT(x.danhgia)}</span></span>
@@ -2557,25 +2628,27 @@ function drawAnKpis(){
     .map(([k,l])=>({ n:arrived.filter(o=>o.s.stage===k).length, c:VZ.life(k), t:l }));
   const vzA = VZ.segbar(sgA, { label:tr('Arrived machines by stage','Máy đã về theo giai đoạn') }) + `<div class="vz-leg">${sgA.filter(x=>x.n).map(x=>`<span><i style="background:${x.c}"></i>${x.t} ${x.n}</span>`).join('')}</div>`;
   const VZK = { 3: vzA, 4: VZ.segbar([{ n:oper.length, c:VZ.life('in_operation'), t:tr('Commissioned','Đã nghiệm thu') }, { n:arrived.length - oper.length, c:'rgba(148,163,184,.35)', t:tr('Not yet commissioned','Chưa nghiệm thu') }], { label:tr('Commissioned share of arrived machines','Tỷ lệ đã nghiệm thu trên số máy đã về') }) };
-  anKpis.innerHTML = K.map(([c,ic,l,v,n,go],i)=>`<div class="kpi" data-i="${i}" style="--accent:${c};${go?'':'cursor:default'}"><span class="ic">${ic}</span><div class="lbl">${l}</div><div class="val">${v}</div><div class="note" title="${ovEsc(n)}">${ovEsc(n)}</div>${VZK[i] ? `<div class="vz">${VZK[i]}</div>` : ''}</div>`).join('');
+  const KPD = ['value', 'value supplier', 'origin'];      // thẻ phụ thuộc nhóm trường (ẩn theo quyền, permCss)
+  if(!dS('supplier')) K[0][4] = `${DATA.length} ${tr('machines','thiết bị')}`;
+  anKpis.innerHTML = K.map(([c,ic,l,v,n,go],i)=>`<div class="kpi" data-i="${i}"${KPD[i] ? ` data-pd="${KPD[i]}"` : ''} style="--accent:${c};${go?'':'cursor:default'}"><span class="ic">${ic}</span><div class="lbl">${l}</div><div class="val">${v}</div><div class="note" title="${ovEsc(n)}">${ovEsc(n)}</div>${VZK[i] ? `<div class="vz">${VZK[i]}</div>` : ''}</div>`).join('');
   anKpis.querySelectorAll('.kpi').forEach(k => { const go = K[+k.dataset.i][5]; if(go) k.onclick = () => showMachines(go[0], go[1]); });
 }
-let anNccMode = 'v';
+let anNccMode = dS('value') ? 'v' : 'n';        // không được xem Giá trị: chỉ xếp theo số máy
 function drawAnNcc(){
   const byV = anNccMode === 'v', g = groupRows(DATA,'ncc').sort((a,b)=> byV ? (b.v-a.v || b.n-a.n) : (b.n-a.n || b.v-a.v));
   const top = g.slice(0,8), rest = g.slice(8), tot = byV ? sumV(DATA) : DATA.length;
   if(rest.length){ const r = rest.flatMap(o=>o.rows); top.push({ other:true, k:tr(`Other (${rest.length} suppliers)`,`Khác (${rest.length} NCC)`), rows:r, n:r.length, v:sumV(r) }); }
   hbars(anNcc, top.map(o=>({ label: o.other ? o.k : (unescH(o.k) || tr('(no supplier)','(chưa có NCC)')), rows:o.rows,
     val: byV ? o.v : o.n, txt: byV ? tyT(o.v) : o.n+' '+tr('mach.','TB'),
-    sub: pctT(byV ? o.v : o.n, tot)+' · '+(byV ? o.n+' '+tr('mach.','TB') : tyT(o.v)) })), '🏭');
+    sub: pctT(byV ? o.v : o.n, tot)+(byV ? ' · '+o.n+' '+tr('mach.','TB') : dS('value') ? ' · '+tyT(o.v) : '') })), '🏭');
   anNccV.classList.toggle('on', byV); anNccN.classList.toggle('on', !byV);
 }
 function drawAnGeo(){
   hbars(anOrigin, groupRows(DATA,'xuatxu').sort((a,b)=>b.n-a.n || b.v-a.v).map(o=>({ label: ctT(unescH(o.k)) || tr('(unknown)','(chưa rõ)'),
-    rows:o.rows, val:o.n, txt:o.n+' '+tr('mach.','TB'), sub:tyT(o.v) })), '🌍');
+    rows:o.rows, val:o.n, txt:o.n+' '+tr('mach.','TB'), sub:dS('value') ? tyT(o.v) : '' })), '🌍');
   const ST = [['arrived',C.arrived],['overdue',C.overdue],['soon',C.soon],['waiting',C.waiting],['unknown',cssv('--st-done')]];
   hbars(anSite, groupRows(DATA,'noilapdat').sort((a,b)=>b.n-a.n || b.v-a.v).map(o=>({ label: unescH(o.k) || tr('(unknown)','(chưa rõ)'),
-    rows:o.rows, val:o.n, txt:o.n+' '+tr('mach.','TB'), sub:tyT(o.v),
+    rows:o.rows, val:o.n, txt:o.n+' '+tr('mach.','TB'), sub:dS('value') ? tyT(o.v) : '',
     segs: ST.map(([s,c])=>[o.rows.filter(x=>(x.status||'unknown')===s).length, c]) })), '📍');
   anSiteL.innerHTML = ST.filter(([s])=>DATA.some(x=>(x.status||'unknown')===s)).map(([s,c])=>`<span><i style="background:${c}"></i>${LBL[s]}</span>`).join('');
 }
@@ -2645,7 +2718,7 @@ function initMaps(){
     const mk = L.circleMarker(o.c,{radius:r,color:o.col,weight:2,fillColor:o.col,fillOpacity:.4}).addTo(mo);
     mk.bindTooltip(`${ctT(name)}: ${rows.length} ${tr('machines','thiết bị')}`,{direction:'top'});
     mk.bindPopup(`<div class="mp-title" style="color:${o.col}">🌍 ${ctT(name)}</div>
-      <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')} · ${VZ.money(v)}<br>${tr('Suppliers','NCC')}: ${nccs.join(', ')}</div>
+      <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')}${dS('value') ? ' · ' + VZ.money(v) : ''}${dS('ncc') ? `<br>${tr('Suppliers','NCC')}: ${nccs.join(', ')}` : ''}</div>
       <div class="mp-list">${rows.map(x=>`<div>${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
       {maxWidth:290});
     if(name!=='Việt Nam'){
@@ -2683,7 +2756,7 @@ function initMaps(){
     }
     mk.bindTooltip(`${ctT(name)}: ${rows.length} ${tr('machines','thiết bị')}`,{direction:'top'});
     mk.bindPopup(`<div class="mp-title">📍 ${name}</div>
-      <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')} · ${VZ.money(v)}</div>
+      <div class="mp-sub">${rows.length} ${tr('machines','thiết bị')}${dS('value') ? ' · ' + VZ.money(v) : ''}</div>
       <div class="mp-list">${rows.map(x=>`<div>${x.ten} <b style="color:${C[x.status]}">●</b></div>`).join('')}</div>`,
       {maxWidth:290});
     pts.push(coord);
@@ -2721,10 +2794,10 @@ function buildEval(){
   }).sort((a,b)=>b.score-a.score || b.ontime-a.ontime);
   const SEG = [['pOn','#2dd4bf',tr('On time','Không trễ'),W.ontime],['pMay','#7dd3fc',tr('Equipment count','Số thiết bị'),W.may],['pVal','#a78bfa',tr('Value','Giá trị'),W.val]];
   const okCol = p => p >= 1 ? 'var(--st-ok)' : p >= .8 ? 'var(--sky)' : p >= .5 ? 'var(--st-warn)' : 'var(--st-bad)';
-  picTable.innerHTML = `<table><thead><tr><th class="c">#</th><th class="l">${tr('Person in charge','Người phụ trách')}</th><th>${tr('Equipment','Thiết bị')}</th><th>${tr('Value','Giá trị')}</th>
+  picTable.innerHTML = `<table><thead><tr><th class="c">#</th><th class="l">${tr('Person in charge','Người phụ trách')}</th><th>${tr('Equipment','Thiết bị')}</th><th data-pd="value">${tr('Value','Giá trị')}</th>
       <th>${tr('On time','Không trễ')}</th><th>${tr('Late · pending','Trễ · chờ về')}</th><th>${tr('Score','Điểm')}</th></tr></thead><tbody>${scored.map((s,i)=>`
     <tr><td class="c">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</td><td class="nm">${s.n}</td>
-      <td>${s.total} ${tr('items','TB')} · ${s.units} ${tr('units','máy')}</td><td>${tyT(s.vnd)}</td>
+      <td>${s.total} ${tr('items','TB')} · ${s.units} ${tr('units','máy')}</td><td data-pd="value">${tyT(s.vnd)}</td>
       <td><span class="mini"><b style="color:${okCol(s.ontime)}">${Math.round(s.ontime*100)}%</b><span class="tr"><i style="width:${s.ontime*100}%;background:${okCol(s.ontime)}"></i></span></span></td>
       <td>${s.tre ? `<span class="pic-chip warn" data-kind="tre">🔴 ${s.tre}</span>` : `<span class="pic-chip good">✓ 0</span>`} <span class="pic-chip" data-kind="pend">⏳ ${s.pend}</span></td>
       <td><span class="mini" title="${SEG.map(([k,,l])=>l+': '+s[k].toFixed(1)).join(' · ')}"><b>${s.score.toFixed(0)}</b><span class="tr" style="flex-basis:110px">${SEG.map(([k,c])=>`<i style="width:${s[k]}%;background:${c}"></i>`).join('')}</span></span></td></tr>`).join('')}</tbody></table>`;
@@ -2920,7 +2993,7 @@ function plPicker(){
   const t = DM.todayIso(), ids = new Set(PL.hist.map(h => h.machine_id));
   const list = DATA.filter(x => ids.has(x._id)).sort((a, b) => ((b.vedukienn >= t) - (a.vedukienn >= t)) || String(a.vedukienn).localeCompare(String(b.vedukienn)));
   const row = x => { const on = PL.sel.includes(x._id), off = !on && PL.sel.length >= 8;
-    return `<label class="${off ? 'off' : ''}" data-q="${ovEsc((x.ten + ' ' + (x.ncc || '')).toLowerCase())}"><input type="checkbox" value="${x._id}"${on ? ' checked' : ''}${off ? ' disabled' : ''}>
+    return `<label class="${off ? 'off' : ''}" data-q="${ovEsc((x.ten + ' ' + (dS('ncc') && x.ncc || '')).toLowerCase())}"><input type="checkbox" value="${x._id}"${on ? ' checked' : ''}${off ? ' disabled' : ''}>
       <span>${ovEsc(x.ten)}<small>${DM.companyCode(x.noilapdat) || ovEsc(x.noilapdat)} · ${x.vedukienn >= t ? tr('forecast ', 'dự kiến ') : tr('arrived ', 'đã về ')}${dmD(x.vedukienn)}</small></span></label>`; };
   plPick.innerHTML = `<input type="search" placeholder="${tr('Search machine…', 'Tìm máy…')}">` + (list.map(row).join('') ||
     `<div class="dm-hint">${tr('No forecast history yet — it is recorded automatically each time the expected arrival date changes.', 'Chưa có lịch sử ngày dự kiến — app tự ghi lại mỗi lần đổi Ngày dự kiến về NM.')}</div>`);
@@ -3034,7 +3107,7 @@ function plDrawLook(){
         const tip = `${RS[it.status]}${it.due_date ? ' · ' + tr('due ', 'hạn ') + dmD(it.due_date) : ''}${it.owner ? ' · ' + it.owner : ''}${it.note ? ' · ' + it.note : ''}`;
         return canW ? `<button class="pl-chip ${it.status}${late ? ' late' : ''}" title="${ovEsc(tip)}" data-m="${o.x._id}" data-it="${it.item}" data-st="${it.status}">${RL[it.item]}</button>`
                     : `<span class="pl-chip ${it.status}${late ? ' late' : ''}" title="${ovEsc(tip)}">${RL[it.item]}</span>`; }).join('');
-      return `<div class="pl-m${o.red ? ' red' : ''}" data-mid="${o.x._id}"><div class="hd"><span class="nm" onclick="showDetail(${DATA.indexOf(o.x)})">${ovEsc(o.x.ten)}<small>${DM.companyCode(o.x.noilapdat) || ovEsc(o.x.noilapdat)} · ${ovEsc(o.x.phutrach) || '—'} · ${tr('at site ', 'về NM ')}${dmD(o.forecast)}</small></span>` +
+      return `<div class="pl-m${o.red ? ' red' : ''}" data-mid="${o.x._id}"><div class="hd"><span class="nm" onclick="showDetail(${DATA.indexOf(o.x)})">${ovEsc(o.x.ten)}<small>${DM.companyCode(o.x.noilapdat) || ovEsc(o.x.noilapdat)} · ${dS('person') ? (ovEsc(o.x.phutrach) || '—') + ' · ' : ''}${tr('at site ', 'về NM ')}${dmD(o.forecast)}</small></span>` +
         `<span class="dd" style="color:${o.red ? 'var(--st-bad)' : o.days <= 30 ? 'var(--st-warn)' : 'var(--muted)'}">${o.days === 0 ? tr('today', 'hôm nay') : tr('in ' + o.days + ' d', 'còn ' + o.days + ' ngày')}${o.red ? ' ⚠' : ''}</span>` +
         `<span style="font-size:11.5px;color:var(--muted)">${5 - o.open}/5</span>${canW ? `<button class="ed" title="${tr('Edit checklist', 'Sửa checklist')}" data-ed="${o.x._id}">✏️</button>` : ''}</div>` +
         `<div class="pl-chips">${chips}</div></div>`; }).join(''); }).join('');
@@ -3165,7 +3238,7 @@ function filtered(){
     (filter==='all' || (filter==='delay'? x.giaitrinh : INST_FILTERS.includes(filter) ? DM.matchStatus(x, filter) : x.status===filter)) &&
     (!loc || x.noilapdat===loc) && (!origin || x.xuatxu===origin) && (!pic || x.phutrach===pic) &&
     (!ptF || (ptF==='__miss' ? DM.missingTransit(x) : ptF==='__ok' ? ptNeedsOk(x) : x.hinh_thuc_mua===ptF)) &&
-    (!q || (x.ten+' '+x.ncc+' '+(x.thuong_hieu||'')+' '+(x.ma_may||'')).toLowerCase().includes(q)) &&
+    (!q || [dS('ten') && x.ten, dS('ncc') && x.ncc, dS('thuong_hieu') && x.thuong_hieu, dS('ma_may') && x.ma_may].filter(Boolean).join(' ').toLowerCase().includes(q)) &&   // không tìm trên trường bị ẩn
     DM.inPeriod(x.vedukienn, lMon, lYr));
   rows.sort((a,b)=>{
     if(sortKey==='__prio'){
@@ -3209,20 +3282,20 @@ function render(){
   const nPages = Math.max(1, Math.ceil(rows.length/PS));
   if(pageNo>nPages) pageNo = nPages;
   const view = rows.slice((pageNo-1)*PS, pageNo*PS);
-  const qw = !!window.__canWrite;
+  const qw = dW('quick');
   const alBy = new Map(((window.__MMTB || {}).machines || []).filter(c=>c.tracking_machine_id && c.alias_names).map(c=>[c.tracking_machine_id, window.__aliasTxt ? window.__aliasTxt(c.alias_names) : c.alias_names]));
   tb.innerHTML = view.map((x,i)=>`<tr class="${x.status!=='arrived'&&x.danhgia==='Trễ'?'late-flag':''} slide-in" data-mo="${x._id}" style="--i:${i};cursor:pointer" onclick="showDetail(${DATA.indexOf(x)})" title="${tr('Click to view full machine details','Bấm để xem đầy đủ thông tin thiết bị')}">
     ${qw ? `<td class="qu-c" onclick="event.stopPropagation()"><input type="checkbox" class="qu-ck" data-id="${x._id}"${QU_SEL.has(x._id)?' checked':''} aria-label="${tr('Select for quick update','Chọn để cập nhật nhanh')}"><button type="button" class="qu-btn" title="${tr('⚡ Quick update','⚡ Cập nhật nhanh')}" onclick="quickEdit(${DATA.indexOf(x)})">⚡</button></td>` : ''}
-    <td class="name">${x.ten}${alBy.get(x._id) ? `<small class="nm-alias" title="${escH(tr('Other names','Tên gọi khác'))}: ${escH(alBy.get(x._id))}">${escH(alBy.get(x._id))}</small>` : x.congsuat?`<small>${x.congsuat}</small>`:''}</td>
-    <td>${x.sl}</td><td>${x.noilapdat}</td><td>${thCell(x)}</td><td>${ctT(x.xuatxu)}${ptSub(x)}</td>
-    <td>${x.phutrach||'—'}</td>
-    <td class="money">${fmtM(x.vnd)} ₫${x.sl >= 2 && x.vnd ? `<small class="unit-p">${fmtM(x.vnd / x.sl)} ₫ / set</small>` : ''}</td>
-    <td class="money" style="color:var(--sky)">${fmtU(x.usd)}$${x.sl >= 2 && x.usd ? `<small class="unit-p">${fmtU(x.usd / x.sl)}$ / set</small>` : ''}</td>
-    <td class="dt">${fmtD(x.dathang)}</td><td class="dt">${fmtD(x.vekh)}</td><td class="dt"><b>${fmtD(x.vedukienn)}</b>${x.vedukienn ? (x.venm_tt ? `<small class="nm-kind tt">${tr('Arrived at plant','Đã về NM')}</small>` : `<small class="nm-kind">${tr('Expected at plant','Dự kiến về NM')}</small>`) : ''}</td>
-    <td>${stCell(x)}</td>
-    <td><span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}">${dgT(x.danhgia)}${x.giaitrinh?' 📝':''}</span></td></tr>`).join('');
+    <td class="name" data-pd="name">${x.ten}${alBy.get(x._id) ? `<small class="nm-alias" title="${escH(tr('Other names','Tên gọi khác'))}: ${escH(alBy.get(x._id))}">${escH(alBy.get(x._id))}</small>` : x.congsuat && dS('capacity')?`<small>${x.congsuat}</small>`:''}</td>
+    <td data-pd="qty">${x.sl}</td><td data-pd="location">${x.noilapdat}</td><td data-pd="supplier">${thCell(x)}</td><td data-pd="origin">${ctT(x.xuatxu)}${dS('purchase') ? ptSub(x) : ''}</td>
+    <td data-pd="person">${x.phutrach||'—'}</td>
+    <td class="money" data-pd="value">${fmtM(x.vnd)} ₫${x.sl >= 2 && x.vnd ? `<small class="unit-p">${fmtM(x.vnd / x.sl)} ₫ / set</small>` : ''}</td>
+    <td class="money" style="color:var(--sky)" data-pd="value">${fmtU(x.usd)}$${x.sl >= 2 && x.usd ? `<small class="unit-p">${fmtU(x.usd / x.sl)}$ / set</small>` : ''}</td>
+    <td class="dt" data-pd="dates">${fmtD(x.dathang)}</td><td class="dt" data-pd="dates">${fmtD(x.vekh)}</td><td class="dt" data-pd="dates"><b>${fmtD(x.vedukienn)}</b>${x.vedukienn ? (x.venm_tt ? `<small class="nm-kind tt">${tr('Arrived at plant','Đã về NM')}</small>` : `<small class="nm-kind">${tr('Expected at plant','Dự kiến về NM')}</small>`) : ''}</td>
+    <td data-pd="status">${stCell(x)}</td>
+    <td data-pd="status"><span class="badge dg-${x.danhgia==='Trễ'?'tre':x.danhgia==='Sớm'?'som':'dung'}">${dgT(x.danhgia)}${x.giaitrinh && dS('notes')?' 📝':''}</span></td></tr>`).join('');
   const val = rows.reduce((s,x)=>s+x.vnd,0), usd = rows.reduce((s,x)=>s+x.usd,0);
-  cnt.textContent = `${rows.length} ${tr('machines','thiết bị')} · ${tr('Total','Tổng')}: ${VZ.money(val)} ≈ ${VZ.money(usd, 'USD')} · ${tr('Page','Trang')} ${pageNo}/${nPages}`;
+  cnt.textContent = `${rows.length} ${tr('machines','thiết bị')} · ${dS('value') ? `${tr('Total','Tổng')}: ${VZ.money(val)} ≈ ${VZ.money(usd, 'USD')} · ` : ''}${tr('Page','Trang')} ${pageNo}/${nPages}`;
   // pager
   let html = `<button class="pbtn" ${pageNo===1?'disabled':''} onclick="goPage(${pageNo-1})">‹</button>`;
   for(let i=1;i<=nPages;i++){
@@ -3246,7 +3319,7 @@ window.showKPI = kind => {
     mTitle.textContent = T.commissioning + ' · ' + tr('all periods','mọi kỳ');
     mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${dmN(K.installing)} ${tr('installing','đang lắp đặt')} · 🧪 ${dmN(K.testing)} ${tr('testing','đang thử nghiệm')} · ⏰ ${dmN(K.waitInstall)} ${tr(`not installed > ${K.waitDays} days`,`chưa lắp đặt quá ${K.waitDays} ngày`)} · ⚠ ${dmN(K.lateAccept)} ${tr('late commissioning','trễ nghiệm thu')}`;
     mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(({x, s})=>`<div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
-      <span class="kn">${ovEsc(unescH(x.ten))}<small>${ovEsc(unescH(x.phutrach))||'—'} · ${DM.companyCode(x.noilapdat)||ovEsc(unescH(x.noilapdat))} · ${ovEsc(unescH(x.ncc))||'—'}</small></span>
+      <span class="kn">${ovEsc(unescH(x.ten))}<small>${dSub(x)}</small></span>
       <span class="kv">${tr('At plant','Về NM')} ${dmD(x.venm_tt)} · ${tr('Commissioning plan','NT KH')} ${dmD(x.nghiemthu_kh)}<br>${stCell(x)}</span></div>`).join('')}</div>`
       : `<div class="m-ok">${tr('No machines waiting for commissioning.','Không có máy nào chờ nghiệm thu.')}</div>`;
     openM(); return;
@@ -3254,14 +3327,14 @@ window.showKPI = kind => {
   const rows = [...K.rows].sort((a,b) => ((DM.delay(b)||{days:0}).days - (DM.delay(a)||{days:0}).days) || String(a.vedukienn).localeCompare(String(b.vedukienn)));
   const vnd = rows.reduce((s,x)=>s+(+x.vnd||0),0), units = rows.reduce((s,x)=>s+x.sl,0);
   mTitle.textContent = T[kind] + ' · ' + ovLabel();
-  mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')} · ${dmN(vnd)} ₫`;
+  mSub.innerHTML = `${rows.length} ${tr('machines','thiết bị')} · ${units} ${tr('units','máy')}${dS('value') ? ` · ${dmN(vnd)} ₫` : ''}`;
   mBody.innerHTML = rows.length ? `<div class="k-list">${rows.map(x=>{
     const d = DM.delay(x), sev = DM.severity(x);
     const a = DM.milestones(x)[2];
     const tag = sev==='done' ? (a.planned && a.actual > a.planned ? tr('arrived ','về trễ ')+'+'+DM.days(a.planned,a.actual)+tr(' d',' ngày') : OV_LC.arrived)
               : d ? '+'+d.days+tr(' d late',' ngày trễ') : tr('on schedule','đúng tiến độ');
     return `<div class="k-row" onclick="showDetail(${DATA.indexOf(x)})">
-      <span class="kn">${ovEsc(x.ten)}${x.sl>=2?` <b style="color:var(--sky)">(x${x.sl})</b>`:''}<small>${ovEsc(x.phutrach)||'—'} · ${DM.companyCode(x.noilapdat)||ovEsc(x.noilapdat)} · ${ovEsc(x.ncc)||'—'}</small></span>
+      <span class="kn">${ovEsc(x.ten)}${x.sl>=2?` <b style="color:var(--sky)">(x${x.sl})</b>`:''}<small>${dSub(x)}</small></span>
       <span class="kv">${tr('Plan','KH')} ${dmD(a.planned)} · ${a.actual?tr('Actual','Thực tế'):tr('Forecast','Dự kiến')} ${dmD(a.actual||a.forecast)}<br>
         <span class="sev sev-${sev}" style="font-size:11px;padding:1px 8px">${tag}</span> <span style="font-size:11px">${OV_LC[DM.lifecycle(x)]}</span></span>
     </div>`;}).join('')}</div>`
@@ -3288,85 +3361,86 @@ window.showDetail = i => {
   const Dy = v => (v===null||v===undefined||v==='') ? '—' : Number(v).toLocaleString(NUMLOC)+tr(' days',' ngày');
   const dgColor = x.danhgia==='Trễ'?'var(--red)':x.danhgia==='Sớm'?'var(--green)':x.danhgia==='Đúng tiến độ'?'var(--blue)':'var(--muted)';
   const it = (k,v,cls='') => `<div class="dt-i ${cls}"><span class="dt-k">${k}</span><span class="dt-v">${v}</span></div>`;
-  const sec = (title,items) => `<div class="dt-sec"><h5>${title}</h5><div class="dt-grid">${items.join('')}</div></div>`;
+  const ig = (g,k,v,cls) => dS(g) ? it(k,v,cls) : '';      // phân quyền trường: chỉ mục người dùng được xem
+  const sec = (title,items) => items.join('') ? `<div class="dt-sec"><h5>${title}</h5><div class="dt-grid">${items.join('')}</div></div>` : '';   // mọi mục bị ẩn → bỏ cả nhóm
   const ctm = x.sonagyctm ?? x.sonagytm;
   const ins = DM.installStatus(x);
 
-  mTitle.textContent = (x.ma_may ? x.ma_may + ' · ' : '') + unescH(x.ten);
-  mSub.innerHTML = `<span class="badge b-${INST_STAGE(ins) ? ins.stage : x.status}" style="font-size:10.5px;padding:2px 8px">${INST_STAGE(ins) ? ILBL[ins.stage] : LBL[x.status]||tr('Unknown','Chưa xác định')}</span>
+  mTitle.textContent = [dS('code') && x.ma_may, dS('name') && unescH(x.ten)].filter(Boolean).join(' · ');
+  mSub.innerHTML = (!dS('status') ? '' : `<span class="badge b-${INST_STAGE(ins) ? ins.stage : x.status}" style="font-size:10.5px;padding:2px 8px">${INST_STAGE(ins) ? ILBL[ins.stage] : LBL[x.status]||tr('Unknown','Chưa xác định')}</span>
     &nbsp;${tr('Rating','Đánh giá')}: <b style="color:${dgColor}">${dgT(x.danhgia)}</b>
-    &nbsp;·&nbsp; ${x.daysleft==null ? tr('no arrival date yet','chưa có ngày về')
+    &nbsp;·&nbsp; `) + (!dS('dates') ? '' : `${x.daysleft==null ? tr('no arrival date yet','chưa có ngày về')
       : x.status==='arrived' ? tr(`arrived ${Math.abs(x.daysleft)} days ago`,`đã về ${Math.abs(x.daysleft)} ngày trước`)
       : x.status==='overdue' ? tr(`${Math.abs(x.daysleft)} days past the expected date — arrival not confirmed`,`quá ngày dự kiến ${Math.abs(x.daysleft)} ngày — chưa xác nhận đã về`)
-      : tr(`${x.daysleft} days to go`,`còn ${x.daysleft} ngày`)}`;
+      : tr(`${x.daysleft} days to go`,`còn ${x.daysleft} ngày`)}`);
 
   mBody.innerHTML = `<div class="dt-wrap">
-    ${msTrack(x)}
+    ${dS('dates') ? msTrack(x) : ''}
     ${sec(tr('General','Thông tin chung'),[
-      it(tr('Machine code','Mã máy'), x.ma_may ? `<b>${T(x.ma_may)}</b>` + (x.venm_tt ? '' : `<br><small style="color:var(--st-over)">⚠ ${MC_LOST()}</small>`)
+      ig('code', tr('Machine code','Mã máy'), x.ma_may ? `<b>${T(x.ma_may)}</b>` + (x.venm_tt ? '' : `<br><small style="color:var(--st-over)">⚠ ${MC_LOST()}</small>`)
         : `<span style="color:var(--muted)">${x.venm_tt ? tr('Not assigned yet (admin: 🏷 Assign machine codes)','Chưa cấp (admin: 🏷 Cấp mã máy)') : tr('— assigned when the machine arrives at the plant','— cấp khi máy về NM')}</span>`),
-      it(tr('Machine name','Tên máy'), T(x.ten),'full'),
-      it(tr('Person in charge','Người phụ trách'), T(x.phutrach)),
-      it(tr('Quantity','Số lượng'), N(x.sl)),
-      it(tr('Capacity','Công suất'), T(x.congsuat)),
-      it(tr('Installation site','Nơi lắp đặt'), T(x.noilapdat)),
-      ...(x._th ? [it(tr('Brand','Thương hiệu'), T(x.thuong_hieu))] : []),
-      it(tr('Supplier','Nhà cung cấp'), T(x.ncc)),
-      it(tr('Origin','Xuất xứ'), T(ctT(x.xuatxu))),
-      ...(x._pt ? [it(tr('Purchase type','Hình thức mua'), (PT_LBL[x.hinh_thuc_mua] || tr('Not chosen','Chưa chọn'))
+      ig('name', tr('Machine name','Tên máy'), T(x.ten),'full'),
+      ig('person', tr('Person in charge','Người phụ trách'), T(x.phutrach)),
+      ig('qty', tr('Quantity','Số lượng'), N(x.sl)),
+      ig('capacity', tr('Capacity','Công suất'), T(x.congsuat)),
+      ig('location', tr('Installation site','Nơi lắp đặt'), T(x.noilapdat)),
+      ...(x._th ? [ig('supplier', tr('Brand','Thương hiệu'), T(x.thuong_hieu))] : []),
+      ig('supplier', tr('Supplier','Nhà cung cấp'), T(x.ncc)),
+      ig('origin', tr('Origin','Xuất xứ'), T(ctT(x.xuatxu))),
+      ...(x._pt ? [ig('purchase', tr('Purchase type','Hình thức mua'), (PT_LBL[x.hinh_thuc_mua] || tr('Not chosen','Chưa chọn'))
         + (ptNeedsOk(x) ? ` <span class="badge sm b-wait_install">❓ ${tr('Needs confirming','Cần xác nhận')}</span>` : '')
         + (DM.missingTransit(x) ? `<small class="pt-sub w">${PT_MISS()}</small>` : ''))] : []),
-      it('Model', T(x.model)),
-      it(tr('Serial number','Số serial'), T(x.serial))])}
+      ig('model', 'Model', T(x.model)),
+      ig('model', tr('Serial number','Số serial'), T(x.serial))])}
     ${sec(tr('Value','Giá trị'),[
-      it(tr('Total value (VND)','Tổng giá trị (VNĐ)'), (x.vnd ? x.vnd.toLocaleString(NUMLOC)+' ₫' : '—') + (x.sl >= 2 && x.vnd ? `<small class="unit-p">${tr('per set','đơn giá 1 set')}: ${Math.round(x.vnd / x.sl).toLocaleString(NUMLOC)} ₫${x.usd ? ' · $' + Math.round(x.usd / x.sl).toLocaleString('en-US') : ''}</small>` : ''),'hl'),
-      it(tr('Total value (USD)','Tổng giá trị (USD)'), x.usd ? x.usd.toLocaleString('en-US')+' $' : '—','hl')])}
+      ig('value', tr('Total value (VND)','Tổng giá trị (VNĐ)'), (x.vnd ? x.vnd.toLocaleString(NUMLOC)+' ₫' : '—') + (x.sl >= 2 && x.vnd ? `<small class="unit-p">${tr('per set','đơn giá 1 set')}: ${Math.round(x.vnd / x.sl).toLocaleString(NUMLOC)} ₫${x.usd ? ' · $' + Math.round(x.usd / x.sl).toLocaleString('en-US') : ''}</small>` : ''),'hl'),
+      ig('value', tr('Total value (USD)','Tổng giá trị (USD)'), x.usd ? x.usd.toLocaleString('en-US')+' $' : '—','hl')])}
     ${sec(tr('Planned schedule','Tiến độ theo kế hoạch (KH)'),[
-      it(tr('Proposal approval date','Ngày duyệt ĐXĐT'), fmtD(x.duyet)),
-      it(tr('Order date','Ngày đặt hàng'), fmtD(x.dathang)),
-      it(tr('Advance-payment wait (plan)','TG chờ tạm ứng KH'), Dy(x.ctu)),
-      it(tr('Shipping time (plan)','TG đi tàu KH'), Dy(x.ditaukh)),
-      it(tr('Clearance & pickup (plan)','TG lãnh máy KH'), Dy(x.lanhkh)),
-      it(tr('Manufacturing days (CTM)','Số ngày chế tạo máy (CTM)'), Dy(ctm)),
-      it('Working day', T(x.workingday)),
-      it(tr('Planned arrival date','Ngày dự kiến máy về (KH)'), `<b>${fmtD(x.vekh)}</b>`,'hl')])}
+      ig('dates', tr('Proposal approval date','Ngày duyệt ĐXĐT'), fmtD(x.duyet)),
+      ig('dates', tr('Order date','Ngày đặt hàng'), fmtD(x.dathang)),
+      ig('dates', tr('Advance-payment wait (plan)','TG chờ tạm ứng KH'), Dy(x.ctu)),
+      ig('dates', tr('Shipping time (plan)','TG đi tàu KH'), Dy(x.ditaukh)),
+      ig('dates', tr('Clearance & pickup (plan)','TG lãnh máy KH'), Dy(x.lanhkh)),
+      ig('dates', tr('Manufacturing days (CTM)','Số ngày chế tạo máy (CTM)'), Dy(ctm)),
+      ig('dates', 'Working day', T(x.workingday)),
+      ig('dates', tr('Planned arrival date','Ngày dự kiến máy về (KH)'), `<b>${fmtD(x.vekh)}</b>`,'hl')])}
     ${sec(tr('Actual schedule','Tiến độ thực tế (TT)'),[
-      it(tr('Advance-payment date (actual)','Ngày tạm ứng TT'), fmtD(x.tamungtt)),
-      it(tr('Confirmed/expected ex-works','Xác nhận/dự kiến xuất xưởng'), fmtD(x.xuatxuong)),
-      it(tr('Vessel departure (actual)','Ngày tàu chạy TT'), fmtD(x.tauchay_tt)),
-      it(tr('Port arrival (actual)','Ngày cập cảng TT'), fmtD(x.capcang_tt)),
-      it(tr('Arrival at plant (actual)','Ngày máy về NM TT'), fmtD(x.venm_tt)),
-      it(tr('Shipping time (actual)','TG đi tàu TT'), Dy(x.ditautt)),
-      it(tr('Clearance & pickup (actual)','TG lãnh máy TT'), Dy(x.lanhtt)),
-      it(x.venm_tt ? tr('Arrived at plant','Đã về NM') : tr('Expected at plant','Dự kiến về NM'), `<b>${fmtD(x.vedukienn)}</b>`,'hl'),
-      it(tr('Rating','Đánh giá'), `<b style="color:${dgColor}">${dgT(x.danhgia)}</b>`,'hl')])}
+      ig('dates', tr('Advance-payment date (actual)','Ngày tạm ứng TT'), fmtD(x.tamungtt)),
+      ig('dates', tr('Confirmed/expected ex-works','Xác nhận/dự kiến xuất xưởng'), fmtD(x.xuatxuong)),
+      ig('dates', tr('Vessel departure (actual)','Ngày tàu chạy TT'), fmtD(x.tauchay_tt)),
+      ig('dates', tr('Port arrival (actual)','Ngày cập cảng TT'), fmtD(x.capcang_tt)),
+      ig('dates', tr('Arrival at plant (actual)','Ngày máy về NM TT'), fmtD(x.venm_tt)),
+      ig('dates', tr('Shipping time (actual)','TG đi tàu TT'), Dy(x.ditautt)),
+      ig('dates', tr('Clearance & pickup (actual)','TG lãnh máy TT'), Dy(x.lanhtt)),
+      ig('dates', x.venm_tt ? tr('Arrived at plant','Đã về NM') : tr('Expected at plant','Dự kiến về NM'), `<b>${fmtD(x.vedukienn)}</b>`,'hl'),
+      ig('status', tr('Rating','Đánh giá'), `<b style="color:${dgColor}">${dgT(x.danhgia)}</b>`,'hl')])}
     ${sec(tr('Installation – Commissioning','Lắp đặt – Nghiệm thu'),[
-      it(tr('Status','Trạng thái'), ins.stage ? stCell(x)
+      ig('status', tr('Status','Trạng thái'), ins.stage ? stCell(x)
         : `<span style="color:var(--muted)">${tr('— tracked after the machine arrives at the plant','— theo dõi sau khi máy về NM')}</span>` + (ins.lost ? `<br><small style="color:var(--st-over)">⚠ ${INST_LOST()}</small>` : ''), 'full'),
-      it(tr('Commissioning, plan','Ngày nghiệm thu KH'), fmtD(x.nghiemthu_kh)),
-      it(tr('Installation start (actual)','Ngày bắt đầu lắp đặt TT'), fmtD(x.lapdat_tt)),
-      it(tr('Test run (actual)','Ngày chạy thử TT'), fmtD(x.chaythu_tt) + (ins.trialPlan ? ` <small style="color:var(--muted)">${tr('(planned — after today)','(kế hoạch — sau hôm nay)')}</small>` : '')),
-      it(tr('Commissioning (actual)','Ngày nghiệm thu TT'), `<b>${fmtD(x.nghiemthu_tt)}</b>`,'hl'),
-      it(ins.open ? tr('Waiting for installation (so far)','Đã chờ lắp đặt (tới hôm nay)') : tr('Waiting for installation','Số ngày chờ lắp đặt'), Dy(ins.waitDays)),
-      it(tr('Installation → commissioning','Lắp đặt → nghiệm thu'), Dy(ins.installDays)),
-      it(tr('Arrival at plant → commissioning','Về NM → nghiệm thu'), Dy(ins.toAcceptDays),'hl'),
-      it(tr('Commissioning delay vs plan','Trễ nghiệm thu so với KH'), ins.acceptDelay != null
+      ig('dates', tr('Commissioning, plan','Ngày nghiệm thu KH'), fmtD(x.nghiemthu_kh)),
+      ig('dates', tr('Installation start (actual)','Ngày bắt đầu lắp đặt TT'), fmtD(x.lapdat_tt)),
+      ig('dates', tr('Test run (actual)','Ngày chạy thử TT'), fmtD(x.chaythu_tt) + (ins.trialPlan ? ` <small style="color:var(--muted)">${tr('(planned — after today)','(kế hoạch — sau hôm nay)')}</small>` : '')),
+      ig('dates', tr('Commissioning (actual)','Ngày nghiệm thu TT'), `<b>${fmtD(x.nghiemthu_tt)}</b>`,'hl'),
+      ig('dates', ins.open ? tr('Waiting for installation (so far)','Đã chờ lắp đặt (tới hôm nay)') : tr('Waiting for installation','Số ngày chờ lắp đặt'), Dy(ins.waitDays)),
+      ig('dates', tr('Installation → commissioning','Lắp đặt → nghiệm thu'), Dy(ins.installDays)),
+      ig('dates', tr('Arrival at plant → commissioning','Về NM → nghiệm thu'), Dy(ins.toAcceptDays),'hl'),
+      ig('dates', tr('Commissioning delay vs plan','Trễ nghiệm thu so với KH'), ins.acceptDelay != null
         ? `<b style="color:${ins.acceptDelay > 0 ? 'var(--red)' : 'var(--green)'}">${ins.acceptDelay > 0 ? '+' : ''}${Dy(ins.acceptDelay)}</b>`
         : ins.lateAccept ? `<b style="color:var(--red)">+${Dy(ins.lateDays)}</b> <small>${tr('(not yet commissioned)','(chưa nghiệm thu)')}</small>` : '—','hl')])}
-    ${x.ghichu_ld ? `<div class="dt-sec"><h5>${tr('Installation note','Ghi chú lắp đặt')}</h5><div class="m-gt" style="white-space:pre-wrap">${x.ghichu_ld}</div></div>` : ''}
+    ${x.ghichu_ld && dS('notes') ? `<div class="dt-sec"><h5>${tr('Installation note','Ghi chú lắp đặt')}</h5><div class="m-gt" style="white-space:pre-wrap">${x.ghichu_ld}</div></div>` : ''}
     ${csBlock(x)}
-    <div class="dt-sec"><h5>${tr(`Delay note`,`Giải trình`)}</h5>
+    ${!dS('notes') ? '' : `<div class="dt-sec"><h5>${tr(`Delay note`,`Giải trình`)}</h5>
       ${x.giaitrinh
         ? `<div class="m-gt">⚠️ ${x.giaitrinh}</div>`
         : `<div class="m-ok">✅ ${tr(`No delay note.`,`Không có giải trình.`)}</div>`}
-    </div>
+    </div>`}
     <div class="dt-actions">
       <button class="nbtn2 ghost" onclick="showHistory(${i})">${tr(`🕘 History`,`🕘 Lịch sử`)}</button>
-      ${window.__role !== 'viewer' ? `<button class="nbtn2 ghost" onclick="showPayments(${i})">${tr(`💳 Payments`,`💳 Thanh toán`)}</button>` : ''}
-      ${window.__canWrite ? `<button class="nbtn2 ghost" onclick="askDelete(${i})">${tr(`🗑 Delete machine`,`🗑 Xoá máy`)}</button>
-      <button class="nbtn2 ghost" onclick="quickEdit(${i})">${tr(`⚡ Quick update`,`⚡ Cập nhật nhanh`)}</button>
-      <button class="nbtn2 ghost" onclick="cloneMachine(${i})" title="${tr('Add a new machine pre-filled from this one','Thêm máy mới, điền sẵn từ máy này')}">${tr(`📋 Clone`,`📋 Nhân bản`)}</button>
-      <button class="nbtn2" onclick="editMachine(${i})">${tr(`✏️ Edit`,`✏️ Sửa thông tin`)}</button>` : ''}</div>
+      ${PERM.act('delivery','payment') && dS('value') ? `<button class="nbtn2 ghost" onclick="showPayments(${i})">${tr(`💳 Payments`,`💳 Thanh toán`)}</button>` : ''}
+      ${dW('delete') ? `<button class="nbtn2 ghost" onclick="askDelete(${i})">${tr(`🗑 Delete machine`,`🗑 Xoá máy`)}</button>` : ''}
+      ${dW('quick') ? `<button class="nbtn2 ghost" onclick="quickEdit(${i})">${tr(`⚡ Quick update`,`⚡ Cập nhật nhanh`)}</button>` : ''}
+      ${dW('clone') ? `<button class="nbtn2 ghost" onclick="cloneMachine(${i})" title="${tr('Add a new machine pre-filled from this one','Thêm máy mới, điền sẵn từ máy này')}">${tr(`📋 Clone`,`📋 Nhân bản`)}</button>` : ''}
+      ${dW('edit') ? `<button class="nbtn2" onclick="editMachine(${i})">${tr(`✏️ Edit`,`✏️ Sửa thông tin`)}</button>` : ''}</div>
     <div class="dt-note">${tr(`Planned arrival date = Order date + advance-payment wait (plan) + shipping time (plan) + clearance &amp; pickup (plan) + manufacturing days (CTM).<br>
     Expected arrival at plant = Confirmed/expected ex-works + shipping time (actual) + clearance &amp; pickup (actual).`,`Ngày dự kiến máy về (KH) = Ngày đặt hàng + TG chờ tạm ứng KH + TG đi tàu KH + TG lãnh máy KH + Số ngày chế tạo máy (CTM).<br>
     Ngày dự kiến máy về NM = Xác nhận/dự kiến xuất xưởng + TG đi tàu TT + TG lãnh máy TT.`)}</div>
@@ -3376,7 +3450,7 @@ window.showDetail = i => {
 window.showGT = i => {
   const x = DATA[i];
   mTitle.textContent = x.ten;
-  mSub.innerHTML = `${x.phutrach||'—'} · ${x.noilapdat} · ${x.ncc} · ${x.venm_tt ? tr('Arrived at plant','Đã về NM') : tr('Expected at plant','Dự kiến về NM')}: <b>${fmtD(x.vedukienn)}</b> (${tr('plan','KH')}: ${fmtD(x.vekh)}) · ${tr('Rating','Đánh giá')}: <b style="color:${x.danhgia==='Trễ'?'var(--red)':x.danhgia==='Sớm'?'var(--green)':'var(--blue)'}">${dgT(x.danhgia)}</b>`;
+  mSub.innerHTML = `${dS('person') ? (x.phutrach||'—') + ' · ' : ''}${x.noilapdat} · ${dS('ncc') ? x.ncc + ' · ' : ''}${x.venm_tt ? tr('Arrived at plant','Đã về NM') : tr('Expected at plant','Dự kiến về NM')}: <b>${fmtD(x.vedukienn)}</b> (${tr('plan','KH')}: ${fmtD(x.vekh)}) · ${tr('Rating','Đánh giá')}: <b style="color:${x.danhgia==='Trễ'?'var(--red)':x.danhgia==='Sớm'?'var(--green)':'var(--blue)'}">${dgT(x.danhgia)}</b>`;
   mBody.innerHTML = x.giaitrinh
     ? `<div class="m-gt">⚠️ <b>${tr(`Delay note:`,`Giải trình:`)}</b>\n${x.giaitrinh}</div>`
     : `<div class="m-ok">✅ ${tr(`No delay note — the machine ${x.danhgia==='Trễ'?'is late but has no note yet':'is on schedule'}.`,`Không có giải trình — thiết bị ${x.danhgia==='Trễ'?'trễ nhưng chưa có ghi chú':'theo tiến độ'}.`)}</div>`;
@@ -3503,6 +3577,11 @@ async function saveMachine(m, editId){
   const sb = window.__sb; if(!sb) throw {code:'nodb'};
   window.__selfWriting = true;
   const cur = editId ? DATA.find(x=>x._id===editId) : null;
+  // phân quyền trường: trường không được sửa lấy giá trị cũ (máy mới: bỏ). Hình thức mua / loại tiền không mã hoá → bỏ hẳn (không gửi = giữ, không "xác nhận")
+  if(!PERM.isAdmin()){
+    m = permKeep('delivery', Object.assign({}, m), cur ? (k => typeof cur[k] === 'string' ? unescH(cur[k]) : cur[k]) : null, dEdRow);
+    ['hinh_thuc_mua','gia_tien_te'].forEach(k=>{ if(!dE(k)) delete m[k]; });
+  }
   const r0 = toRow(m);
   // cột của migration 09 chỉ gửi khi có giá trị (cơ sở dữ liệu chưa chạy 09 vẫn lưu được máy).
   // ghichu_ld: giữ ghi chú đang có — sec được mã hoá lại cả gói, thiếu trường là mất ghi chú
@@ -3653,8 +3732,9 @@ function quDiff(x,f,batch){
     if(batch){ if(v!=='' && v!==(cur||'')) ch[k] = v; }
     else if(v!==(cur||'')) ch[k] = QU_TEXT.includes(k) ? v : (v||null);
   });
+  Object.keys(ch).forEach(k=>{ if(!dE(k)) delete ch[k]; });      // phân quyền trường: ô không được sửa không bao giờ ghi (kể cả ép DOM)
   if(!quArrived(x,ch)) QU_LD.forEach(k=>{ delete ch[k]; });
-  if('hinh_thuc_mua' in f){       // chỉ ghi khi có chọn: chọn lại đúng giá trị đang có = xác nhận gợi ý
+  if('hinh_thuc_mua' in f && dE('hinh_thuc_mua')){       // chỉ ghi khi có chọn: chọn lại đúng giá trị đang có = xác nhận gợi ý
     const v = f.hinh_thuc_mua;
     if(v && (v!==x.hinh_thuc_mua || x.hinh_thuc_can_xn)) ch.hinh_thuc_mua = v;
     if(batch && (v||x.hinh_thuc_mua)==='domestic') QU_PORT.forEach(k=>{ delete ch[k]; });
@@ -3746,6 +3826,7 @@ function quForm(list, keep){
     <div class="add-actions"><button type="button" class="nbtn2 ghost" id="quCancel">${tr('Cancel','Huỷ')}</button>
       <button type="submit" class="nbtn2" id="quSave">${batch ? tr('Review changes →','Xem lại thay đổi →') : tr('💾 Save','💾 Lưu')}</button></div></form>`;
   openM(batch);
+  permForm('delivery', [['qu_hinh_thuc_mua','purchase']].concat(QU_KEYS.map(k=>['qu_' + k, k])), false);   // quyền trường: ẩn / khoá ô (quDiff cũng bỏ ô khoá)
   const fp = {};
   const ptSel = quEl('qu_hinh_thuc_mua');
   // máy đang là gợi ý chưa xác nhận: để trống, người dùng phải tự chọn thì mới tính là xác nhận
@@ -3901,9 +3982,10 @@ function acExport(rows){
   const loc = s => { const [y,m,d] = s.slice(0,10).split('-').map(Number); return new Date(y, m-1, d); };
   const aoa = [[tr('Machine','Tên hạng mục'), tr('Installation site','Nơi lắp đặt'), tr('Supplier','NCC'), tr('Expected at plant','Ngày dự kiến về NM'), tr('Days past','Số ngày đã qua')]]
     .concat(rows.map(x=>[unescH(x.ten).trim(), unescH(x.noilapdat).trim(), unescH(x.ncc).trim(), loc(x.vedukienn), acPast(x)]));
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{wch:42},{wch:14},{wch:26},{wch:16},{wch:12}];
-  for(let r=1; r<aoa.length; r++){ const c = ws[XLSX.utils.encode_cell({r, c:3})]; if(c) c.z = 'dd/mm/yyyy'; }
+  const A = supCol(aoa, 2), dc = dS('supplier') ? 3 : 2;
+  const ws = XLSX.utils.aoa_to_sheet(A);
+  ws['!cols'] = supCol([[{wch:42},{wch:14},{wch:26},{wch:16},{wch:12}]], 2)[0];
+  for(let r=1; r<A.length; r++){ const c = ws[XLSX.utils.encode_cell({r, c:dc})]; if(c) c.z = 'dd/mm/yyyy'; }
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'RaSoat');
   const fn = `RaSoat_MayVe_ChuaXacNhan_${DM.todayIso()}.xlsx`; XLSX.writeFile(wb, fn); return fn;
 }
@@ -3912,7 +3994,7 @@ function acDraw(){
   const rows = acRows(), t = DM.todayIso();
   quEl('acBody').innerHTML = rows.map(x=>`<tr class="${AC.sel.has(x._id)?'on':''}" data-id="${x._id}">
       <td><input type="checkbox" class="acc" data-id="${x._id}"${AC.sel.has(x._id)?' checked':''} aria-label="${tr('Confirm','Xác nhận')}"></td>
-      <td class="m">${x.ten}</td><td>${x.noilapdat||'—'}</td><td>${x.ncc||'—'}</td>
+      <td class="m">${x.ten}</td><td>${x.noilapdat||'—'}</td><td data-pd="supplier">${x.ncc||'—'}</td>
       <td>${fmtD(x.vedukienn)}</td><td class="n">${acPast(x)} ${tr('d','ngày')}</td>
       <td><input class="acd" id="acd_${x._id}" value="${AC.date[x._id]||x.vedukienn}"></td>
       <td id="acr_${x._id}">${acRateCell(x)}</td></tr>`).join('')
@@ -3929,8 +4011,11 @@ function acCount(){
   quEl('acSave').disabled = !n;
   quEl('acSave').textContent = tr(`💾 Save ${n} machine(s)`,`💾 Lưu ${n} máy`);
 }
+/* bảng duyệt / file xuất của ✅ Xác nhận về và 🏷 Gán mã: bỏ cột NCC (cột thứ i) khi không được xem nhóm supplier */
+const supCol = (aoa, i) => dS('supplier') ? aoa : aoa.map(r => r.filter((_, j) => j !== i));
+const canGate = a => window.__role === 'admin' || (window.__perms != null && PERM.act('delivery', a));
 window.acOpen = () => {
-  if(window.__role !== 'admin') return;
+  if(!canGate('confirm')) return;
   const all = acAll();
   AC.sel = new Set([...AC.sel].filter(id=>all.some(x=>x._id===id)));
   mTitle.textContent = tr(`✅ Confirm arrival at plant (${all.length} overdue)`, `✅ Xác nhận ngày về NM (${all.length} máy quá hạn)`);
@@ -3945,7 +4030,7 @@ window.acOpen = () => {
       <button type="button" class="nbtn2 ghost" id="acAllB">${tr('Select all shown','Chọn tất cả đang hiện')}</button>
       <button type="button" class="nbtn2 ghost" id="acNone">${tr('Clear','Bỏ chọn')}</button>
       <button type="button" class="nbtn2 ghost" id="acXls">⬇️ ${tr('Export review list','Xuất danh sách rà soát')}</button></div>
-    <div class="qu-tbl ac-tbl"><table><thead><tr><th></th><th>${tr('Machine','Máy')}</th><th>${tr('Site','Nơi lắp đặt')}</th><th>${tr('Supplier','NCC')}</th>
+    <div class="qu-tbl ac-tbl"><table><thead><tr><th></th><th>${tr('Machine','Máy')}</th><th>${tr('Site','Nơi lắp đặt')}</th><th data-pd="supplier">${tr('Supplier','NCC')}</th>
       <th>${tr('Expected at plant','Dự kiến về NM')}</th><th>${tr('Past','Đã qua')}</th><th>${tr('Arrival at plant (actual)','Ngày máy về NM TT')}</th>
       <th>${tr('Rating: old → new','Đánh giá: cũ → mới')}</th></tr></thead><tbody id="acBody"></tbody></table></div>
     <div id="quMsg" style="min-height:1.2em;font-size:13px;margin-bottom:8px"></div>
@@ -3997,7 +4082,7 @@ async function acRun(plan){
       <button type="button" class="nbtn2" onclick="mBg.classList.remove('show')">${tr('Close','Đóng')}</button></div>`;
   if(!bad) quToast(tr(`✅ Confirmed ${ok} machine(s)`,`✅ Đã xác nhận ${ok} máy`));
 }
-if(window.__role === 'admin') quEl('btnAc').hidden = false;
+if(canGate('confirm')) quEl('btnAc').hidden = false;
 /* 🔗 Tiến độ ↔ Danh mục (admin): số máy chờ đồng bộ hiện trên nút */
 if(window.__role === 'admin' && window.CS){
   quEl('btnCs').hidden = false;
@@ -4057,12 +4142,13 @@ function mcExport(){
   const od = [[tr('Machine','Tên hạng mục'), tr('Installation site','Nơi lắp đặt'), tr('Supplier','NCC'), tr('Expected arrival at plant','Ngày dự kiến về NM'), tr('Days overdue','Số ngày quá hạn'), tr('Notes','Ghi chú')]]
     .concat(MC.overdue.map(o=>[o.raw.trim(), unescH(o.x.noilapdat||'').trim(), unescH(o.x.ncc||'').trim(), o.x.vedukienn ? loc(o.x.vedukienn) : '',
       Math.abs(DM.arrivalStatus(o.x).daysleft||0), tr('No code until the arrival date is confirmed','Chưa có mã cho tới khi xác nhận ngày về')]));
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, sheet(aoa, [4]), 'DeXuat');
-  XLSX.utils.book_append_sheet(wb, sheet(od, [3]), 'QuaHan_ChuaXacNhan');
+  const sp = dS('supplier') ? 0 : 1;      // không được xem NCC: bỏ cột NCC, cột ngày lùi 1
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, sheet(supCol(aoa, 3), [4 - sp]), 'DeXuat');
+  XLSX.utils.book_append_sheet(wb, sheet(supCol(od, 2), [3 - sp]), 'QuaHan_ChuaXacNhan');
   const fn = `DeXuat_MaMay_${DM.todayIso()}.xlsx`; XLSX.writeFile(wb, fn); return fn;
 }
 window.mcOpen = async () => {
-  if(window.__role !== 'admin') return;
+  if(window.__role !== 'admin') return;   // máy chủ assign_machine_codes chỉ cho admin
   mTitle.textContent = tr('🏷 Assign machine codes','🏷 Cấp mã máy'); mSub.textContent = tr('Loading…','Đang tải…'); mBody.innerHTML = window.MO ? MO.skel(6) : ''; openM(1);
   try{ const L = await mcLoad(); MC.rows = L.rows; MC.plan = mcPlan(L.rows, L.counters); }
   catch(err){ mSub.textContent = ''; mBody.innerHTML = `<div class="m-gt">${mcErr(err)}</div>`; return; }
@@ -4080,8 +4166,8 @@ window.mcOpen = async () => {
   const lostHtml = MC.lost.length ? `<div class="m-gt" style="margin-bottom:10px">⚠ ${tr(`${MC.lost.length} machine(s) have a code but lost the actual arrival date (the code is kept). Re-enter the date with ⚡ Quick update if it was deleted by mistake:`,`${MC.lost.length} máy đã có mã nhưng mất ngày về TT (mã vẫn giữ). Nếu ngày bị xoá nhầm, nhập lại bằng ⚡ Cập nhật nhanh:`)}<br>${MC.lost.map(o=>`<b>${o.r.ma_may}</b> ${escH(o.raw.trim())}`).join('<br>')}</div>` : '';
   if(!MC.plan.length && !MC.trim.length){ mBody.innerHTML = lostHtml + `<div class="m-ok">✅ ${tr('Nothing to assign. You can now run supabase/migrations/20261031_08_machine_code_arrived_check.sql.','Không còn máy nào cần cấp mã. Có thể chạy supabase/migrations/20261031_08_machine_code_arrived_check.sql.')}</div>`; return; }
   mBody.innerHTML = lostHtml + `<div class="qu-tbl mc-tbl"><table><thead><tr><th>${tr('Proposed code','Mã đề xuất')}</th><th>${tr('Machine','Tên hạng mục')}</th><th>${tr('Site','Nơi lắp đặt')}</th>
-      <th>${tr('Supplier','NCC')}</th><th>${tr('Arrival at plant (actual)','Ngày về NM TT')}</th><th>${tr('Notes','Ghi chú')}</th></tr></thead><tbody>
-      ${MC.plan.map(p=>`<tr class="${p.notes.length?'mc-note':''}"><td class="m">${p.code}</td><td>${escH(p.o.raw.trim())}</td><td>${p.o.x.noilapdat||'—'}</td><td>${p.o.x.ncc||'—'}</td>
+      <th data-pd="supplier">${tr('Supplier','NCC')}</th><th>${tr('Arrival at plant (actual)','Ngày về NM TT')}</th><th>${tr('Notes','Ghi chú')}</th></tr></thead><tbody>
+      ${MC.plan.map(p=>`<tr class="${p.notes.length?'mc-note':''}"><td class="m">${p.code}</td><td>${escH(p.o.raw.trim())}</td><td>${p.o.x.noilapdat||'—'}</td><td data-pd="supplier">${p.o.x.ncc||'—'}</td>
         <td>${fmtD(p.o.x.venm_tt)}</td><td class="mc-n">${p.notes.map(escH).join('<br>')}</td></tr>`).join('')}</tbody></table></div>
     <div id="quMsg" style="min-height:1.2em;font-size:13px;margin-bottom:8px"></div>
     <div class="add-actions">
@@ -4138,10 +4224,10 @@ if(window.__role === 'admin' && window.__sb){
   window.__sb.from('machines').select('id', { count:'exact', head:true }).is('ma_may', null).not('venm_tt', 'is', null)
     .then(r => { if(!r.error && r.count) quEl('btnMc').hidden = false; });
 }
-window.quickEdit = i => { const x = DATA[i]; if(x && window.__canWrite) quForm([x]); };
+window.quickEdit = i => { const x = DATA[i]; if(x && dW('quick')) quForm([x]); };
 /* chọn nhiều: ô chọn ở đầu dòng, ô ở tiêu đề = chọn / bỏ chọn mọi máy đang lọc (mọi trang) */
 window.quSync = rows => {
-  const on = !!window.__canWrite; quEl('quTh').hidden = !on;
+  const on = dW('quick'); quEl('quTh').hidden = !on;
   if(!on){ quEl('quBar').hidden = true; return; }
   const ids = rows.map(x=>x._id), n = ids.filter(id=>QU_SEL.has(id)).length;
   quEl('quAll').checked = ids.length>0 && n===ids.length; quEl('quAll').indeterminate = n>0 && n<ids.length;
@@ -4153,7 +4239,7 @@ window.quSync = rows => {
 };
 window.quClear = () => { QU_SEL.clear(); render(); };
 window.quBatch = () => {
-  const list = DATA.filter(x=>QU_SEL.has(x._id)); if(!list.length || !window.__canWrite) return;
+  const list = DATA.filter(x=>QU_SEL.has(x._id)); if(!list.length || !dW('quick')) return;
   quForm(list);
 };
 tb.addEventListener('change', e=>{
@@ -4214,6 +4300,12 @@ async function importMachines(data, known){
     if(!m.hinh_thuc_mua || m.hinh_thuc_mua===old.hinh_thuc_mua){ m.hinh_thuc_mua = old.hinh_thuc_mua||null; m.hinh_thuc_can_xn = !!old.hinh_thuc_can_xn; }
     else m.hinh_thuc_can_xn = false;
   });
+  /* phân quyền trường: cột người dùng không được sửa lấy giá trị đang có của máy đó (máy mới: để trống) — file không ghi đè được */
+  if(!PERM.isAdmin()) data.forEach(m=>{
+    const old = m.sysid && known.get(m.sysid);
+    permKeep('delivery', m, old ? (k => typeof old[k] === 'string' ? unescH(old[k]) : old[k]) : null, dEdRow);
+    if(old && !dE('hinh_thuc_mua')) m.hinh_thuc_can_xn = !!old.hinh_thuc_can_xn;
+  });
   const actRow = m => Object.fromEntries(ACT_KEYS.concat(LD_KEYS).map(k=>[k, k==='ghichu_ld' ? (m[k] ? String(m[k]) : null)
     : (typeof m[k]==='string' && /^\d{4}-\d{2}-\d{2}$/.test(m[k])) ? m[k] : null]));
   const rows = await Promise.all(data.map((m,i)=>window.__seal('machines', Object.assign(toRow(m), actRow(m), {sort_order:i+1, id:m.sysid||null, hinh_thuc_mua:m.hinh_thuc_mua||null, hinh_thuc_can_xn:!!m.hinh_thuc_can_xn}, hasTH() ? {thuong_hieu:m.thuong_hieu||null} : {}))));     // không gửi Mã máy: chỉ hệ thống cấp
@@ -4240,7 +4332,7 @@ function confirmBox(o){
   bg.onclick = e=>{ if(e.target===bg) bg.classList.remove('show'); };
 }
 window.editMachine = i => {
-  const x = DATA[i]; if(!x) return;
+  const x = DATA[i]; if(!x || !dW('edit')) return;
   mBg.classList.remove('show');
   resetAddForm();
   const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value = (v==null?'':v); };
@@ -4264,10 +4356,11 @@ window.editMachine = i => {
   window.__editId = x._id; CLONE_SRC = null; clonePicker(document.getElementById('addClone'), null); cloneHl(f_nld, false);
   addTitle.textContent = tr('✏️ Edit: ','✏️ Sửa: ') + unescH(x.ten);
   addSubmit.textContent = tr('💾 Save changes','💾 Lưu thay đổi');
+  permForm('delivery', D_FORM, false);
   addBg.classList.add('show');
 };
 window.askDelete = i => {
-  const x = DATA[i]; if(!x) return;
+  const x = DATA[i]; if(!x || !dW('delete')) return;
   confirmBox({ title:tr('Delete this machine?','Xoá máy này?'), sub:`<b>${x.ten}</b><br>${tr('The machine moves to the trash. An admin can restore it at any time.','Máy được chuyển vào thùng rác. Admin khôi phục được bất cứ lúc nào.')}`, ok:tr('🗑 Delete machine','🗑 Xoá máy'),
     onOk: async ()=>{
       try{
@@ -4312,7 +4405,7 @@ window.showHistory = async i => {
       else if(n.deleted_at && !o.deleted_at){ act=tr('Moved to trash','Chuyển vào thùng rác'); col='var(--red)'; }
       else if(o.deleted_at && !n.deleted_at){ act=tr('Restored','Khôi phục'); col='var(--green)'; }
       else {
-        const ch = REC_KEYS.concat(ACT_KEYS, LD_KEYS, ['hinh_thuc_mua']).filter(k=> JSON.stringify(o[k]??null) !== JSON.stringify(n[k]??null));
+        const ch = REC_KEYS.concat(ACT_KEYS, LD_KEYS, ['hinh_thuc_mua']).filter(k=> dS(k) && JSON.stringify(o[k]??null) !== JSON.stringify(n[k]??null));   // không hiện thay đổi của trường bị ẩn
         body = ch.length ? ch.map(k=>`<div>${(LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k]}: <s>${escH(showVal(k,o[k]))}</s> → <ins>${escH(showVal(k,n[k]))}</ins></div>`).join('')
                          : '<div style="color:var(--muted)">'+tr('No content changes','Không đổi nội dung')+'</div>';
       }
@@ -4337,7 +4430,7 @@ function payErrText(e){
   return dbErrText(e);
 }
 window.showPayments = async (i, editId) => {
-  const x = DATA[i]; if(!x || window.__role === 'viewer') return;   // viewer không xem thanh toán
+  const x = DATA[i]; if(!x || !PERM.act('delivery','payment') || !dS('value')) return;   // chỉ người có nút 💳 (viewer không bao giờ); lịch thanh toán toàn số tiền → cần xem được nhóm Giá trị
   const sb = window.__sb, canW = !!window.__canWrite;
   mTitle.textContent = tr('💳 Payments: ', '💳 Thanh toán: ') + unescH(x.ten);
   mSub.textContent = tr('Loading…', 'Đang tải…');
@@ -4531,8 +4624,9 @@ window.purgeTrash = j => {
 };
 
 (function appState(){
-  if(window.__canWrite===false){ btnAdd.hidden = true; btnPick.hidden = true; }
-  if(window.__canWrite){ btnExport.hidden = false; btnExport.onclick = ()=>{ try{ exportExcel('TienDoMayVe'); }catch(e){ showNotice({type:'error', title:tr('Could not export the file','Chưa xuất được file'), sub:escH(e.message)}); } }; }
+  btnAdd.hidden = !dW('add'); btnPick.hidden = !dW('import');
+  btnExp.hidden = !PERM.act('delivery','export');   // 📤 Xuất dữ liệu; ⬇️ Excel bên dưới vẫn chỉ người có quyền ghi (như trước)
+  if(window.__canWrite && PERM.REG.delivery.groups.every(g=>dS(g.k))){ btnExport.hidden = false; btnExport.onclick = ()=>{ try{ exportExcel('TienDoMayVe'); }catch(e){ showNotice({type:'error', title:tr('Could not export the file','Chưa xuất được file'), sub:escH(e.message)}); } }; }
   if(window.__role==='admin'){ btnTrash.hidden = false; btnTrash.onclick = openTrash; btnUsers.hidden = false; btnUsers.onclick = UA.open; }
   if(window.__userEmail){ btnLogout.hidden = false; btnLogout.title = tr('Sign out (','Đăng xuất (') + window.__userEmail + ')';
     btnPw.hidden = false; btnPw.onclick = openChangePw; }
@@ -4710,7 +4804,7 @@ async function mmImport(J){
 }
 
 /* ===================== TỔNG QUAN ===================== */
-let ovCo = '', ovDrawn = false, tmMode = 'v';
+let ovCo = '', ovDrawn = false, tmMode = mS('value') ? 'v' : 'n';   // không được xem Giá trị: treemap theo số máy
 function drawOverview(){
   if(MM.err || !MM.machines.length){ c1.innerHTML = emptyHTML(); return; }
   if(!ovDrawn){
@@ -4725,11 +4819,11 @@ function drawOverview(){
       <div class="card mm-life" style="--accent:var(--lc-in_operation)"><h3><span class="dot"></span>${tr('Equipment lifecycle','Vòng đời thiết bị')}<small id="mmLifeSub"></small></h3><div id="mmLife"></div></div>
       <div class="mm-ov">
         <div class="card mm-tm" style="--accent:var(--lc-arrived)"><h3><span class="dot"></span><span id="mmTmT"></span><small id="mmTmS"></small>
-          <span class="sel"><span class="gv-btn on" id="mmTmV">${tr('Value','Giá trị')}</span><span class="gv-btn" id="mmTmN">${tr('Count','Số máy')}</span></span></h3>
+          <span class="sel" data-pm="value"><span class="gv-btn on" id="mmTmV">${tr('Value','Giá trị')}</span><span class="gv-btn" id="mmTmN">${tr('Count','Số máy')}</span></span></h3>
           <div class="chartbox mm-box" id="mmTm"></div></div>
-        <div class="card" style="--accent:var(--lc-arrived)"><h3><span class="dot"></span>${tr('Top 10 suppliers by value','10 nhà cung cấp giá trị lớn nhất')}<small id="mmSpS"></small></h3><div class="chartbox mm-box" id="mmSp"></div></div>
-        <div class="card" style="--accent:var(--lc-arrived)"><h3><span class="dot"></span>${tr('Equipment by group','Thiết bị theo nhóm')}<small id="mmGrS"></small>
-          <span class="sel"><span class="gv-btn on" id="mmGrN">${tr('Count','Số máy')}</span><span class="gv-btn" id="mmGrV">${tr('Value','Giá trị')}</span></span></h3><div class="chartbox mm-box" id="mmGr"></div></div>
+        <div class="card" style="--accent:var(--lc-arrived)" data-pm="value supplier"><h3><span class="dot"></span>${tr('Top 10 suppliers by value','10 nhà cung cấp giá trị lớn nhất')}<small id="mmSpS"></small></h3><div class="chartbox mm-box" id="mmSp"></div></div>
+        <div class="card" style="--accent:var(--lc-arrived)" data-pm="classify"><h3><span class="dot"></span>${tr('Equipment by group','Thiết bị theo nhóm')}<small id="mmGrS"></small>
+          <span class="sel"><span class="gv-btn on" id="mmGrN">${tr('Count','Số máy')}</span><span class="gv-btn" id="mmGrV" data-pm="value">${tr('Value','Giá trị')}</span></span></h3><div class="chartbox mm-box" id="mmGr"></div></div>
       </div>`;
     mmOvCo.onchange = e=>{ ovCo = e.target.value; updOverview(); };
     mmTmV.onclick = ()=>{ tmMode = 'v'; updOverview(); }; mmTmN.onclick = ()=>{ tmMode = 'n'; updOverview(); };
@@ -4760,7 +4854,7 @@ function updOverview(){
   const bm = bigMoney(all), co = JSON.stringify(ovCo).replace(/"/g,'&quot;');
   mmKpis.innerHTML =
     kpi('var(--sky)', '⚙️', tr('Total equipment','Tổng thiết bị'), N(rows.length), `${N(units)} ${tr('units','máy')}${subN ? ` · ${tr('incl.','gồm')} ${N(subN)} ${tr('sub-units','bộ phận con')}` : ''}`, `mmGo({co:${co}})`) +
-    kpi('var(--violet)', '💰', tr('Total value','Tổng giá trị'), bm.main + `<small style="font-size:.5em">${bm.unit}</small>`, bm.note, `mmGo({co:${co}})`) +
+    kpi('var(--violet)', '💰', tr('Total value','Tổng giá trị'), bm.main + `<small style="font-size:.5em">${bm.unit}</small>`, bm.note, `mmGo({co:${co}})`).replace('<div class="kpi"', '<div class="kpi" data-pm="value"') +
     kpi('var(--green)', '✅', tr('In operation','Đang vận hành'), N(op), (rows.length ? Math.round(op/rows.length*100) : 0) + tr('% of equipment','% thiết bị'), `mmGo({co:${co},st:'in_operation'})`,
         VZ.segbar([{ n:op, c:VZ.life('in_operation'), t:LCL.in_operation }, { n:rows.length - op, c:'rgba(148,163,184,.35)', t:tr('Other statuses','Trạng thái khác') }], { label:tr('Share of equipment in operation','Tỷ lệ thiết bị đang vận hành') })) +
     kpi('var(--amber)', '🛠', tr('Being invested','Đang đầu tư'), N(prog), tr('planned → installing','kế hoạch → lắp đặt'), `mmGo({co:${co},st:'__prog'})`,
@@ -4768,7 +4862,7 @@ function updOverview(){
                return VZ.segbar(sg, { label:tr('Equipment being invested, by stage','Thiết bị đang đầu tư theo giai đoạn') }) +
                  `<div class="vz-leg">${sg.filter(x=>x.n).map(x=>`<span><i style="background:${x.c}"></i>${x.t} ${x.n}</span>`).join('')}</div>`; })()) +
     kpi('var(--blue)', '🏭', tr('Production lines','Chuyền sản xuất'), N(lines), tr('running lines','chuyền đang hoạt động') + (lnAll.length > lines ? ` · ${N(lnAll.length - lines)} ${tr('stopped','ngừng')}` : ''), `mmGo({co:${co}})`) +
-    kpi('var(--red)', '🤝', tr('Suppliers','Nhà cung cấp'), N(sups), tr('suppliers with machines','NCC có máy'), `mmGo({co:${co}})`);
+    kpi('var(--red)', '🤝', tr('Suppliers','Nhà cung cấp'), N(sups), tr('suppliers with machines','NCC có máy'), `mmGo({co:${co}})`).replace('<div class="kpi"', '<div class="kpi" data-pm="supplier"');
 
   /* ---- biểu đồ (ECharts, màu chart_theme.js) — CHỈ HIỂN THỊ, số liệu như cũ ---- */
   const valOf = x => brVal.get(x.id) || 0;                         // giá trị cả nhánh (máy + bộ phận con)
@@ -4806,7 +4900,7 @@ function updOverview(){
   const tm = chart('mmTm');
   tm.setOption({ tooltip:Object.assign(tip(), { formatter:p => { const v = p.value, path = (p.treePathInfo || []).slice(1).map(t=>E(t.name));
       const parent = (p.treePathInfo || []).length > 1 ? p.treePathInfo[p.treePathInfo.length - 2].value : tot;
-      return `<b>${path.join(' › ')}</b><br>${tmMode==='v' ? vTxt(v) : N(v) + tr(' units',' máy')} · ${parent ? Math.round(v/parent*100) : 0}%` + (p.data && p.data.notes ? `<br><span style="color:${ink.muted}">ⓘ ${E(p.data.notes)}</span>` : '') + (p.data && p.data.id ? `<br><span style="color:${ink.muted}">${E(LCL[p.data.st] || '')}${p.data.model ? ' · ' + E(p.data.model) : ''} · ${tr('click for details','bấm để xem chi tiết')}</span>` : ''); } }),
+      return `<b>${path.join(' › ')}</b><br>${tmMode==='v' ? vTxt(v) : N(v) + tr(' units',' máy')} · ${parent ? Math.round(v/parent*100) : 0}%` + (p.data && p.data.notes ? `<br><span style="color:${ink.muted}">ⓘ ${E(p.data.notes)}</span>` : '') + (p.data && p.data.id ? `<br><span style="color:${ink.muted}">${E(LCL[p.data.st] || '')}${p.data.model && mS('model') ? ' · ' + E(p.data.model) : ''} · ${tr('click for details','bấm để xem chi tiết')}</span>` : ''); } }),
     series:[{ type:'treemap', name:ovCo || tr('All plants','Tất cả nhà máy'), data:tree, roam:false, nodeClick:'zoomToNode', leafDepth:ovCo ? 1 : 1, top:6, left:0, right:0, bottom:30,
       breadcrumb:{ bottom:2, left:0, height:22, itemStyle:{ color:cssv('--panel2'), borderColor:ink.border, textStyle:{ color:ink.txt } }, emphasis:{ itemStyle:{ color:cssv('--thead') } } },
       label:{ show:true, color:'#fff', fontSize:12, fontWeight:600, overflow:'truncate', formatter:p => p.name + '\n' + (tmMode==='v' ? vTxt(p.value) : N(p.value)) },
@@ -4872,14 +4966,14 @@ function drawList(){
     c2.innerHTML = `
       <div class="toolbar">
         <div class="search"><input id="mmQ" type="text" placeholder="${tr('Search code, name, model, serial, supplier...','Tìm mã, tên, model, số serial, NCC...')}"></div>
-        <select id="mmFCo"><option value="">${tr('Plant: All','Nhà máy: Tất cả')}</option>${opts(MM.companies.map(c=>[c.code, c.code + ' — ' + c.name]), F.co)}</select>
-        <select id="mmFArea"></select><select id="mmFLine" style="max-width:240px"></select>
-        <select id="mmFGrp"><option value="">${tr('Group: All','Nhóm: Tất cả')}</option>${opts(groups, F.grp)}</select>
-        <select id="mmFSt"><option value="">${tr('Status: All','Trạng thái: Tất cả')}</option>
+        <select id="mmFCo" data-pm="location"><option value="">${tr('Plant: All','Nhà máy: Tất cả')}</option>${opts(MM.companies.map(c=>[c.code, c.code + ' — ' + c.name]), F.co)}</select>
+        <select id="mmFArea" data-pm="location"></select><select id="mmFLine" style="max-width:240px" data-pm="location"></select>
+        <select id="mmFGrp" data-pm="classify"><option value="">${tr('Group: All','Nhóm: Tất cả')}</option>${opts(groups, F.grp)}</select>
+        <select id="mmFSt" data-pm="status"><option value="">${tr('Status: All','Trạng thái: Tất cả')}</option>
           <option value="__prog">${tr('Being invested','Đang đầu tư')}</option>${hasLink() ? `<option value="__info">⚑ ${tr('Needs info','Cần bổ sung')}</option>` : ''}${MM.hasTypes ? `<option value="__name">✏️ ${tr('Name not standard','Tên chưa chuẩn')}</option>` : ''}${opts(LC.map(s=>[s, LCL[s]]), F.st)}</select>
         <button class="pbtn" id="mmFReset" title="${tr('Clear filters','Xoá bộ lọc')}">✕</button>
       </div>
-      <div class="tablewrap"><table><thead><tr>${COLS.map(([k,l])=>`<th data-ms="${k}">${l}</th>`).join('')}</tr></thead><tbody id="mmTb"></tbody></table></div>
+      <div class="tablewrap"><table><thead><tr>${COLS.map(([k,l])=>`<th data-ms="${k}" data-pm="${pgOf('mmtb', k)}">${l}</th>`).join('')}</tr></thead><tbody id="mmTb"></tbody></table></div>
       <div class="pagerow"><div class="count-info" id="mmCnt"></div><div class="pager" id="mmPager"></div></div>`;
     mmQ.oninput = e=>{ F.q = e.target.value.trim().toLowerCase(); pg = 1; renderList(); };
     mmFCo.onchange = e=>{ F.co = e.target.value; F.area = ''; F.line = ''; fillDeps(); pg = 1; renderList(); };
@@ -4901,8 +4995,9 @@ function filtered(){
     (!F.grp || (F.grp==='__none' ? !x.group_name : x.group_name===F.grp)) &&
     (!F.st || (F.st==='__prog' ? LC.indexOf(x.lifecycle_status) < LC.indexOf('in_operation') : F.st==='__info' ? !!x.needs_info
               : F.st==='__name' ? nameIss(x).length > 0 : x.lifecycle_status===F.st)) &&
-    (!F.q || [x.machine_code, x.legacy_code, x.tracking_code, x.name, x.alias_names, x.model, x.serial_number, x.supplier_name, x.manufacturer, x.line_name, x.notes]
-              .some(v=>v && String(v).toLowerCase().includes(F.q))));
+    (!F.q || [['machine_code','code'], ['legacy_code','code'], ['tracking_code','code'], ['name','name'], ['alias_names','name'], ['model','model'], ['serial_number','model'],
+               ['supplier_name','supplier'], ['manufacturer','supplier'], ['line_name','location'], ['notes','notes']]
+              .some(([k, g])=>mS(g) && x[k] && String(x[k]).toLowerCase().includes(F.q))));   // không tìm trên trường bị ẩn
 }
 function renderList(){
   if(!listDrawn) return;
@@ -4920,13 +5015,13 @@ function renderList(){
   mmTb.innerHTML = view.map((x,i)=>{
     const nk = (kids.get(x.id) || []).length, par = x.parent_machine_id && byId.get(x.parent_machine_id);
     return `<tr class="slide-in" data-mo="${x.id}" style="--i:${i};cursor:pointer" onclick="mmShow('${x.id}')">
-      <td class="name">${E(x.name)}${nk ? ` <span class="mm-kidtag" title="${E((kids.get(x.id) || []).map(c=>c.name).join(', '))}">🧩 ${nk} ${tr(nk > 1 ? 'sub-units' : 'sub-unit','bộ phận con')}</span>` : ''}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${aliasTxt(x.alias_names) || x.tracking_machine_id ? `<small class="nm-alias">${aliasTxt(x.alias_names) ? `<span title="${E(tr('Other names','Tên gọi khác'))}: ${E(aliasTxt(x.alias_names))}">${E(aliasTxt(x.alias_names))}</span>` : ''}${aliasTxt(x.alias_names) && x.tracking_machine_id ? ' · ' : ''}${x.tracking_machine_id ? `<span title="${tr('Linked to Delivery','Đã liên kết Tiến độ máy về')}">🔗</span>` : ''}</small>` : ''}${par ? `<small class="mm-of" onclick="event.stopPropagation();mmShow('${par.id}')" title="${tr('Open the parent machine','Mở máy cha')}">↳ ${tr('part of','thuộc')}: ${E(par.name)}</small>` : ''}</td>
-      <td>${E(x.company_code)}</td><td>${T(x.area_name)}</td><td${x.line_notes ? ` title="${E(x.line_notes)}"` : ''}>${T(x.line_name)}${x.line_notes ? ' <span style="color:var(--muted)">ⓘ</span>' : ''}</td><td>${T(x.group_name)}</td>
-      <td>${T(x.supplier_name)}</td><td>${T(x.manufacturer)}</td><td>${N(x.quantity || 1)}</td>
-      <td class="money">${money(x)}${(+x.quantity || 1) >= 2 && (LANG==='vi' ? x.value_vnd : x.value_usd) ? `<small class="unit-p">${LANG==='vi' ? N(x.value_vnd / x.quantity) + ' ₫' : '$' + N(x.value_usd / x.quantity)} / set</small>` : ''}</td><td>${badge(x.lifecycle_status)}</td></tr>`; }).join('')
+      <td class="name" data-pm="name">${E(x.name)}${nk ? ` <span class="mm-kidtag" title="${E((kids.get(x.id) || []).map(c=>c.name).join(', '))}">🧩 ${nk} ${tr(nk > 1 ? 'sub-units' : 'sub-unit','bộ phận con')}</span>` : ''}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${aliasTxt(x.alias_names) || x.tracking_machine_id ? `<small class="nm-alias">${aliasTxt(x.alias_names) ? `<span title="${E(tr('Other names','Tên gọi khác'))}: ${E(aliasTxt(x.alias_names))}">${E(aliasTxt(x.alias_names))}</span>` : ''}${aliasTxt(x.alias_names) && x.tracking_machine_id ? ' · ' : ''}${x.tracking_machine_id ? `<span title="${tr('Linked to Delivery','Đã liên kết Tiến độ máy về')}">🔗</span>` : ''}</small>` : ''}${par && mS('location') ? `<small class="mm-of" onclick="event.stopPropagation();mmShow('${par.id}')" title="${tr('Open the parent machine','Mở máy cha')}">↳ ${tr('part of','thuộc')}: ${E(par.name)}</small>` : ''}</td>
+      <td data-pm="location">${E(x.company_code)}</td><td data-pm="location">${T(x.area_name)}</td><td data-pm="location"${x.line_notes ? ` title="${E(x.line_notes)}"` : ''}>${T(x.line_name)}${x.line_notes ? ' <span style="color:var(--muted)">ⓘ</span>' : ''}</td><td data-pm="classify">${T(x.group_name)}</td>
+      <td data-pm="supplier">${T(x.supplier_name)}</td><td data-pm="supplier">${T(x.manufacturer)}</td><td data-pm="qty">${N(x.quantity || 1)}</td>
+      <td class="money" data-pm="value">${money(x)}${(+x.quantity || 1) >= 2 && (LANG==='vi' ? x.value_vnd : x.value_usd) ? `<small class="unit-p">${LANG==='vi' ? N(x.value_vnd / x.quantity) + ' ₫' : '$' + N(x.value_usd / x.quantity)} / set</small>` : ''}</td><td data-pm="status">${badge(x.lifecycle_status)}</td></tr>`; }).join('')
     || `<tr><td colspan="${COLS.length}" style="text-align:center;color:var(--muted);padding:24px">${tr('No machines match the filters.','Không có máy nào khớp bộ lọc.')}</td></tr>`;
   const bm = bigMoney(rows);
-  mmCnt.textContent = `${N(rows.length)} ${tr('machines','thiết bị')} · ${tr('Total','Tổng')}: ${bm.main}${bm.unit} (${bm.note}) · ${tr('Page','Trang')} ${pg}/${nP}`;
+  mmCnt.textContent = `${N(rows.length)} ${tr('machines','thiết bị')} · ${mS('value') ? `${tr('Total','Tổng')}: ${bm.main}${bm.unit} (${bm.note}) · ` : ''}${tr('Page','Trang')} ${pg}/${nP}`;
   let h = `<button class="pbtn" ${pg===1?'disabled':''} onclick="mmPage(${pg-1})">‹</button>`;
   for(let i=1;i<=nP;i++){
     if(nP>7 && i>2 && i<nP-1 && Math.abs(i-pg)>1){ if(!h.endsWith('…</span>')) h += '<span class="pbtn" style="border:none;cursor:default">…</span>'; continue; }
@@ -4936,58 +5031,61 @@ function renderList(){
 }
 window.mmPage = p => { pg = p; renderList(); c2.querySelector('.tablewrap').scrollTop = 0; };
 /* bấm thẻ KPI -> sang Danh sách với bộ lọc tương ứng */
-window.mmGo = o => { Object.keys(F).forEach(k=>F[k]=''); F.co = o.co || ''; F.st = o.st || ''; F.grp = o.grp || ''; sortK = '__tree'; pg = 1; listDrawn = false; showPage('c2'); };
+window.mmGo = o => { Object.keys(F).forEach(k=>F[k]=''); F.co = mS('location') ? o.co || '' : ''; F.st = mS('status') ? o.st || '' : ''; F.grp = mS('classify') ? o.grp || '' : '';   // không lọc theo nhóm trường bị ẩn
+  sortK = '__tree'; pg = 1; listDrawn = false; showPage('c2'); };
 
 /* ===================== CHI TIẾT ===================== */
 window.mmShow = id => {
   const x = byId.get(id); if(!x) return;
   const it = (k,v,cls='') => `<div class="dt-i ${cls}"><span class="dt-k">${k}</span><span class="dt-v">${v}</span></div>`;
-  const sec = (title, items) => `<div class="dt-sec"><h5>${title}</h5><div class="dt-grid">${items.join('')}</div></div>`;
+  const sec = (title, items) => items.join('') ? `<div class="dt-sec"><h5>${title}</h5><div class="dt-grid">${items.join('')}</div></div>` : '';   // mọi mục bị ẩn → bỏ cả nhóm
+  const ig = (g, k, v, cls) => mS(g) ? it(k, v, cls) : '';      // phân quyền trường: chỉ mục được xem
   const ms = msBy.get(x.id) || {};
   const cap = x.capacity_value != null ? N(x.capacity_value, 3) + ' ' + E(x.capacity_unit || '') : '—';
   const ch = (kids.get(x.id) || []);
-  mTitle.textContent = x.name;
-  mSub.innerHTML = `${E(x.machine_code)} · ${E(x.company_code)}${x.area_name?' · '+E(x.area_name):''} · ${badge(x.lifecycle_status)} · ${ROLEL[x.role] || ''}${x.needs_info ? ' ' + NEEDS() : ''}`;
+  mTitle.textContent = mS('name') ? x.name : (mS('code') ? x.machine_code : '');
+  mSub.innerHTML = [mS('code') && E(x.machine_code), mS('location') && (E(x.company_code) + (x.area_name ? ' · ' + E(x.area_name) : '')), mS('status') && badge(x.lifecycle_status),
+    mS('classify') && (ROLEL[x.role] || '')].filter(Boolean).join(' · ') + (x.needs_info && mS('status') ? ' ' + NEEDS() : '');
   const trk = x.tracking_machine_id
     ? `<a class="cs-link" onclick="window.__goTracking('${x.tracking_machine_id}')">${E(x.tracking_code || tr('(no code yet)','(chưa có mã)'))} ↗</a>`
     : `<span style="color:var(--muted)">${tr('not linked','chưa liên kết')}</span>`;
   mBody.innerHTML = `<div class="dt-wrap">
     ${sec(tr('General','Thông tin chung'), [
-      it(tr('Machine name','Tên máy'), T(x.name) + (nameIss(x).length ? `<div class="nm-hint">${nameIss(x).map(k=>`<div>⚠ ${E(NS.ISSUE()[k])}</div>`).join('')}</div>` : ''), 'full'),
-      ...(x.alias_names ? [it(tr('Other names / old names','Tên gọi khác / tên cũ'), T(x.alias_names), 'full')] : []),
-      ...(hasLink() ? [it(tr('Delivery tracking code','Mã Tiến độ'), trk, 'full')] : []),
-      it(tr('Code','Mã máy'), T(x.machine_code) + (x.code_temp ? `<span class="tag-temp">${tr('temporary','tạm')}</span>` : '') +
-        (x.legacy_code ? `<div class="mm-sub">${tr('old code','mã cũ')}: ${E(x.legacy_code)}</div>` : '')), it('Model', T(x.model)),
-      it(tr('Brand','Thương hiệu'), T(x.manufacturer)), it(tr('Serial number','Số serial'), T(x.serial_number)),
-      it(tr('Quantity','Số lượng'), N(x.quantity || 1)), it(tr('Capacity','Công suất'), cap),
-      it(tr('Materials','Vật liệu'), (x.materials || []).join(', ') || '—'), it(tr('Group','Nhóm'), T(x.group_name)),
-      it(tr('Equipment type','Loại thiết bị'), T(x.equipment_type)), it(tr('Origin','Xuất xứ'), T(x.origin))])}
+      ig('name', tr('Machine name','Tên máy'), T(x.name) + (nameIss(x).length ? `<div class="nm-hint">${nameIss(x).map(k=>`<div>⚠ ${E(NS.ISSUE()[k])}</div>`).join('')}</div>` : ''), 'full'),
+      ...(x.alias_names ? [ig('name', tr('Other names / old names','Tên gọi khác / tên cũ'), T(x.alias_names), 'full')] : []),
+      ...(hasLink() ? [ig('code', tr('Delivery tracking code','Mã Tiến độ'), trk, 'full')] : []),
+      ig('code', tr('Code','Mã máy'), T(x.machine_code) + (x.code_temp ? `<span class="tag-temp">${tr('temporary','tạm')}</span>` : '') +
+        (x.legacy_code ? `<div class="mm-sub">${tr('old code','mã cũ')}: ${E(x.legacy_code)}</div>` : '')), ig('model', 'Model', T(x.model)),
+      ig('supplier', tr('Brand','Thương hiệu'), T(x.manufacturer)), ig('model', tr('Serial number','Số serial'), T(x.serial_number)),
+      ig('qty', tr('Quantity','Số lượng'), N(x.quantity || 1)), ig('capacity', tr('Capacity','Công suất'), cap),
+      ig('capacity', tr('Materials','Vật liệu'), (x.materials || []).join(', ') || '—'), ig('classify', tr('Group','Nhóm'), T(x.group_name)),
+      ig('classify', tr('Equipment type','Loại thiết bị'), T(x.equipment_type)), ig('origin', tr('Origin','Xuất xứ'), T(x.origin))])}
     ${sec(tr('Location','Vị trí'), [
-      it(tr('Plant','Nhà máy'), E(x.company_code) + ' — ' + T(x.company_name)), it(tr('Area','Khu vực'), T(x.area_name)),
-      it(tr('Production line','Chuyền'), T(x.line_name)), it(tr('Role','Vai trò'), ROLEL[x.role] || '—'),
-      it(tr('Parent machine','Máy cha'), x.parent_machine_id && byId.has(x.parent_machine_id)
+      ig('location', tr('Plant','Nhà máy'), E(x.company_code) + ' — ' + T(x.company_name)), ig('location', tr('Area','Khu vực'), T(x.area_name)),
+      ig('location', tr('Production line','Chuyền'), T(x.line_name)), ig('classify', tr('Role','Vai trò'), ROLEL[x.role] || '—'),
+      ig('location', tr('Parent machine','Máy cha'), x.parent_machine_id && byId.has(x.parent_machine_id)
         ? `<a style="color:var(--sky);cursor:pointer" onclick="mmShow('${x.parent_machine_id}')">${E(x.parent_code)} — ${E(x.parent_name)}</a>` : '—', 'full')])}
     ${sec(tr('Procurement & value','Mua sắm & giá trị'), [
-      it(tr('Supplier','Nhà cung cấp'), T(x.supplier_name)), it(tr('Proposal approval date','Ngày duyệt ĐXĐT'), D(x.approved_date)),
-      it(tr('Contract amount','Giá trị hợp đồng'), x.contract_amount != null ? N(x.contract_amount) + ' ' + x.contract_currency
+      ig('supplier', tr('Supplier','Nhà cung cấp'), T(x.supplier_name)), ig('dates', tr('Proposal approval date','Ngày duyệt ĐXĐT'), D(x.approved_date)),
+      ig('value', tr('Contract amount','Giá trị hợp đồng'), x.contract_amount != null ? N(x.contract_amount) + ' ' + x.contract_currency
         + ((+x.quantity || 1) >= 2 ? `<small class="unit-p">${tr('per set','đơn giá 1 set')}: ${N(x.contract_amount / x.quantity)} ${x.contract_currency} × ${x.quantity}</small>` : '') : '—'),
-      it(tr('Locked exchange rate','Tỷ giá khoá'), x.locked_rate != null ? N(x.locked_rate, 2) : '—'),
-      it(tr('Value (VND)','Giá trị (VNĐ)'), x.value_vnd != null ? N(x.value_vnd) + ' ₫' : '—', 'hl'),
-      it(tr('Value (USD)','Giá trị (USD)'), x.value_usd != null ? N(x.value_usd) + ' $' : '—', 'hl'),
-      it(tr('Manufacturing days (CTM)','Số ngày chế tạo máy (CTM)'), x.manufacturing_days != null ? N(x.manufacturing_days) + tr(' days',' ngày') : '—')])}
+      ig('value', tr('Locked exchange rate','Tỷ giá khoá'), x.locked_rate != null ? N(x.locked_rate, 2) : '—'),
+      ig('value', tr('Value (VND)','Giá trị (VNĐ)'), x.value_vnd != null ? N(x.value_vnd) + ' ₫' : '—', 'hl'),
+      ig('value', tr('Value (USD)','Giá trị (USD)'), x.value_usd != null ? N(x.value_usd) + ' $' : '—', 'hl'),
+      ig('dates', tr('Manufacturing days (CTM)','Số ngày chế tạo máy (CTM)'), x.manufacturing_days != null ? N(x.manufacturing_days) + tr(' days',' ngày') : '—')])}
     ${sec(tr('Lifecycle','Vòng đời'), [
-      it(tr('Status','Trạng thái'), badge(x.lifecycle_status)), it(tr('Commissioned','Ngày nghiệm thu'), D(x.commissioned_date)),
+      ig('status', tr('Status','Trạng thái'), badge(x.lifecycle_status)), ig('dates', tr('Commissioned','Ngày nghiệm thu'), D(x.commissioned_date)),
       ...Object.keys(MSL).filter(k=>ms[k] && (ms[k].actual_date || ms[k].planned_date || ms[k].forecast_date))
-        .map(k=>it(MSL[k], ms[k].actual_date ? D(ms[k].actual_date) : `<span style="color:var(--muted)">${tr('plan','KH')} ${D(ms[k].planned_date || ms[k].forecast_date)}</span>`))])}
-    ${sec(tr('People','Nhân sự'), [it(tr('Engineer in charge','Kỹ sư phụ trách'), T(x.engineer)), it(tr('Manager','Người quản lý'), T(x.manager))])}
-    ${ch.length ? `<div class="dt-sec"><h5>${tr('Sub-units','Bộ phận con')} (${ch.length})</h5><div class="mm-kids">${
+        .map(k=>ig('dates', MSL[k], ms[k].actual_date ? D(ms[k].actual_date) : `<span style="color:var(--muted)">${tr('plan','KH')} ${D(ms[k].planned_date || ms[k].forecast_date)}</span>`))])}
+    ${sec(tr('People','Nhân sự'), [ig('person', tr('Engineer in charge','Kỹ sư phụ trách'), T(x.engineer)), ig('person', tr('Manager','Người quản lý'), T(x.manager))])}
+    ${ch.length && mS('location') ? `<div class="dt-sec"><h5>${tr('Sub-units','Bộ phận con')} (${ch.length})</h5><div class="mm-kids">${
       ch.map(c=>`<a onclick="mmShow('${c.id}')">↳ ${E(c.machine_code)} — ${E(c.name)}</a>`).join('')}</div></div>` : ''}
-    ${x.notes ? `<div class="dt-sec"><h5>${tr('Notes','Ghi chú')}</h5><div class="m-gt" style="white-space:pre-wrap">${E(x.notes)}</div></div>` : ''}
+    ${x.notes && mS('notes') ? `<div class="dt-sec"><h5>${tr('Notes','Ghi chú')}</h5><div class="m-gt" style="white-space:pre-wrap">${E(x.notes)}</div></div>` : ''}
     <div class="dt-actions">
-      ${canW ? `<button class="nbtn2 ghost" onclick="mmDelete('${x.id}')">${tr('🗑 Delete machine','🗑 Xoá máy')}</button>
-                ${splitMax(x) >= 2 ? `<button class="nbtn2 ghost" onclick="mmSplit('${x.id}')" title="${tr('Split into separate machines (e.g. same model installed in 2 places)','Tách thành nhiều máy riêng (VD 2 máy giống nhau lắp ở 2 nơi)')}">${tr('✂️ Split','✂️ Tách máy')}</button>` : ''}
-                <button class="nbtn2 ghost" onclick="mmClone('${x.id}')" title="${tr('Add a new machine pre-filled from this one','Thêm máy mới, điền sẵn từ máy này')}">${tr('📋 Clone','📋 Nhân bản')}</button>
-                <button class="nbtn2" onclick="mmEdit('${x.id}')">${tr('✏️ Edit','✏️ Sửa thông tin')}</button>` : ''}</div>
+      ${PERM.act('mmtb','delete') ? `<button class="nbtn2 ghost" onclick="mmDelete('${x.id}')">${tr('🗑 Delete machine','🗑 Xoá máy')}</button>` : ''}
+                ${PERM.act('mmtb','split') && splitMax(x) >= 2 ? `<button class="nbtn2 ghost" onclick="mmSplit('${x.id}')" title="${tr('Split into separate machines (e.g. same model installed in 2 places)','Tách thành nhiều máy riêng (VD 2 máy giống nhau lắp ở 2 nơi)')}">${tr('✂️ Split','✂️ Tách máy')}</button>` : ''}
+                ${PERM.act('mmtb','clone') ? `<button class="nbtn2 ghost" onclick="mmClone('${x.id}')" title="${tr('Add a new machine pre-filled from this one','Thêm máy mới, điền sẵn từ máy này')}">${tr('📋 Clone','📋 Nhân bản')}</button>` : ''}
+                ${PERM.act('mmtb','edit') ? `<button class="nbtn2" onclick="mmEdit('${x.id}')">${tr('✏️ Edit','✏️ Sửa thông tin')}</button>` : ''}</div>
     <div class="dt-note">${tr('Source','Nguồn')}: ${T(x.source_ref)} · ${tr('Last edited','Sửa lần cuối')}: ${x.updated_at ? new Date(x.updated_at).toLocaleString(NUMLOC) : '—'}${x.updated_by ? ' · ' + E(x.updated_by) : ''}</div>
   </div>`;
   openM(1);
@@ -5037,7 +5135,7 @@ function buildForm(){
       ${L(tr('Parent machine (for sub-units)','Máy cha (nếu là bộ phận con)'), `<select id="m_parent"></select>`)}
       ${L(tr('Role','Vai trò'), `<select id="m_role"><option value="main">${ROLEL.main}</option><option value="auxiliary">${ROLEL.auxiliary}</option></select>`)}
       ${L(tr('Capacity','Công suất'), `<div style="display:flex;gap:6px"><input id="m_capv" type="number" step="any" style="flex:1;min-width:0" placeholder="3000">${MM.hasUnits ? '<select id="m_capu" style="width:110px"></select>' : '<input id="m_capu" type="text" style="width:96px" placeholder="kg/h">'}</div>`)}
-      ${L(tr('Materials','Vật liệu'), `<div class="mm-mat">${['PET','HDPE','PP'].map(m=>`<label><input type="checkbox" value="${m}" class="m_mat"> ${m}</label>`).join('')}</div>`)}
+      ${L(tr('Materials','Vật liệu'), `<div class="mm-mat" id="m_mats">${['PET','HDPE','PP'].map(m=>`<label><input type="checkbox" value="${m}" class="m_mat"> ${m}</label>`).join('')}</div>`)}
       ${L(tr('Group','Nhóm'), `<select id="m_group"></select>`)}
       ${L(tr('Equipment type','Loại thiết bị'), `<select id="m_type"></select>`)}
       ${L(tr('Origin','Xuất xứ'), `<input id="m_origin" type="text">`)}
@@ -5212,16 +5310,24 @@ function openForm(x, clone){
   // 📋 ô nhân bản: chỉ khi Thêm (không khi Sửa)
   const mmc = document.getElementById('mmClone');
   if(x) clonePicker(mmc, null);
-  else clonePicker(mmc, () => MM.machines.filter(c => !c.__locked).map(c => ({ id:c.id, title:c.name, sub:[c.company_code, c.line_name, c.supplier_name, c.model].filter(Boolean).join(' · ') })),
+  else clonePicker(mmc, !PERM.act('mmtb','clone') ? null : () => MM.machines.filter(c => !c.__locked).map(c => ({ id:c.id, title:c.name, sub:[mS('location') && c.company_code, mS('location') && c.line_name, mS('supplier') && c.supplier_name, mS('model') && c.model].filter(Boolean).join(' · ') })),
     id => { const c = byId.get(id); if(c) openForm(c, true); }, () => openForm(null), src ? src.name : null);
   cloneHl(m_co, !!src);
+  // phân quyền trường: ẩn / khoá ô; máy mới (Thêm / Nhân bản) để trống ô không được sửa. Mã máy tự cấp (mã tạm) nên không theo bảng này, chỉ ẩn khi không được xem
+  permForm('mmtb', M_FORM(), !x);
+  if(!PERM.isAdmin() && !mS('code')) m_code.closest('label').classList.add('pg-hide');
   mBg.classList.remove('show');
   mmBg.classList.add('show');
   m_name.focus();
 }
+/* ô form Danh mục → nhóm quyền (m_code không có ở đây: mã tạm tự cấp; chỉ admin sửa mã) */
+const M_FORM = () => [['m_co','location'],['m_name','name'],['m_alias','name'],['m_model','model'],['m_brand','supplier'],['m_serial','model'],['m_qty','qty'],
+  ['m_area','location'],['m_line','location'],['m_parent','location'],['m_role','classify'],['m_capv','capacity'],['m_mats','capacity'],['m_group','classify'],
+  ['m_type','classify'],['m_origin','origin'],['m_sup','supplier'],['m_cur','value'],['m_amt','value'],['m_rate','value'],['m_appr','dates'],['m_ctm','dates'],
+  ['m_st','status'],['m_comm','dates'],['m_eng','person'],['m_mgr','person'],['m_notes','notes'],['m_needs','status']].concat(FORM_MS.map(k=>['m_ms_' + k, 'dates']));
 window.mmClose = () => { const b = document.getElementById('mmBg'); if(b) b.classList.remove('show'); };
-window.mmEdit = id => openForm(byId.get(id));
-window.mmClone = id => { const c = byId.get(id); if(c) openForm(c, true); };
+window.mmEdit = id => { if(PERM.act('mmtb','edit')) openForm(byId.get(id)); };
+window.mmClone = id => { const c = byId.get(id); if(c && PERM.act('mmtb','clone')) openForm(c, true); };
 /* ✂️ Tách máy: 1 hồ sơ (VD số lượng 2 bên Tiến độ) -> N hồ sơ riêng, mỗi máy chọn Khu vực / Chuyền / vị trí.
    Máy gốc giữ mọi thứ (mã, serial, giá trị hợp đồng, liên kết Tiến độ); chỉ đổi khu vực, chuyền, số lượng 1, ghi chú vị trí.
    Máy mới chép thông tin + ngày + trạng thái + mốc, mã tạm mới; để trống serial, mã tài sản, giá trị hợp đồng (giá trị nằm ở máy gốc,
@@ -5234,10 +5340,13 @@ function splitMax(x){
   return Math.min(20, Math.max(+x.quantity || 1, (+(trk && trk.sl) || 0) - done));
 }
 window.mmSplit = id => {
-  const x = byId.get(id); if(!x) return;
+  const x = byId.get(id); if(!x || !PERM.act('mmtb','split')) return;
   const trk = x.tracking_machine_id ? (window.__trackRows ? window.__trackRows() : []).find(t => t._id === x.tracking_machine_id) : null;
   const nMax = splitMax(x); if(nMax < 2) return;
-  const hasAmt = x.contract_amount != null && x.contract_amount !== '' && !isNaN(+x.contract_amount), T0 = hasAmt ? +x.contract_amount : 0;
+  // phân quyền trường: không được sửa Giá trị → không chia (máy gốc giữ nguyên giá trị, máy mới để trống — tổng vẫn đúng);
+  // không sửa được vị trí → khu vực / chuyền khoá theo máy gốc; không sửa được ghi chú → không có ô Ghi chú vị trí
+  const hasAmt = PERM.edit('mmtb', 'value') && x.contract_amount != null && x.contract_amount !== '' && !isNaN(+x.contract_amount), T0 = hasAmt ? +x.contract_amount : 0;
+  const lkLoc = PERM.edit('mmtb', 'location') ? '' : ' disabled', noNote = !PERM.edit('mmtb', 'notes');
   const dec = 0;                                   // chia giá trị theo số nguyên (mọi loại tiền)
   /* chia giá trị: ô có nhập giữ nguyên, ô để trống chia đều phần còn lại (máy gốc nhận phần lẻ); null = tổng các ô vượt / không khớp */
   const shares = vals => { const blank = vals.map((v, i)=>v == null ? i : -1).filter(i=>i >= 0), rem = T0 - vals.reduce((s, v)=>s + (v || 0), 0);
@@ -5249,9 +5358,9 @@ window.mmSplit = id => {
   const ln = MM.lines.filter(l=>l.company_id===x.company_id).sort((a,b)=>String(a.name).localeCompare(b.name));
   const opt = (list, v, lbl) => `<option value="">—</option>` + list.map(o=>`<option value="${E(o.id)}"${o.id===v?' selected':''}>${E(lbl(o))}</option>`).join('');
   const row = i => `<div class="sp-card" data-i="${i}"><div class="sp-h">${i ? `✂️ ${tr('New machine','Máy mới')} ${i} <small>${tr('new temporary code','mã tạm mới')}</small>` : `<b>${E(x.machine_code)}</b> <small>${tr('original','máy gốc')}</small>`}</div>
-      <div class="add-grid sp-g"><label>${tr('Area','Khu vực')}<select class="sp-area">${opt(ar, x.area_id, a=>a.name)}</select></label>
-      <label>${tr('Line','Chuyền')}<select class="sp-line">${opt(ln, x.line_id, l=>lineLbl(l))}</select></label>
-      <label>${tr('Location note','Ghi chú vị trí')}<input class="sp-loc" type="text" placeholder="${tr('e.g. next to warehouse B','VD cạnh kho B')}"></label>
+      <div class="add-grid sp-g"><label>${tr('Area','Khu vực')}<select class="sp-area"${lkLoc}>${opt(ar, x.area_id, a=>a.name)}</select></label>
+      <label>${tr('Line','Chuyền')}<select class="sp-line"${lkLoc}>${opt(ln, x.line_id, l=>lineLbl(l))}</select></label>
+      <label${noNote ? ' class="pg-hide"' : ''}>${tr('Location note','Ghi chú vị trí')}<input class="sp-loc" type="text" placeholder="${tr('e.g. next to warehouse B','VD cạnh kho B')}"></label>
       ${hasAmt ? `<label>${tr('Contract amount','Giá trị hợp đồng')} (${E(x.contract_currency || '')}) <small style="font-weight:400">${tr('empty = auto split','trống = tự chia')}</small><input class="sp-val" type="number" step="any" min="0"></label>` : ''}</div></div>`;
   mTitle.textContent = tr('✂️ Split machine · ','✂️ Tách máy · ') + x.name;
   mSub.innerHTML = trk ? tr(`Linked to Delivery <b>${E(trk.ma_may || '')}</b> · quantity there: <b>${+trk.sl || 1}</b>`, `Đang liên kết Tiến độ <b>${E(trk.ma_may || '')}</b> · số lượng bên đó: <b>${+trk.sl || 1}</b>`) : '';
@@ -5265,7 +5374,7 @@ window.mmSplit = id => {
       <div id="spErr" style="color:var(--red);font-size:13px;min-height:1.2em;margin-top:6px"></div>
       <div class="add-actions"><button type="button" class="nbtn2 ghost" onclick="mBg.classList.remove('show')">${tr('Cancel','Hủy')}</button>
         <button type="submit" class="nbtn2" id="spGo">${tr('✂️ Split','✂️ Tách máy')}</button></div></form>`;
-  const keep = () => [...spRows.querySelectorAll('.sp-card')].map(r=>({ a:r.querySelector('.sp-area').value, l:r.querySelector('.sp-line').value, n:r.querySelector('.sp-loc').value,
+  const keep = () => [...spRows.querySelectorAll('.sp-card')].map(r=>({ a:lkLoc ? x.area_id || '' : r.querySelector('.sp-area').value, l:lkLoc ? x.line_id || '' : r.querySelector('.sp-line').value, n:noNote ? '' : r.querySelector('.sp-loc').value,
     v: r.querySelector('.sp-val') ? r.querySelector('.sp-val').value.trim() : '' }));
   const valsOf = rows => rows.map(o=>o.v === '' ? null : Number(o.v));
   const hint = () => { if(!hasAmt) return; const rows = keep(), sh = shares(valsOf(rows));
@@ -5387,6 +5496,17 @@ async function save(){
     engineer: val('m_eng') || null, manager: val('m_mgr') || null, notes: val('m_notes') || null };
   if(window.m_needs) row.needs_info = m_needs.checked;      // cột của migration 10: chỉ gửi khi form có ô này
   if(window.m_alias) row.alias_names = val('m_alias') || null;   // migration 11; nằm trong sec — luôn gửi để không mất khi mã hoá lại
+  const cur0 = editId ? byId.get(editId) : null;
+  // trường mã hoá không có ô trong form (VD asset_code): giữ giá trị đang có — __seal chỉ niêm phong trường có trên dòng, thiếu là mất
+  if(cur0 && !cur0.__locked) SEC.mmtb_machines.f.forEach(k=>{ if(!(k in row) && k in cur0) row[k] = cur0[k] ?? null; });
+  // phân quyền trường: trường không được sửa = giá trị cũ (Sửa) / bỏ để DB đặt mặc định (máy mới) — kể cả ô bị ép qua DOM
+  if(!PERM.isAdmin()){
+    const code = row.machine_code;
+    permKeep('mmtb', row, cur0 ? (k => cur0[k] === undefined ? null : cur0[k]) : null);
+    if(!cur0) row.machine_code = code;                       // máy mới: mã tạm tự cấp
+    if(row.parent_machine_id) row.role = 'sub_unit';         // vai trò đi theo máy cha (ràng buộc DB)
+    else if(row.role === 'sub_unit') row.role = 'main';
+  }
   if(MM.hasGroups){   // có cột code_temp (07_library.sql): mã tự cấp = tạm; admin gõ mã khác = mã kế toán
     const cur = editId ? byId.get(editId) : null;
     if(!cur) row.code_temp = !m_code.dataset.touched;
@@ -5414,7 +5534,7 @@ async function save(){
     }
     // mốc tiến độ thực tế: ghi những mốc có ngày, hoặc đã có trước đó (để xoá ngày)
     const old = msBy.get(id) || {};
-    const ups = FORM_MS.filter(k=>dt('m_ms_'+k) || (old[k] && old[k].actual_date))
+    const ups = !PERM.edit('mmtb', 'dates') ? [] : FORM_MS.filter(k=>dt('m_ms_'+k) || (old[k] && old[k].actual_date))   // không được sửa ngày / mốc: không ghi mốc
       .map(k=>({ machine_id:id, milestone:k, actual_date:dt('m_ms_'+k) }));
     if(ups.length){
       const { error } = await sb.from('delivery_milestones').upsert(ups, { onConflict:'machine_id,milestone' });
@@ -5428,7 +5548,7 @@ async function save(){
   finally{ mmSave.disabled = false; setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
 }
 window.mmDelete = id => {
-  const x = byId.get(id); if(!x) return;
+  const x = byId.get(id); if(!x || !PERM.act('mmtb','delete')) return;
   const ch = kids.get(id) || [];
   if(ch.length){ showNotice({ type:'error', title:tr('This machine has sub-units','Máy này còn bộ phận con'),
     sub:tr(`Move or delete its ${ch.length} sub-units first.`,`Hãy chuyển hoặc xoá ${ch.length} bộ phận con trước.`) }); return; }
@@ -5449,7 +5569,7 @@ window.mmDelete = id => {
       finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
     } });
 };
-if(canW && !MM.err){ btnAddM.hidden = false; btnAddM.onclick = ()=>openForm(null); }
+if(PERM.act('mmtb','add') && !MM.err){ btnAddM.hidden = false; btnAddM.onclick = ()=>openForm(null); }
 
 /* ===================== THƯ VIỆN =====================
    Mã máy · NCC · Nhà máy · Nhà xưởng · Chuyền · Nhóm. Mọi người xem được; chỉ admin thêm / sửa / xoá (07_library.sql).
@@ -6075,7 +6195,7 @@ function updHeaderTs(){
 const last = { mmtb:'c1', delivery:'p1' };
 const _show = showPage;
 showPage = function(id){
-  id = window.__tabOk(id);
+  id = window.__tabOk(id); if(!id) return;
   _show(id);
   const m = /^c/.test(id) ? 'mmtb' : 'delivery'; last[m] = id;
   if(id==='c1') drawOverview();
@@ -6088,7 +6208,17 @@ function brandSub(){
   const i = document.querySelector('.brand .bt i');
   if(i) i.textContent = document.body.dataset.mod === 'delivery' ? tr('Delivery','Tiến độ máy về') : tr('Catalog','Danh mục MMTB');
 }
+function noAccess(){
+  document.querySelectorAll('.mod').forEach(b=>b.hidden = true);
+  if(document.getElementById('noAccessBg')) return;
+  const bg = document.createElement('div'); bg.id = 'noAccessBg'; bg.className = 'login-bg';
+  bg.innerHTML = '<div class="login-card"><h2>' + tr('No access yet','Chưa được cấp quyền') + '</h2><p>' + tr('You have not been given access to any section. Contact an admin.','Bạn chưa được cấp quyền xem phần nào. Liên hệ admin.')
+    + '</p><button type="button" id="naOut">' + tr('Sign out','Đăng xuất') + '</button></div>';
+  document.body.appendChild(bg);
+  bg.querySelector('#naOut').onclick = async ()=>{ await appSignOut(); location.reload(); };
+}
 function setMod(m){
+  if(!window.__modOk(m)){ const o = m === 'mmtb' ? 'delivery' : 'mmtb'; if(window.__modOk(o)) m = o; else return noAccess(); }
   document.body.dataset.mod = m;
   try{ localStorage.setItem('tdmv_mod', m); }catch(e){}
   document.querySelectorAll('.mod').forEach(b=>b.classList.toggle('active', b.dataset.m===m));
@@ -6096,10 +6226,11 @@ function setMod(m){
   updHeaderTs();
   showPage(last[m]);
 }
-document.querySelectorAll('.mod').forEach(b=>b.onclick = ()=>setMod(b.dataset.m));
+document.querySelectorAll('.mod').forEach(b=>{ b.hidden = !window.__modOk(b.dataset.m); b.onclick = ()=>setMod(b.dataset.m); });   // phân hệ không có tab nào: ẩn nút gạt
 /* mở máy ở phân hệ kia (liên kết Tiến độ ↔ Danh mục) */
-window.__goCatalog = id => { mBg.classList.remove('show'); setMod('mmtb'); showPage('c2'); setTimeout(()=>window.mmShow(id), 50); };
-window.__goTracking = id => { mBg.classList.remove('show'); setMod('delivery'); showPage('p3');
+/* mở hồ sơ Danh mục từ Tiến độ: cần tab Danh sách Danh mục (c2) */
+window.__goCatalog = id => { if(!window.__modOk('mmtb') || !PERM.tab('mmtb','c2')) return; mBg.classList.remove('show'); setMod('mmtb'); showPage('c2'); setTimeout(()=>window.mmShow(id), 50); };
+window.__goTracking = id => { if(!window.__modOk('delivery')) return; mBg.classList.remove('show'); setMod('delivery'); showPage('p3');
   const rows = window.__trackRows ? window.__trackRows() : [], i = rows.findIndex(t=>t._id===id);
   if(i >= 0) setTimeout(()=>showDetail(i), 50); };
 setMod(document.body.dataset.mod==='delivery' ? 'delivery' : 'mmtb');
@@ -6815,7 +6946,12 @@ window.encryptExisting = async () => {
   }
 
   window.__userEmail = session.user.email;
-  const { data: me } = await sb.from('app_users').select('role').eq('email', session.user.email).maybeSingle();
+  let { data: me, error: meErr } = await sb.from('app_users').select('role, perms').eq('email', session.user.email).maybeSingle();
+  /* chỉ khi lỗi nói rõ là chưa có cột perms (migration 22 chưa chạy) mới đọc lại không có perms = quy tắc theo role như cũ.
+     Lỗi khác (mạng, RLS...): giữ me rỗng → màn "Chưa được cấp quyền", không bao giờ cấp quyền mặc định theo role */
+  if(meErr && (meErr.code === '42703' || /column[^]*perms|perms[^]*column|schema cache/i.test(String(meErr.message || ''))))
+    ({ data: me } = await sb.from('app_users').select('role').eq('email', session.user.email).maybeSingle());
+  else if(meErr) me = null;
   if(!me){
     const bg = card(tr(`<h2>No access yet</h2><p>The account <b>${esc(session.user.email)}</b> is signed in but is not on the app's user list. Ask an administrator to add this email, then reload the page.</p>`,
       `<h2>Chưa được cấp quyền</h2><p>Tài khoản <b>${esc(session.user.email)}</b> đã đăng nhập nhưng chưa có trong danh sách người dùng của app. Nhờ quản trị thêm email này rồi tải lại trang.</p>`)
@@ -6824,8 +6960,10 @@ window.encryptExisting = async () => {
     return;
   }
   window.__role = me.role;
-  window.__canWrite = (me.role==='editor' || me.role==='admin');
-  window.__canWriteM = ['editor','catalog_editor','admin'].includes(me.role);
+  window.__perms = me.perms == null ? null : me.perms;
+  PERM.init(me.role, window.__perms);
+  window.__canWrite = PERM.canWrite('delivery');
+  window.__canWriteM = PERM.canWrite('mmtb');
   await cryptoGate(sb, me.role, card, session.user.email);
   await UA.forceChangePw(sb, session.user, card, appSignOut, me.role);   // sau cryptoGate: cần khoá để gói lại
   window.__MMTB = await loadMmtb(sb);
