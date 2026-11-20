@@ -362,3 +362,8 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - **Ẩn:** `data-pm` / `data-pd` + CSS (giá trị còn trong DOM/DATA — ẩn để gọn và tránh nhầm, không phải bí mật); tìm kiếm, bộ lọc, xuất Excel, chi tiết, tổng không dùng trường ẩn; thẻ/biểu đồ phụ thuộc nhóm ẩn thì ẩn theo.
 - **👥:** bấm người → bảng tick theo phân hệ (Tab / Nút ✎ / Trường Xem-Sửa), 📋 sao chép quyền, Chọn hết/Bỏ hết, nhãn "chưa cấu hình", 💾 Lưu quyền. Đổi viewer ⇄ editor ở ô chọn trên dòng = mở bảng tick chưa lưu; đổi liên quan admin vẫn qua `manage-users`.
 - Test: `_dev_tests_TienDoMayVe/e2e_perms_sql_test.py` (SQL), `e2e_perms_ui_test.py` ([1] PERM, [2] tab/nút, [3] trường + lưu an toàn, [4] 👥). Spec/plan: repo dự phòng `docs/superpowers/`.
+
+## 📅 Thẻ Kế hoạch so với thực tế — Tổng quan Tiến độ (2026-11-20, chỉ phần nhìn)
+- Không tooltip (user: che dữ liệu khác); bấm thanh vẫn mở chi tiết máy.
+- Mốc thời gian + "Hôm nay" ở biểu đồ riêng `#gnAxis` (instance `gnAx`) NGOÀI vùng cuộn `.dm-gwrap` → đứng yên khi cuộn. Hai biểu đồ phải cùng `min/max` trục thời gian và cùng `grid.left/right` (`GRID`, `xBase()`), nếu không mốc lệch với thanh. Biểu đồ chính tắt nhãn trục.
+- Chú thích `#gnLegend` ở chân thẻ. Dòng nhóm = `coFull(code)`: tên thư viện 🏭 (trùng tên gốc không dấu thì dùng bản có dấu `CO_FULL`) + " · mã", chữ `--focus`, dải nền vẽ bằng `graphic` (`gnBands`). Test: `e2e_gantt_card_test.py`.

@@ -883,6 +883,9 @@ td.name small.nm-alias{display:block;color:var(--muted);font-weight:400;overflow
 .dm-legend i.fc{background:transparent!important;border:1.5px dashed var(--muted)}
 .dm-legend i.ov{background:rgba(251,146,60,.15)!important;border:1.5px dashed var(--st-over)}
 .dm-gwrap{max-height:560px;overflow-y:auto;overflow-x:hidden}
+/* Kế hoạch so với thực tế: dải mốc thời gian đứng yên trên vùng cuộn, chú thích ở chân thẻ */
+.gn-axis{height:46px;flex:0 0 auto}
+.dm-legend.gn-legend{margin:10px 0 0}
 
 .ov-top{margin-bottom:12px}
 .ov-top .dm-filters{margin:0;flex:0 1 auto}
@@ -907,7 +910,7 @@ td.name small.nm-alias{display:block;color:var(--muted);font-weight:400;overflow
   .ov-main > .card,.ov-sub > .card{display:flex;flex-direction:column;min-height:0;margin:0;padding:11px 14px}
   .ov-main .card h3{margin-bottom:6px;flex:0 0 auto}
   .ov-gantt{grid-row:1 / 3}
-  .ov-gantt .dm-legend{margin:0 0 6px}
+  .ov-gantt .dm-legend{margin:8px 0 0}
   .ov-gantt .dm-gwrap{flex:1 1 auto;min-height:0;max-height:none}
   .ov-att #attBox{flex:1 1 auto;min-height:0;overflow:auto}
   .ov-att td{padding:6px 8px}
@@ -1167,7 +1170,7 @@ label:has(> .cb-src){position:relative}
     <div class="kpis dm-kpis" id="dmKpis"></div>
     <div class="ov-main">
       <div class="card ov-gantt" style="--accent:var(--blue)"><h3><span class="dot"></span><span id="gnTitle"></span><small id="gnSub"></small><span class="sel"><span class="gv-btn" id="gnAll"></span></span></h3>
-        <div class="dm-legend" id="gnLegend"></div><div class="dm-gwrap"><div id="gnChart"></div></div><div id="gnEmpty" class="dm-hint" hidden></div></div>
+        <div id="gnAxis" class="gn-axis"></div><div class="dm-gwrap"><div id="gnChart"></div></div><div id="gnEmpty" class="dm-hint" hidden></div><div class="dm-legend gn-legend" id="gnLegend"></div></div>
       <div class="card dm-att ov-att" style="--accent:var(--st-bad)"><h3><span class="dot"></span><span id="attTitle"></span><small id="attSub"></small><span class="sel"><span class="gv-btn on" id="attModeL"></span><span class="gv-btn" id="attModeV"></span></span></h3><div id="attBox"></div></div>
       <div class="ov-sub">
         <div class="card ov-fn" style="--accent:var(--violet)"><h3><span class="dot"></span><span id="fnTitle"></span><span class="sel"><span class="gv-btn on" id="fnCnt"></span><span class="gv-btn" id="fnVal" data-pd="value"></span></span></h3><div id="fnChart"></div></div>
@@ -2345,7 +2348,12 @@ let KP = null;
   const small = () => (fnChart.clientWidth || 400) < 440;
 
   /* ---- 2.1 Gantt ---- */
-  const gn = echarts.init(gnChart);
+  const gn = echarts.init(gnChart), gnAx = echarts.init(gnAxis);
+  /* tên đầy đủ nhà máy cho dòng nhóm: thư viện 🏭 Nhà máy → tên gốc 6 công ty → giữ mã */
+  const CO_FULL = { DTR:'Duy Tân Recycling', DAL:'Đại Lộc', DOL:'Đông Lâm', KN:'Khánh Nga', TDP:'Tân Đại Phát', TT:'Tân Tạo' };
+  const coFull = c => { const r = (DM.COMPANY_LIST || []).find(x => x.code === c), lib = (r && r.name) || '', base = CO_FULL[c] || '';
+    // thư viện mặc định ghi không dấu (Duy Tan Recycling) → cùng tên thì dùng bản có dấu; tên khác (admin đặt) thì theo thư viện
+    const nm = lib && (!base || DM.fold(lib) !== DM.fold(base)) ? lib : base || lib; return nm && nm !== c ? nm + ' · ' + c : c; };
   let showAll = false, GN = null;
   gnTitle.textContent = tr('📅 Plan vs actual', '📅 Kế hoạch so với thực tế');
   gnAll.onclick = () => { showAll = !showAll; drawGantt(); };
@@ -2368,7 +2376,7 @@ let KP = null;
       `<span><i class="fc" style="border-color:${cssv('--st-inst')}"></i>${tr('Not yet commissioned (to plan / today)', 'Chưa nghiệm thu (tới KH / hôm nay)')}</span>`;
     const cats = [], plan = [], act = [], inst = [];
     GN.groups.forEach(g => {
-      cats.push({ h: true, t: '▸ ' + g.group + ' (' + g.items.length + ')' });
+      cats.push({ h: true, t: '▸ ' + coFull(g.group) + ' (' + g.items.length + ')' });
       g.items.forEach(it => {
         const y = cats.length, i = GN.items.indexOf(it);
         cats.push({ t: it.x.ten });
@@ -2380,10 +2388,10 @@ let KP = null;
       });
     });
     gnEmpty.hidden = !!GN.items.length;
-    gnChart.style.display = GN.items.length ? '' : 'none';
-    if(!GN.items.length){ gn.clear(); gnEmpty.textContent = tr('No machines with a contract date and an arrival date in this view.', 'Không có máy nào có ngày ký HĐ và ngày về trong góc nhìn này.'); return; }
+    gnChart.style.display = gnAxis.style.display = GN.items.length ? '' : 'none';
+    if(!GN.items.length){ gn.clear(); gnAx.clear(); gnEmpty.textContent = tr('No machines with a contract date and an arrival date in this view.', 'Không có máy nào có ngày ký HĐ và ngày về trong góc nhìn này.'); return; }
     const rowH = 26;
-    gnChart.style.height = (cats.length * rowH + 90) + 'px';
+    gnChart.style.height = (cats.length * rowH + 16) + 'px';
     const bar = (frac, styleOf) => (params, api) => {
       const y = api.value(0), s0 = api.coord([api.value(1), y]), e0 = api.coord([api.value(2), y]);
       const h = api.size([0, 1])[1] * frac, cs = params.coordSys;
@@ -2392,36 +2400,35 @@ let KP = null;
       const it = GN.items[api.value(3)];
       return r && it && { type:'rect', shape:Object.assign(r, { r:3 }), style:styleOf(it) };
     };
-    const tip = p => {
-      const it = GN.items[p.value[3]];
-      const row = (lbl, m) => `<tr><td style="padding-right:10px;color:${cssv('--muted')}">${lbl}</td><td>${dmD(m.planned)}</td><td>${dmD(m.forecast)}</td><td>${dmD(m.actual)}</td></tr>`;
-      const d = it.delay;
-      return `<b>${ovEsc(it.x.ten)}</b><br><span style="color:${cssv('--muted')}">${[dS('ncc') && (ovEsc(it.x.ncc) || '—'), it.group, dS('person') && (ovEsc(it.x.phutrach) || '—')].filter(Boolean).join(' · ')}</span>` +
-        `<table style="margin-top:6px;font-size:12px;border-collapse:collapse"><tr style="color:${cssv('--muted')}"><td></td><td>${tr('Planned','Kế hoạch')}</td><td style="padding:0 8px">${tr('Forecast','Dự kiến')}</td><td>${tr('Actual','Thực tế')}</td></tr>` +
-        it.milestones.map(m => row(OV_MS[m.milestone], m)).join('') +
-        (it.x.venm_tt || it.x.nghiemthu_kh ? row(tr('Installation start', 'Bắt đầu lắp đặt'), { actual: it.x.lapdat_tt }) +
-          row(tr('Test run', 'Chạy thử'), it.inst.trialPlan ? { planned: it.x.chaythu_tt } : { actual: it.x.chaythu_tt }) +
-          row(tr('Commissioning', 'Nghiệm thu'), { planned: it.x.nghiemthu_kh, actual: it.x.nghiemthu_tt }) : '') + `</table>` +
-        (it.inst.lateAccept ? `<div style="margin-top:6px;color:${C.bad};font-weight:700">⚠ ${tr('Commissioning late','Trễ nghiệm thu')} +${it.inst.lateDays} ${tr('days','ngày')}</div>` : '') +
-        (it.inst.waitInstall ? `<div style="margin-top:6px;color:${C.warn};font-weight:700">⏰ ${tr(`Arrived ${it.inst.waitDays} days ago, not installed`,`Đã về ${it.inst.waitDays} ngày, chưa lắp đặt`)}</div>` : '') +
-        (d ? `<div style="margin-top:6px;color:${d.days > 14 ? C.bad : C.warn};font-weight:700">+${d.days} ${tr('days late','ngày trễ')}</div>`
-           : it.sev === 'done' ? '' : `<div style="margin-top:6px;color:${C.ok};font-weight:700">${tr('On schedule','Đúng hạn')}</div>`);
-    };
     const today = TS(DM.todayIso());
+    const ts = [].concat(plan, act, inst), lo0 = Math.min(today, ...ts.map(r => r[1])), hi0 = Math.max(today, ...ts.map(r => r[2]));
+    const pad = Math.max((hi0 - lo0) * .02, 864e5), xMin = lo0 - pad, xMax = hi0 + pad;
+    const GRID = { left: lblW() + 12, right: narrow() ? 30 : 18 };
+    const xBase = () => ({ type:'time', min:xMin, max:xMax, axisLine:{ lineStyle:{ color:VZ.axis().line } } });
+    // dải mốc thời gian riêng (đứng yên khi cuộn danh sách máy), cùng min/max + lề trái/phải với biểu đồ chính
+    gnAx.setOption(Object.assign(base(), {
+      grid:Object.assign({ top: 40, bottom: 2 }, GRID),
+      xAxis:Object.assign(xBase(), { position:'top', axisTick:{ show:false }, splitLine:{ show:false }, splitNumber: narrow() ? 4 : 8,
+              axisLabel:{ color:VZ.axis().text, fontSize:11, hideOverlap:true, formatter:{ year:'{yyyy}', month:tr('{MMM}', 'T{M}'), day:'{dd}/{MM}' } } }),
+      yAxis:{ type:'value', show:false, min:0, max:1 },
+      series:[{ type:'line', name:'today', data:[[today, 0]], symbol:'none', silent:true,
+        markLine:{ silent:true, symbol:'none', data:[{ xAxis:today }], lineStyle:{ color:C.bad, width:1.5, type:'solid' },
+                   label:{ formatter:tr('Today','Hôm nay'), color:C.bad, fontWeight:'bold', position:'end', distance:22 } } }]
+    }), true);
+    gnAx.resize();
     gn.setOption(Object.assign(base(), {
-      grid:{ left: lblW() + 12, right: 18, top: 50, bottom: 10, containLabel:false },
-      tooltip:Object.assign(tipBox(), { trigger:'item', confine:true, formatter:tip }),
-      xAxis:{ type:'time', position:'top', axisLabel:{ color:VZ.axis().text, fontSize:11, hideOverlap:true,
-              formatter:{ year:'{yyyy}', month:tr('{MMM}', 'T{M}'), day:'{dd}/{MM}' } }, axisLine:{ lineStyle:{ color:VZ.axis().line } },
-              splitLine:{ show:true, lineStyle:{ color:VZ.axis().split } } },
+      grid:Object.assign({ top: 4, bottom: 10, containLabel:false }, GRID),
+      tooltip:{ show:false },   // user 2026-11-20: không hiện bảng khi rê chuột (che dữ liệu khác) — bấm thanh mở chi tiết
+      xAxis:Object.assign(xBase(), { position:'top', axisLabel:{ show:false }, axisTick:{ show:false }, splitNumber: narrow() ? 4 : 8,
+              splitLine:{ show:true, lineStyle:{ color:VZ.axis().split } } }),
       yAxis:{ type:'category', inverse:true, data:cats.map(c => c.t), axisTick:{ show:false }, axisLine:{ lineStyle:{ color:VZ.axis().line } },
               axisLabel:{ width: lblW(), overflow:'truncate', fontSize:11.5, color:cssv('--txt'),
                           formatter:(v, i) => cats[i] && cats[i].h ? '{h|' + v + '}' : v,
-                          rich:{ h:{ fontWeight:'bold', color:cssv('--strong'), fontSize:12 } } } },
+                          rich:{ h:{ fontWeight:'bold', color:cssv('--focus'), fontSize:12.5 } } } },
       series:[
         { type:'custom', name:'plan', renderItem:bar(.72, () => ({ fill:rgba(cssv('--muted'), .28) })), encode:{ x:[1, 2], y:0 }, data:plan,
-          markLine:{ silent:true, symbol:'none', data:[{ xAxis:today }], lineStyle:{ color:C.bad, width:1.5, type:'solid' },
-                     label:{ formatter:tr('Today','Hôm nay'), color:C.bad, fontWeight:'bold', position:'start', distance:24 } } },
+          markLine:{ silent:true, symbol:'none', data:[{ xAxis:today }], lineStyle:{ color:C.bad, width:1.5, type:'solid' }, label:{ show:false } },
+ },
         { type:'custom', name:'actual', renderItem:bar(.36, it => it.endKind === 'overdue'
             ? { fill:rgba(cssv('--st-over'), .18), stroke:cssv('--st-over'), lineWidth:1.6, lineDash:[5, 3] }
             : it.endKind === 'forecast'
@@ -2434,6 +2441,10 @@ let KP = null;
       ]
     }), true);
     gn.resize();
+    // dải nền nhạt suốt dòng nhóm nhà máy (cả phần tên), nằm dưới chữ và thanh
+    const band = gn.convertToPixel({ yAxisIndex:0 }, 1) - gn.convertToPixel({ yAxisIndex:0 }, 0), fc = rgba(cssv('--focus'), .10);
+    gn.setOption({ graphic:[{ id:'gnBands', type:'group', silent:true, z:-1, children:cats.map((c, i) => c.h ? { type:'rect', silent:true, z:-1,
+      shape:{ x:0, y:gn.convertToPixel({ yAxisIndex:0 }, i) - band / 2, width:gn.getWidth(), height:band, r:4 }, style:{ fill:fc } } : null).filter(Boolean) }] });
   }
   gn.on('click', p => { const it = GN && GN.items[p.value[3]]; if(it) showDetail(DATA.indexOf(it.x)); });
 
