@@ -1134,6 +1134,7 @@ label:has(> .cb-src){position:relative}
   <button class="upd-btn mod-delivery" id="btnExport" hidden title="Download the full list as an Excel file; the last column (System ID) is the key when you import it back — do not change it">⬇️ Excel</button>
   <button class="upd-btn mod-delivery" id="btnTrash" hidden title="Deleted machines — restore or delete permanently">🗑</button>
   <button class="upd-btn" id="btnUsers" hidden title="Manage users">👥</button>
+  <div class="who" id="whoMe" hidden><button type="button" class="who-btn" aria-haspopup="menu" aria-expanded="false"><span class="who-av" aria-hidden="true"></span><span class="who-t"><b></b><small></small></span></button><div class="who-menu" role="menu"><div class="who-mh"><b></b><small></small></div><button type="button" role="menuitem" data-a="pw">🔑 Change password</button><button type="button" role="menuitem" data-a="out">⎋ Sign out</button></div></div>
   <button class="upd-btn" id="btnPw" hidden title="Change password">🔑</button>
   <button class="upd-btn" id="btnLogout" hidden title="Sign out">⎋</button>
   <button class="upd-btn theme-btn" id="btnLang" title="Chuyển sang tiếng Việt">VI</button>
@@ -4639,8 +4640,8 @@ window.purgeTrash = j => {
   btnExp.hidden = !PERM.act('delivery','export');   // 📤 Xuất dữ liệu; ⬇️ Excel bên dưới vẫn chỉ người có quyền ghi (như trước)
   if(window.__canWrite && PERM.REG.delivery.groups.every(g=>dS(g.k))){ btnExport.hidden = false; btnExport.onclick = ()=>{ try{ exportExcel('TienDoMayVe'); }catch(e){ showNotice({type:'error', title:tr('Could not export the file','Chưa xuất được file'), sub:escH(e.message)}); } }; }
   if(window.__role==='admin'){ btnTrash.hidden = false; btnTrash.onclick = openTrash; btnUsers.hidden = false; btnUsers.onclick = UA.open; }
-  if(window.__userEmail){ btnLogout.hidden = false; btnLogout.title = tr('Sign out (','Đăng xuất (') + window.__userEmail + ')';
-    btnPw.hidden = false; btnPw.onclick = openChangePw; }
+  if(window.__userEmail){ btnLogout.hidden = false; btnLogout.title = tr('Sign out (','Đăng xuất (') + (window.__userName || window.__userEmail) + ')';
+    btnPw.hidden = false; btnPw.onclick = openChangePw; showWho(); }
   btnLogout.onclick = async ()=>{ await appSignOut(); location.reload(); };
   const note = window.__DB_NOTE;
   if(note==='empty' && window.__canWrite) showBanner(tr('No data yet. Press <b>📂 Import Excel</b> to load the TienDoMayVe.xlsx file.','Chưa có dữ liệu. Bấm <b>📂 Nạp Excel</b> để nạp file TienDoMayVe.xlsx.'), 'warn');
@@ -6384,6 +6385,38 @@ const STATIC_VI = new Map([
   btnLang.textContent = tr('VI', 'EN');
   btnLang.title = tr('Chuyển sang tiếng Việt', 'Switch to English');
 })();
+/* ô tên người đăng nhập trên thanh tiêu đề: họ tên admin nhập (chữ lót + tên), trống thì phần trước @ của email.
+   Chỉ hiển thị, không ghi gì. Màn hẹp chỉ còn vòng chữ cái đầu, 🔑 ⎋ nằm trong bảng xổ khi bấm vòng (CLAUDE.md 👤). */
+function whoInitials(name, email){
+  const w = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if(w.length) return (w[0][0] + (w.length > 1 ? w[w.length - 1][0] : '')).toUpperCase();
+  return String(email || '?').split('@')[0].slice(0, 2).toUpperCase();
+}
+function showWho(){
+  const em = window.__userEmail || '', nm = window.__userName || em.split('@')[0];
+  const role = { admin:'Admin', editor:'Editor', viewer:tr('Viewer','Chỉ xem') }[window.__role] || '';
+  const bt = whoMe.querySelector('.who-btn'), menu = whoMe.querySelector('.who-menu');
+  whoMe.querySelector('.who-av').textContent = whoInitials(window.__userName, em);
+  whoMe.querySelectorAll('b').forEach(e => e.textContent = nm);
+  whoMe.querySelector('.who-t small').textContent = role;
+  whoMe.querySelector('.who-mh small').textContent = (role ? role + ' · ' : '') + em;
+  bt.title = nm + (role ? ' · ' + role : '') + ' — ' + em;
+  bt.setAttribute('aria-label', tr('Signed in as ', 'Đang đăng nhập: ') + nm + (role ? ' (' + role + ')' : ''));
+  /* nhãn dựng lúc mở: icons.js nạp sau đoạn này; icon SVG cùng bộ với thanh (thiếu icons.js thì dùng emoji) */
+  const ic = (n, e) => (window.ICONS && ICONS.svg(n)) || e;
+  const label = () => { menu.querySelector('[data-a="pw"]').innerHTML = ic('key', '🔑') + ' ' + escH(tr('Change password', 'Đổi mật khẩu'));
+    menu.querySelector('[data-a="out"]').innerHTML = ic('logout', '⎋') + ' ' + escH(tr('Sign out', 'Đăng xuất')); };
+  label();
+  /* bảng xổ chỉ dùng ở màn hẹp (CSS ẩn 🔑 ⎋ trên thanh, xem theme.css); màn rộng bấm không mở gì */
+  const set = on => { if(on) label(); whoMe.classList.toggle('open', on); bt.setAttribute('aria-expanded', on ? 'true' : 'false'); };
+  const narrow = () => getComputedStyle(menu).getPropertyValue('--who-menu').trim() === '1';
+  bt.onclick = () => set(narrow() && !whoMe.classList.contains('open'));
+  menu.querySelector('[data-a="pw"]').onclick = () => { set(false); btnPw.click(); };
+  menu.querySelector('[data-a="out"]').onclick = () => { set(false); btnLogout.click(); };
+  document.addEventListener('click', e => { if(!whoMe.contains(e.target)) set(false); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && whoMe.classList.contains('open')){ set(false); bt.focus(); } });
+  whoMe.hidden = false;
+}
 function switchLang(){
   try{ localStorage.setItem('tdmv_lang', LANG==='vi' ? 'en' : 'vi'); }catch(e){}
   location.reload();
@@ -6957,11 +6990,11 @@ window.encryptExisting = async () => {
   }
 
   window.__userEmail = session.user.email;
-  let { data: me, error: meErr } = await sb.from('app_users').select('role, perms').eq('email', session.user.email).maybeSingle();
+  let { data: me, error: meErr } = await sb.from('app_users').select('role, perms, ho_ten').eq('email', session.user.email).maybeSingle();
   /* chỉ khi lỗi nói rõ là chưa có cột perms (migration 22 chưa chạy) mới đọc lại không có perms = quy tắc theo role như cũ.
      Lỗi khác (mạng, RLS...): giữ me rỗng → màn "Chưa được cấp quyền", không bao giờ cấp quyền mặc định theo role */
   if(meErr && (meErr.code === '42703' || /column[^]*perms|perms[^]*column|schema cache/i.test(String(meErr.message || ''))))
-    ({ data: me } = await sb.from('app_users').select('role').eq('email', session.user.email).maybeSingle());
+    ({ data: me } = await sb.from('app_users').select('role, ho_ten').eq('email', session.user.email).maybeSingle());
   else if(meErr) me = null;
   if(!me){
     const bg = card(tr(`<h2>No access yet</h2><p>The account <b>${esc(session.user.email)}</b> is signed in but is not on the app's user list. Ask an administrator to add this email, then reload the page.</p>`,
@@ -6971,6 +7004,7 @@ window.encryptExisting = async () => {
     return;
   }
   window.__role = me.role;
+  window.__userName = String(me.ho_ten || '').trim();   // chữ lót + tên do admin nhập ở 👥 (chỉ hiển thị)
   window.__perms = me.perms == null ? null : me.perms;
   PERM.init(me.role, window.__perms);
   window.__canWrite = PERM.canWrite('delivery');

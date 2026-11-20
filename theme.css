@@ -259,3 +259,31 @@ span.flatpickr-weekday{color:var(--muted)}
 .pm-save:disabled{opacity:.6}
 @media(max-width:640px){.pm-copy{margin-left:0}.pm-mods{grid-template-columns:1fr}}
 .pay-tbl.ua-tbl:has(.ua-prow){overflow:visible}   /* để chân bảng quyền (nút Lưu) dính đáy cửa sổ khi cuộn */
+/* ô tên người đăng nhập (chỉ hiển thị): vòng chữ cái đầu + tên (đậm) / quyền (nhỏ), đứng trước 🔑 ⎋.
+   Màn hẹp (Tiến độ <=1820px, mọi phân hệ <=1500px — đo: tên ~108px không vừa thanh Tiến độ admin): chỉ còn vòng chữ cái đầu,
+   🔑 ⎋ rời thanh vào bảng xổ khi bấm vòng (thanh còn dư chỗ hơn trước). JS đọc --who-menu để biết đang ở chế độ hẹp. */
+.who{position:relative;flex:none}
+.who[hidden]{display:none!important}
+.who-btn{display:inline-flex;align-items:center;gap:7px;height:32px;max-width:200px;padding:0 9px 0 3px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--txt);font:inherit;cursor:default}
+.who-av{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.3px;flex:none}
+.who-t{display:flex;flex-direction:column;min-width:0;line-height:1.1;text-align:left}
+.who-t b{font-size:12.5px;font-weight:650;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who-t small{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.who-menu{--who-menu:0;display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:60;flex-direction:column;min-width:200px;max-width:calc(100vw - 24px);padding:6px;border-radius:10px;border:1px solid var(--border);background:var(--panel);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.who-mh{display:flex;flex-direction:column;gap:2px;padding:6px 8px 8px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+.who-mh b{font-size:13.5px;font-weight:650;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who-mh small{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who-menu button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:8px;border:0;border-radius:6px;background:transparent;color:var(--txt);font:inherit;font-size:13px;cursor:pointer}
+.who-menu button:hover,.who-menu button:focus-visible{background:var(--panel2)}
+@media(max-width:1820px){
+  body[data-mod="delivery"] .who-t{display:none}
+  body[data-mod="delivery"] #btnPw,body[data-mod="delivery"] #btnLogout{display:none!important}
+  body[data-mod="delivery"] .who-btn{padding:0 3px;cursor:pointer}
+  body[data-mod="delivery"] .who-menu{--who-menu:1}
+  body[data-mod="delivery"] .who.open .who-menu{display:flex}}
+@media(max-width:1500px){
+  .who-t{display:none}
+  #btnPw,#btnLogout{display:none!important}
+  .who-btn{padding:0 3px;cursor:pointer}
+  .who-menu{--who-menu:1}
+  .who.open .who-menu{display:flex}}

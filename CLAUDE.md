@@ -367,3 +367,8 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Không tooltip (user: che dữ liệu khác); bấm thanh vẫn mở chi tiết máy.
 - Mốc thời gian + "Hôm nay" ở biểu đồ riêng `#gnAxis` (instance `gnAx`) NGOÀI vùng cuộn `.dm-gwrap` → đứng yên khi cuộn. Hai biểu đồ phải cùng `min/max` trục thời gian và cùng `grid.left/right` (`GRID`, `xBase()`), nếu không mốc lệch với thanh. Biểu đồ chính tắt nhãn trục.
 - Chú thích `#gnLegend` ở chân thẻ. Dòng nhóm = `coFull(code)`: tên thư viện 🏭 (trùng tên gốc không dấu thì dùng bản có dấu `CO_FULL`) + " · mã", chữ `--focus`, dải nền vẽ bằng `graphic` (`gnBands`). Test: `e2e_gantt_card_test.py`.
+
+## 👤 Ô tên người đăng nhập — thanh tiêu đề (2026-11-20, chỉ hiển thị)
+- `#whoMe` đứng trước 🔑: vòng chữ cái đầu + họ tên + quyền. Tên = `app_users.ho_ten` (admin nhập ở 👥, chỉ chữ lót + tên, vd "Tiến Dũng"), đọc chung lần đọc `role, perms` lúc đăng nhập → `window.__userName`; trống → phần trước @ email. Chữ cái đầu = chữ đầu + chữ cuối. Không ghi DB.
+- Màn hẹp (Tiến độ ≤1820px, mọi phân hệ ≤1500px — đo: thanh Tiến độ admin không còn chỗ cho tên ~108px): chỉ vòng chữ cái, 🔑 ⎋ ẩn khỏi thanh, bấm vòng mở bảng xổ (tên, quyền · email, 🔑 Đổi mật khẩu, ⎋ Đăng xuất — gọi `btnPw.click()` / `btnLogout.click()`). JS biết chế độ hẹp qua biến CSS `--who-menu` trên `.who-menu`; đổi breakpoint thì chỉ sửa theme.css. Bảng xổ không có ô nhập → đóng khi bấm ra ngoài / Esc.
+- Test: `e2e_user_name_test.py` (so bố cục với bản không có ô tên ở nhiều bề ngang, 2 phân hệ).
