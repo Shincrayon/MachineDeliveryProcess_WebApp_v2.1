@@ -124,10 +124,10 @@ body{background:var(--bg)}
 .login-card p{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
 .lg-fields{display:flex;flex-direction:column;gap:14px}
 .login-card label{gap:7px;font-size:13px;font-weight:600;color:var(--txt)}
-.login-card input:not([type="checkbox"]):not([type="radio"]){height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--txt);font-size:14px;
+.login-card input:where(:not([type="checkbox"]):not([type="radio"])){height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--txt);font-size:14px;
   transition:border-color .15s,box-shadow .15s}
-.login-card input:not([type="checkbox"]):not([type="radio"])::placeholder{color:var(--muted);opacity:.65}
-.login-card input:not([type="checkbox"]):not([type="radio"]):focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus) 22%,transparent)}
+.login-card input:where(:not([type="checkbox"]):not([type="radio"]))::placeholder{color:var(--muted);opacity:.65}
+.login-card input:where(:not([type="checkbox"]):not([type="radio"])):focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus) 22%,transparent)}
 .lg-in{position:relative;display:flex;align-items:center}
 .lg-in > .ico{position:absolute;left:13px;width:17px;height:17px;color:var(--muted);pointer-events:none;transition:color .15s}
 .lg-in:focus-within > .ico{color:var(--focus)}
