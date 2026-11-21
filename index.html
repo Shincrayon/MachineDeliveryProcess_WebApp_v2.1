@@ -588,6 +588,18 @@ button.pl-chip{cursor:pointer}
 #expHint{margin-right:auto;font-size:12.5px;color:var(--amber)}
 .exp-foot .nbtn2:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:640px){.exp-list{max-height:30vh}.exp-open{margin-left:0}.exp-foot .nbtn2{flex:1 1 100%}}
+/* 📤 Thứ tự máy (kéo-thả từng máy) */
+.exp-rtools{margin:2px 0 6px}.exp-rtools .exp-h{margin:0 6px 0 0}
+#expRInfo{font-size:11.5px;color:var(--muted)} #expRInfo.exp-rcust{color:var(--focus,var(--blue));font-weight:700}
+.exp-modal .exp-list{flex-shrink:0}            /* cửa sổ là flex cột: không ép 2 danh sách còn 1 dòng, thừa thì cuộn cả cửa sổ */
+.exp-rows{max-height:34vh;min-height:min(200px,34vh)}
+.exp-rows li{cursor:default}
+.exp-rows .exp-no{min-width:2.2em;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:11.5px}
+.exp-rows .exp-rn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exp-rows li.hit{background:rgba(250,204,21,.16);border-color:rgba(250,204,21,.45)}
+.exp-rows li.moved{animation:expMoved .9s ease}
+@keyframes expMoved{from{background:rgba(96,165,250,.35)}}
+@media(max-width:640px){.exp-rows button{padding:4px 7px;font-size:11px}.exp-rows .exp-type{display:none}}
 /* ⚡ Cập nhật nhanh */
 th.qu-h,td.qu-c{width:64px;white-space:nowrap;cursor:default;padding-right:4px}
 #tb td.name{min-width:170px}

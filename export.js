@@ -3,10 +3,14 @@
    Dữ liệu: window.__listView() trong index.html trả về đúng các dòng bảng 📋 Danh sách đang hiện
    (theo bộ lọc + thứ tự sắp xếp đang xem). File .xlsx dùng ExcelJS, chỉ tải từ cdnjs khi bấm nút.
    Lựa chọn hiện tại + các mẫu báo cáo lưu trong localStorage của trình duyệt này.
+   Thứ tự MÁY (dòng) — 2026-11-21, user chọn kéo-thả từng máy: mục "Thứ tự máy" (kéo ≡ / ▲▼ / ⤒⤓ / tìm máy / ↺ Theo Danh sách).
+   Mặc định = thứ tự Danh sách đang xem. Đã tự xếp thì nhớ danh sách ID ở localStorage (tdmv_exp_ord) + lưu kèm mẫu báo cáo
+   ({ fields, order }; mẫu cũ dạng mảng trường vẫn đọc được). Máy chưa có trong thứ tự đã lưu → cuối, theo thứ tự Danh sách.
+   Chỉ ảnh hưởng file xuất, không đổi dữ liệu / bảng Danh sách.
    ===================================================================== */
 (function(){
 const EXCELJS = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
-const LS_CUR = 'tdmv_exp_cur', LS_TPL = 'tdmv_exp_tpl';
+const LS_CUR = 'tdmv_exp_cur', LS_TPL = 'tdmv_exp_tpl', LS_ORD = 'tdmv_exp_ord';
 const lsGet = (k, d) => { try{ const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; }catch(e){ return d; } };
 const lsSet = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
 const esc = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -110,7 +114,23 @@ function normalize(list){
   return out.filter(f=>okF(f.k));
 }
 let S = null, Q = '', VIEW = null, dragK = null;
+let R = [], RQ = '', dragR = null, custom = false;      // R = các dòng sẽ xuất theo thứ tự; custom = người dùng đã tự xếp
 const save = () => lsSet(LS_CUR, S);
+/* thứ tự đã lưu (mảng ID) áp lên các dòng đang lọc: dòng có trong thứ tự trước, còn lại giữ thứ tự Danh sách ở cuối */
+function applyOrder(rows, ord){
+  if(!Array.isArray(ord) || !ord.length) return rows.slice();
+  const by = new Map(rows.map(x=>[x._id, x])), out = [], used = new Set();
+  ord.forEach(id=>{ const x = by.get(id); if(x && !used.has(id)){ out.push(x); used.add(id); } });
+  rows.forEach(x=>{ if(!used.has(x._id)) out.push(x); });
+  return out;
+}
+/* lưu: giữ cả ID của máy đang bị lọc ra (vị trí cũ) để đổi bộ lọc rồi quay lại không mất thứ tự */
+function saveOrd(){
+  if(!custom){ lsSet(LS_ORD, null); return; }
+  const now = R.map(x=>x._id), set = new Set(now), old = (lsGet(LS_ORD, []) || []).filter(id=>!set.has(id));
+  lsSet(LS_ORD, now.concat(old));
+}
+const setOrder = ord => { R = applyOrder(VIEW.rows, ord); custom = Array.isArray(ord) && ord.length > 0; };
 const chosen = () => S.filter(f=>f.on).map(f=>f.k);
 
 /* ---------- xuất ---------- */
@@ -189,6 +209,9 @@ function shell(){
       <button type="button" class="nbtn2 ghost" data-a="all"></button><button type="button" class="nbtn2 ghost" data-a="none"></button>
       <button type="button" class="nbtn2 ghost" data-a="def"></button><span id="expCnt"></span></div>
     <ul class="exp-list" id="expList"></ul>
+    <div class="exp-tools exp-rtools"><h5 class="exp-h" id="expRowT"></h5><input id="expRQ" type="search"><span id="expRInfo"></span>
+      <button type="button" class="nbtn2 ghost" id="expRReset"></button></div>
+    <ul class="exp-list exp-rows" id="expRows"></ul>
     <h5 class="exp-h" id="expPrevT"></h5><div class="exp-prev" id="expPrev"></div>
     <div class="exp-foot"><span id="expHint"></span>
       <button type="button" class="nbtn2 ghost" id="expCopy"></button><button type="button" class="nbtn2" id="expXlsx"></button></div>
@@ -204,11 +227,12 @@ function shell(){
     save(); draw();
   });
   $('expTplSel').onchange = e=>{ const T = lsGet(LS_TPL, {}), n = e.target.value;
-    if(n && T[n]){ S = normalize(T[n]); $('expTplName').value = n; save(); draw(); } };
+    if(n && T[n]){ const t = T[n]; S = normalize(Array.isArray(t) ? t : t.fields); setOrder(Array.isArray(t) ? null : t.order);
+      $('expTplName').value = n; save(); saveOrd(); draw(); drawRows(); } };
   $('expTplSave').onclick = ()=>{
     const n = $('expTplName').value.trim();
     if(!n){ $('expTplName').focus(); toast(tr('Type a name for the template first.','Nhập tên mẫu trước.')); return; }
-    const T = lsGet(LS_TPL, {}), had = !!T[n]; T[n] = S.map(f=>({ k:f.k, on:f.on })); lsSet(LS_TPL, T);
+    const T = lsGet(LS_TPL, {}), had = !!T[n]; T[n] = { fields: S.map(f=>({ k:f.k, on:f.on })), order: custom ? R.map(x=>x._id) : null }; lsSet(LS_TPL, T);
     drawTpl(n); toast((had ? tr('Template updated: ','Đã cập nhật mẫu: ') : tr('Template saved: ','Đã lưu mẫu: ')) + esc(n));
   };
   $('expTplDel').onclick = ()=>{
@@ -230,16 +254,29 @@ function shell(){
   list.addEventListener('drop', e=>{ const li = e.target.closest('li'); if(!li || !dragK) return; e.preventDefault();
     const r = li.getBoundingClientRect(), after = e.clientY >= r.top + r.height/2;
     place(dragK, li.dataset.k, after); });
+  /* ---- Thứ tự máy ---- */
+  const rl = $('expRows');
+  $('expRQ').oninput = e=>{ RQ = e.target.value.trim().toLowerCase(); drawRows(true); };
+  $('expRReset').onclick = ()=>{ custom = false; R = VIEW.rows.slice(); saveOrd(); drawRows(); draw(); };
+  rl.addEventListener('click', e=>{ const b = e.target.closest('button[data-rm]'); if(!b) return; rmove(b.closest('li').dataset.id, b.dataset.rm); });
+  rl.addEventListener('dragstart', e=>{ const li = e.target.closest('li[data-id]'); if(!li) return; dragR = li.dataset.id; li.classList.add('drag');
+    e.dataTransfer.effectAllowed = 'move'; try{ e.dataTransfer.setData('text/plain', dragR); }catch(_){} });
+  rl.addEventListener('dragend', ()=>{ dragR = null; rl.querySelectorAll('.drag,.over-t,.over-b').forEach(n=>n.classList.remove('drag','over-t','over-b')); });
+  rl.addEventListener('dragover', e=>{ const li = e.target.closest('li[data-id]'); if(!li || !dragR) return; e.preventDefault();
+    const r = li.getBoundingClientRect(), top = e.clientY < r.top + r.height/2;
+    rl.querySelectorAll('.over-t,.over-b').forEach(n=>n.classList.remove('over-t','over-b')); li.classList.add(top ? 'over-t' : 'over-b'); });
+  rl.addEventListener('drop', e=>{ const li = e.target.closest('li[data-id]'); if(!li || !dragR) return; e.preventDefault();
+    const r = li.getBoundingClientRect(); rplace(dragR, li.dataset.id, e.clientY >= r.top + r.height/2); });
   $('expCopy').onclick = async ()=>{
     const keys = chosen(); if(!keys.length) return;
-    const ok = await copyText(toTSV(VIEW.rows, keys));
-    toast(ok ? tr(`✅ Copied ${VIEW.rows.length} rows — paste into Excel with Ctrl+V`,`✅ Đã sao chép ${VIEW.rows.length} dòng — dán vào Excel bằng Ctrl+V`)
+    const ok = await copyText(toTSV(R, keys));
+    toast(ok ? tr(`✅ Copied ${R.length} rows — paste into Excel with Ctrl+V`,`✅ Đã sao chép ${R.length} dòng — dán vào Excel bằng Ctrl+V`)
              : tr('Could not copy. Use ⬇️ Download .xlsx instead.','Chưa sao chép được. Hãy dùng ⬇️ Tải file .xlsx.'));
   };
   $('expXlsx').onclick = async ()=>{
     const keys = chosen(); if(!keys.length) return;
     const b = $('expXlsx'), t0 = b.textContent; b.disabled = true; b.textContent = tr('⏳ Preparing…','⏳ Đang tạo file…');
-    try{ const n = await toXlsx(VIEW.rows, keys); toast(tr(`✅ Downloaded ${VIEW.rows.length} rows: `,`✅ Đã tải ${VIEW.rows.length} dòng: `) + esc(n)); }
+    try{ const n = await toXlsx(R, keys); toast(tr(`✅ Downloaded ${R.length} rows: `,`✅ Đã tải ${R.length} dòng: `) + esc(n)); }
     catch(e){ toast('⚠️ ' + esc(e.message || e)); }
     finally{ b.disabled = !chosen().length; b.textContent = t0; }
   };
@@ -259,6 +296,42 @@ function place(k, target, after){
   const [f] = S.splice(S.findIndex(x=>x.k === k), 1);
   let j = S.findIndex(x=>x.k === target); if(after) j++;
   S.splice(j, 0, f); save(); draw();
+}
+const rIdx = id => R.findIndex(x=>x._id === id);
+function rcommit(id){ custom = true; saveOrd(); drawRows(); draw();
+  const li = $('expRows').querySelector(`li[data-id="${id}"]`); if(li){ li.classList.add('moved'); li.scrollIntoView({ block:'nearest' }); } }
+function rmove(id, how){
+  const i = rIdx(id); if(i < 0) return;
+  const j = how === 'top' ? 0 : how === 'bottom' ? R.length - 1 : i + (+how);
+  if(j < 0 || j >= R.length || j === i) return;
+  const [x] = R.splice(i, 1); R.splice(j, 0, x); rcommit(id);
+  const b = $('expRows').querySelector(`li[data-id="${id}"] button[data-rm="${how}"]`); if(b && !b.disabled) b.focus();
+}
+function rplace(id, target, after){
+  if(id === target) return;
+  const [x] = R.splice(rIdx(id), 1);
+  let j = rIdx(target); if(after) j++;
+  R.splice(j, 0, x); rcommit(id);
+}
+const rName = x => plain(x.ten) || '—';
+const rSite = x => (window.DM && DM.companyCode(plain(x.noilapdat))) || plain(x.noilapdat);
+/* tìm máy: không lọc bớt (để kéo / ▲▼ luôn đúng vị trí thật) — tô các dòng khớp, cuộn tới dòng khớp đầu tiên */
+function drawRows(jump){
+  const n = R.length, hit = x => RQ && (rName(x).toLowerCase().includes(RQ) || String(rSite(x)).toLowerCase().includes(RQ) || String(x.ma_may || '').toLowerCase().includes(RQ));
+  const T = (a, b) => tr(a, b);
+  $('expRows').innerHTML = n ? R.map((x, i)=>`<li draggable="true" data-id="${esc(x._id)}" class="${hit(x) ? 'hit' : ''}">
+      <span class="exp-grip" aria-hidden="true">≡</span><span class="exp-no">${i + 1}</span>
+      <span class="exp-rn" title="${esc(rName(x))}">${esc(rName(x))}</span><span class="exp-type">${esc(rSite(x))}</span>
+      <button type="button" data-rm="-1" title="${T('Move up','Lên')}"${i === 0 ? ' disabled' : ''}>▲</button>
+      <button type="button" data-rm="1" title="${T('Move down','Xuống')}"${i === n - 1 ? ' disabled' : ''}>▼</button>
+      <button type="button" data-rm="top" title="${T('Move to top','Lên đầu')}"${i === 0 ? ' disabled' : ''}>⤒</button>
+      <button type="button" data-rm="bottom" title="${T('Move to bottom','Xuống cuối')}"${i === n - 1 ? ' disabled' : ''}>⤓</button></li>`).join('')
+    : `<li class="exp-none">${T('No rows match the current filters.','Không có dòng nào theo bộ lọc hiện tại.')}</li>`;
+  const nh = RQ ? R.filter(hit).length : 0;
+  $('expRInfo').textContent = RQ ? T(`${nh} match(es)`, `${nh} máy khớp`) : custom ? T('custom order','đã tự xếp') : T('same order as the list','theo thứ tự Danh sách');
+  $('expRInfo').className = custom && !RQ ? 'exp-rcust' : '';
+  $('expRReset').disabled = !custom;
+  if(jump && RQ){ const f = $('expRows').querySelector('li.hit'); if(f) f.scrollIntoView({ block:'nearest' }); }
 }
 function drawTpl(sel){
   const T = lsGet(LS_TPL, {}), names = Object.keys(T).sort((a,b)=>a.localeCompare(b));
@@ -281,7 +354,7 @@ function draw(){
   $('expCnt').textContent = tr(`${keys.length}/${S.length} fields`,`${keys.length}/${S.length} trường`);
   $('expCopy').disabled = $('expXlsx').disabled = none;
   $('expHint').textContent = none ? tr('Select at least one field to export.','Chọn ít nhất 1 trường để xuất.') : '';
-  const rows = VIEW.rows.slice(0, 5);
+  const rows = R.slice(0, 5);
   const show = (k, v) => v == null ? '' : TYPE[k] === 'd' ? dmy(v) : TYPE[k] === 'n' ? Number(v).toLocaleString(tr('en-US','vi-VN')) : v;
   $('expPrev').innerHTML = none ? `<div class="exp-empty">${tr('Nothing to preview.','Chưa có gì để xem trước.')}</div>`
     : !rows.length ? `<div class="exp-empty">${tr('No rows match the current filters.','Không có dòng nào theo bộ lọc hiện tại.')}</div>`
@@ -293,10 +366,14 @@ window.expOpen = () => {
   if(typeof window.__listView !== 'function') return;
   VIEW = window.__listView();
   S = normalize(lsGet(LS_CUR, null) || defaults());
+  setOrder(lsGet(LS_ORD, null)); RQ = '';
   const bg = shell(); Q = '';
   $('expTitle').textContent = tr('📤 Export data','📤 Xuất dữ liệu');
-  $('expInfo').innerHTML = tr(`Will export <b>${VIEW.rows.length}</b> rows with the current filters (${esc(VIEW.desc)}), in the order shown in the list.`,
-                              `Sẽ xuất <b>${VIEW.rows.length}</b> dòng theo bộ lọc hiện tại (${esc(VIEW.desc)}), đúng thứ tự đang xem trong danh sách.`);
+  $('expInfo').innerHTML = tr(`Will export <b>${VIEW.rows.length}</b> rows with the current filters (${esc(VIEW.desc)}), in the order set under <b>Machine order</b> below (default: as shown in the list).`,
+                              `Sẽ xuất <b>${VIEW.rows.length}</b> dòng theo bộ lọc hiện tại (${esc(VIEW.desc)}), theo thứ tự ở mục <b>Thứ tự máy</b> bên dưới (mặc định: như danh sách đang xem).`);
+  $('expRowT').textContent = tr(`Machine order (${VIEW.rows.length})`,`Thứ tự máy (${VIEW.rows.length})`);
+  $('expRQ').value = ''; $('expRQ').placeholder = tr('🔍 Find a machine…','🔍 Tìm máy…');
+  $('expRReset').textContent = tr('↺ Same as list','↺ Theo Danh sách');
   $('expTplName').placeholder = tr('Template name, e.g. Weekly report','Tên mẫu, vd: Báo cáo tuần');
   $('expTplSave').textContent = tr('💾 Save template','💾 Lưu mẫu'); $('expTplDel').textContent = tr('🗑 Delete','🗑 Xoá mẫu');
   $('expQ').value = ''; $('expQ').placeholder = tr('🔍 Find a field…','🔍 Tìm trường…');
@@ -305,9 +382,9 @@ window.expOpen = () => {
   $('expPrevT').textContent = tr('Preview — first 5 rows','Xem trước — 5 dòng đầu');
   $('expCopy').textContent = tr('📋 Copy for Excel','📋 Sao chép để dán Excel'); $('expXlsx').textContent = tr('⬇️ Download .xlsx','⬇️ Tải file .xlsx');
   $('expX').setAttribute('aria-label', tr('Close','Đóng'));
-  drawTpl(''); $('expTplName').value = ''; draw();
+  drawTpl(''); $('expTplName').value = ''; draw(); drawRows();
   bg.classList.add('show');
 };
 /* cho test: các hàm chuyển đổi không phụ thuộc giao diện */
-window.__exp = { cell, toTSV, label, defaults, normalize, calcAdvanceDays, dayDiff };
+window.__exp = { cell, toTSV, label, defaults, normalize, calcAdvanceDays, dayDiff, applyOrder, rows: () => R };
 })();
