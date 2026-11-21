@@ -7071,15 +7071,41 @@ window.encryptExisting = async () => {
   }
   /* logo nhà xưởng (cùng đường vẽ với ICONS 'logo' trong icons.js) — nhúng sẵn để thẻ không phụ thuộc icons.js nạp sau */
   const LOGO_SVG = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V10l5 3V10l5 3V5h3l1 3h4v13z"/><path d="M7 17h2M12 17h2M17 17h2"/></svg>';
+  /* icon nét (cùng kiểu Lucide với icons.js) cho thẻ đăng nhập — nhúng sẵn vì icons.js nạp sau thẻ */
+  const LG_ICO = {
+    mail:   '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+    lock:   '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    eye:    '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    eyeOff: '<path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.7 3.6M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/>'
+  };
+  const lgSvg = n => '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + LG_ICO[n] + '</svg>';
+  const LG_FLAG = { vi:'<svg class="ico flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#da251d"/><path fill="#ffff00" d="M15 4l1.76 5.42h5.7l-4.61 3.35 1.76 5.42L15 14.84l-4.61 3.35 1.76-5.42-4.61-3.35h5.7z"/></svg>',
+    en:'<svg class="ico flag" viewBox="0 0 60 40" aria-hidden="true"><rect width="60" height="40" fill="#012169"/><path d="M0 0l60 40M60 0L0 40" stroke="#fff" stroke-width="8"/><path d="M0 0l60 40M60 0L0 40" stroke="#c8102e" stroke-width="3"/><path d="M30 0v40M0 20h60" stroke="#fff" stroke-width="12"/><path d="M30 0v40M0 20h60" stroke="#c8102e" stroke-width="7"/></svg>' };
+  /* nút ẩn / hiện mật khẩu: 2 icon cùng nét, cùng cỡ (mắt = đang ẩn, bấm để xem · mắt gạch = đang hiện, bấm để ẩn) */
+  function lgEye(pw){
+    let wrap = pw.closest('.pw-wrap');
+    if(wrap && wrap.querySelector('.pw-eye')) return;
+    if(!wrap){ wrap = document.createElement('span'); wrap.className = 'pw-wrap lg-in'; pw.parentNode.insertBefore(wrap, pw); wrap.appendChild(pw); }
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'pw-eye'; if(pw.id) b.id = pw.id + 'Eye';
+    const set = show => { b.innerHTML = lgSvg(show ? 'eyeOff' : 'eye'); b.title = show ? tr('Hide password','Ẩn mật khẩu') : tr('Show password','Hiện mật khẩu');
+      b.setAttribute('aria-label', b.title); b.setAttribute('aria-pressed', show ? 'true' : 'false'); };
+    set(false);
+    b.onclick = () => { const show = pw.type === 'password'; pw.type = show ? 'text' : 'password'; set(show); pw.focus(); };
+    wrap.appendChild(b);
+  }
   function card(inner){
     let bg = document.getElementById('loginBg');
     if(!bg){ bg = document.createElement('div'); bg.id='loginBg'; bg.className='login-bg'; document.body.appendChild(bg); }
-    /* chỉ phần trình bày: đầu thẻ = khối thương hiệu, chân thẻ = ghi chú mã hoá; nội dung/nút/id của từng thẻ giữ nguyên */
-    bg.innerHTML = '<div class="login-card"><div class="lg-brand"><span class="logo">' + LOGO_SVG + '</span><div><b>' + tr('Machinery & Equipment','Thông tin MMTB') + '</b><span>'
+    /* chỉ phần trình bày: đầu thẻ = khối thương hiệu + nút đổi ngôn ngữ, chân thẻ = ghi chú mã hoá; nội dung/nút/id của từng thẻ giữ nguyên */
+    const to = LANG === 'vi' ? 'en' : 'vi';
+    bg.innerHTML = '<div class="login-card"><button type="button" class="lg-lang" id="lgLang" title="' + tr('Chuyển sang tiếng Việt','Switch to English') + '">' + LG_FLAG[to] + '<span>' + to.toUpperCase() + '</span></button>'
+      + '<div class="lg-brand"><span class="logo">' + LOGO_SVG + '</span><div><b>' + tr('Machinery & Equipment','Thông tin MMTB') + '</b><span>'
       + tr('Machinery & equipment tracking · Duy Tân Recycling','Theo dõi máy móc thiết bị · Duy Tân Recycling') + '</span></div></div>'
-      + inner + '<div class="lg-ft">' + tr('Data is encrypted in your browser','Dữ liệu được mã hoá ngay trên trình duyệt') + '</div></div>';
-    const h2 = bg.querySelector('.login-card > h2');   // thẻ đăng nhập tự có tiêu đề là tên app: ẩn cho khỏi trùng
+      + inner + '<div class="lg-ft">' + lgSvg('lock') + tr('Data is encrypted in your browser','Dữ liệu được mã hoá ngay trên trình duyệt') + '</div></div>';
+    bg.querySelector('#lgLang').onclick = () => switchLang();
+    const h2 = bg.querySelector('.login-card > h2');   // thẻ nào lấy tên app làm tiêu đề: ẩn cho khỏi trùng khối thương hiệu
     if(h2 && /Machinery & Equipment|Thông tin MMTB/.test(h2.textContent)) h2.classList.add('brand-dup');
+    bg.querySelectorAll('.login-card input[type="password"]').forEach(lgEye);
     return bg;
   }
 
@@ -7113,29 +7139,20 @@ window.encryptExisting = async () => {
 
   const { data: { session } } = await sb.auth.getSession();
   if(!session){
-    const bg = card(`<h2>${tr('🏭 Machinery & Equipment','🏭 Thông tin MMTB')}</h2><p>${tr('Sign in with the account your administrator gave you.','Đăng nhập bằng tài khoản được quản trị cấp.')}</p>
+    const bg = card(`<h2 class="lg-title">${tr('Sign in','Đăng nhập')}</h2><p class="lg-sub">${tr('Use the account your administrator gave you.','Dùng tài khoản được quản trị cấp.')}</p>
       <form id="lgForm" novalidate>
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <label for="lgEmail">Email<input id="lgEmail" type="email" autocomplete="username" required></label>
-          <label for="lgPass">${tr(`Password`,`Mật khẩu`)}<div class="pw-wrap"><input id="lgPass" type="password" autocomplete="current-password" required><button type="button" id="lgEye" class="pw-eye" aria-label="${tr('Show password','Hiện mật khẩu')}" title="${tr('Show password','Hiện mật khẩu')}">👁</button></div></label>
+        <div class="lg-fields">
+          <label for="lgEmail">Email<span class="lg-in">${lgSvg('mail')}<input id="lgEmail" type="email" autocomplete="username" placeholder="${tr('name@duytanrecycling.com','ten@duytanrecycling.com')}" required></span></label>
+          <label for="lgPass">${tr(`Password`,`Mật khẩu`)}<span class="lg-in pw-wrap">${lgSvg('lock')}<input id="lgPass" type="password" autocomplete="current-password" placeholder="••••••••" required></span></label>
           <div class="pw-caps" id="lgCaps" hidden>${tr(`⚠️ Caps Lock is on`,`⚠️ Đang bật Caps Lock`)}</div>
-          <div class="err" id="lgErr"></div>
-          <button type="submit" id="lgBtn">${tr(`Sign in`,`Đăng nhập`)}</button>
+          <div class="err" id="lgErr" role="alert"></div>
+          <button type="submit" id="lgBtn" class="lg-btn">${tr(`Sign in`,`Đăng nhập`)}</button>
         </div>
       </form>
-      <p style="font-size:12px">${tr('Forgot your password or need an account? Contact the app administrator.','Quên mật khẩu hoặc chưa có tài khoản: liên hệ quản trị app.')} · <a href="#" id="lgLang" style="color:var(--blue)">${tr('Tiếng Việt','English')}</a></p>`);
-    bg.querySelector('#lgLang').onclick = e=>{ e.preventDefault(); switchLang(); };
+      <p class="lg-help">${tr('Forgot your password or need an account?<br>Contact the app administrator.','Quên mật khẩu hoặc chưa có tài khoản?<br>Liên hệ quản trị app.')}</p>`);
     bg.querySelector('#lgEmail').focus();
     checkConfig(cfg).then(msg=>{ if(msg){ const el = bg.querySelector('#lgErr'); if(el && !el.textContent) el.textContent = '⚠️ ' + msg; } });
-    const eye = bg.querySelector('#lgEye'), pw = bg.querySelector('#lgPass'), caps = bg.querySelector('#lgCaps');
-    eye.onclick = ()=>{
-      const show = pw.type === 'password';
-      pw.type = show ? 'text' : 'password';
-      eye.textContent = show ? '🙈' : '👁';
-      eye.title = show ? tr('Hide password','Ẩn mật khẩu') : tr('Show password','Hiện mật khẩu');
-      eye.setAttribute('aria-label', eye.title);
-      pw.focus();
-    };
+    const pw = bg.querySelector('#lgPass'), caps = bg.querySelector('#lgCaps');      // nút 👁 do card() gắn (lgEye) cho mọi ô mật khẩu
     const capsCheck = e=>{ if(e.getModifierState) caps.hidden = !e.getModifierState('CapsLock'); };
     pw.addEventListener('keydown', capsCheck); pw.addEventListener('keyup', capsCheck);
     bg.querySelector('#lgForm').onsubmit = async e=>{

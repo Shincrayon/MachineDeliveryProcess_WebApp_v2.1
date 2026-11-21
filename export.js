@@ -9,12 +9,57 @@
    Chỉ ảnh hưởng file xuất, không đổi dữ liệu / bảng Danh sách.
    Bỏ máy khỏi file xuất (2026-11-21): ô tick từng máy (bỏ tick = mờ, không xuất, tick lại được), Chọn hết / Bỏ hết (đang tìm: chỉ máy khớp).
    Máy bị bỏ: localStorage tdmv_exp_off (mảng ID) + mẫu báo cáo ({ fields, order, off }). Máy mới mặc định được tick. ↺ = thứ tự gốc + tick lại hết.
+   ĐI THEO TÀI KHOẢN (2026-11-21, user chọn "A — riêng từng người", migration 24 user_export_prefs): localStorage nay là bản đệm RIÊNG
+   từng email (khoá 'tdmv_exp_*|email'); mở 📤 thì đọc bản trên máy chủ (mới hơn thì ghi đè bản đệm), mỗi lần đổi tự đẩy lên sau ~0,8 s.
+   Bản đệm mới hơn máy chủ (sửa lúc mất mạng) → đẩy bản đệm lên. Chưa chạy 24 / lỗi mạng / không đăng nhập → chỉ localStorage như cũ.
+   Lần đầu: khoá chung cũ (không có email) chuyển sang khoá của người đang đăng nhập rồi xoá, để người khác cùng trình duyệt không nhận nhầm.
    ===================================================================== */
 (function(){
 const EXCELJS = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
-const LS_CUR = 'tdmv_exp_cur', LS_TPL = 'tdmv_exp_tpl', LS_ORD = 'tdmv_exp_ord', LS_OFF = 'tdmv_exp_off';
+const BASE = { cur:'tdmv_exp_cur', tpl:'tdmv_exp_tpl', ord:'tdmv_exp_ord', off:'tdmv_exp_off', ts:'tdmv_exp_ts' };
+let LS_CUR = BASE.cur, LS_TPL = BASE.tpl, LS_ORD = BASE.ord, LS_OFF = BASE.off, LS_TS = BASE.ts, EM = '';
 const lsGet = (k, d) => { try{ const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; }catch(e){ return d; } };
-const lsSet = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
+const rawSet = (k, v) => { try{ if(v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
+const lsSet = (k, v) => { rawSet(k, v); if([LS_CUR, LS_TPL, LS_ORD, LS_OFF].includes(k)){ rawSet(LS_TS, Date.now()); schedulePush(); } };
+/* ---------- đồng bộ theo tài khoản (migration 24) ---------- */
+const TBL = 'user_export_prefs';
+let SRV = false, pushT = null;                 // SRV = đã đọc được bảng trên máy chủ (có bảng + đăng nhập)
+const pack = () => ({ cur: lsGet(LS_CUR, null), ord: lsGet(LS_ORD, null), off: lsGet(LS_OFF, null), tpl: lsGet(LS_TPL, null) });
+function schedulePush(){ if(!SRV) return; clearTimeout(pushT); pushT = setTimeout(push, 800); }
+async function push(){
+  pushT = null; if(!SRV || !EM || !window.__sb) return;
+  try{ const { error } = await window.__sb.from(TBL).upsert({ email: EM, prefs: pack(), updated_at: new Date().toISOString() }, { onConflict:'email' });
+       if(error) console.warn('[Xuất dữ liệu] chưa lưu được lên tài khoản', error); }
+  catch(e){ console.warn('[Xuất dữ liệu] chưa lưu được lên tài khoản', e); }
+}
+const flush = () => { if(pushT){ clearTimeout(pushT); return push(); } };
+const within = (pr, ms) => Promise.race([pr, new Promise((_, no)=>setTimeout(()=>no(new Error('timeout')), ms))]);
+async function pull(){
+  EM = String(window.__userEmail || '').trim().toLowerCase();
+  const sfx = EM ? '|' + EM : '';
+  LS_CUR = BASE.cur + sfx; LS_TPL = BASE.tpl + sfx; LS_ORD = BASE.ord + sfx; LS_OFF = BASE.off + sfx; LS_TS = BASE.ts + sfx;
+  SRV = false;
+  if(!EM) return;
+  // bản cũ lưu chung trình duyệt → chuyển 1 lần sang khoá của người này rồi xoá
+  const legacy = ['cur','tpl','ord','off'].filter(k=>localStorage.getItem(BASE[k]) != null);
+  if(legacy.length){                                   // khoá cũ chỉ còn từ bản app trước → nhận làm bản mới nhất
+    legacy.forEach(k=>{ try{ localStorage.setItem(BASE[k] + sfx, localStorage.getItem(BASE[k])); }catch(e){} });
+    rawSet(LS_TS, Date.now());
+  }
+  legacy.forEach(k=>{ try{ localStorage.removeItem(BASE[k]); }catch(e){} });
+  if(!window.__sb) return;
+  try{
+    const { data, error } = await within(window.__sb.from(TBL).select('prefs, updated_at').eq('email', EM).maybeSingle(), 5000);
+    if(error) return;                              // chưa chạy migration 24 / RLS / mạng: dùng bản đệm như cũ
+    SRV = true;
+    const srvTs = data && data.updated_at ? Date.parse(data.updated_at) : 0, locTs = Number(lsGet(LS_TS, 0)) || 0;
+    const hasLocal = ['cur','tpl','ord','off'].some(k=>localStorage.getItem(BASE[k] + sfx) != null);
+    if(data && data.prefs && srvTs >= locTs){          // máy chủ mới hơn (vd vừa sửa ở máy khác) → ghi đè bản đệm
+      const P = data.prefs; rawSet(LS_CUR, P.cur ?? null); rawSet(LS_ORD, P.ord ?? null); rawSet(LS_OFF, P.off ?? null); rawSet(LS_TPL, P.tpl ?? null);
+      rawSet(LS_TS, srvTs);
+    } else if(hasLocal) await push();                  // lần đầu (chưa có dòng) hoặc bản đệm mới hơn → đẩy lên
+  }catch(e){ SRV = false; }
+}
 const esc = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const plain = v => (v == null ? '' : String(typeof unescH === 'function' ? unescH(v) : v)).trim();   // DATA giữ chữ đã escape HTML
 const isoOk = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v);
@@ -381,9 +426,10 @@ function draw(){
     : `<table><thead><tr>${keys.map(k=>`<th>${esc(label(k))}</th>`).join('')}</tr></thead><tbody>${rows.map(x=>
         `<tr>${keys.map(k=>{ const v = cell(x,k); return `<td class="${TYPE[k] === 'n' ? 'n' : ''}">${esc(show(k,v))}</td>`; }).join('')}</tr>`).join('')}</tbody></table>`;
 }
-function close(){ const bg = $('expBg'); if(bg) bg.classList.remove('show'); }
-window.expOpen = () => {
+function close(){ const bg = $('expBg'); if(bg) bg.classList.remove('show'); flush(); }
+window.expOpen = async () => {
   if(typeof window.__listView !== 'function') return;
+  await pull();                                       // lấy cấu hình xuất của tài khoản (nếu có bảng), rồi mới dựng popup
   VIEW = window.__listView();
   S = normalize(lsGet(LS_CUR, null) || defaults());
   setOrder(lsGet(LS_ORD, null)); RQ = ''; OFF = new Set(lsGet(LS_OFF, []) || []);
@@ -405,5 +451,5 @@ window.expOpen = () => {
   bg.classList.add('show');
 };
 /* cho test: các hàm chuyển đổi không phụ thuộc giao diện */
-window.__exp = { cell, toTSV, label, defaults, normalize, calcAdvanceDays, dayDiff, applyOrder, rows: () => R, out };
+window.__exp = { cell, toTSV, label, defaults, normalize, calcAdvanceDays, dayDiff, applyOrder, rows: () => R, out, flush, srv: () => SRV, keys: () => ({ LS_CUR, LS_ORD, LS_OFF, LS_TPL }) };
 })();
