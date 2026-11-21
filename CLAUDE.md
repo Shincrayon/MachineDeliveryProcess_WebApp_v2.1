@@ -136,7 +136,7 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Gọi tay: `MO.saved(id)` sau khi lưu (đã có trong `quSaveOne`, `saveMachine`, lưu hồ sơ Danh mục) → dòng `tr[data-mo=id]` loé xanh 1 lần
   khi bảng vẽ lại. Bảng mới muốn có hiệu ứng này thì thêm `data-mo` cho dòng. `MO.skel(n)` = khung chờ; `#moBoot` gỡ khi `mainSrc` chạy.
 - Popup `.modal-bg` / `.notice-bg` luôn `display:flex`, ẩn bằng `visibility` + `opacity` (đóng mờ dần 0,12 s) — vẫn chỉ bật / tắt class `show`.
-- Thanh mốc đầu popup chi tiết: `msTrack(x)` vẽ từ `DM.track(x)` (metrics.js).
+- Thanh mốc đầu popup chi tiết: `msTrack(x)` vẽ từ `DM.track(x)` (metrics.js). Số ngày giữa 2 mốc LIỀN NHAU (cả 2 có ngày): `msGaps` → `.ms-gap` trên đường nối, giữa 2 chấm (left = (i+1)/n); có ngày dự kiến → "~" nghiêng, âm → cam; ≤640px chỉ số. Test: `e2e_track_gap_test.py` (2026-11-21).
 - Kiểm tra: `motion_test.py` (cả lượt "giảm chuyển động").
 
 ## Ô Tháng / Năm chọn nhiều (`multi_pick.js`, window.MP)

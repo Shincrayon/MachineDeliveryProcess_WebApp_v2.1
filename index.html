@@ -995,8 +995,8 @@ tbody tr.mo-flash>td{animation:moFlash 1.6s ease-out}
 .mo-load::after{content:"";position:absolute;inset:44px 16px 16px;border-radius:10px;pointer-events:none;
   background:linear-gradient(90deg,var(--skel-a) 30%,var(--skel-b) 50%,var(--skel-a) 70%);background-size:300% 100%;animation:moShim 1.4s linear infinite}
 /* chi tiết máy: thanh mốc tự lấp đầy */
-.ms-track{position:relative;display:flex;margin:2px 0 16px;padding-top:2px}
-.ms-line,.ms-fill{position:absolute;top:11px;left:calc(100%/12);height:3px;border-radius:2px}
+.ms-track{position:relative;display:flex;margin:2px 0 16px;padding-top:17px}
+.ms-line,.ms-fill{position:absolute;top:26px;left:calc(100%/12);height:3px;border-radius:2px}
 .ms-line{right:calc(100%/12);background:var(--border)}
 .ms-fill{width:calc((100% - 100%/6) * var(--p,0));background:linear-gradient(90deg,var(--blue),var(--green));transform-origin:left;
   animation:msFill .8s var(--mo-ease) .1s both}
@@ -1013,6 +1013,12 @@ tbody tr.mo-flash>td{animation:moFlash 1.6s ease-out}
 .ms-step.warn .d{border-color:var(--st-over);background:rgba(251,146,60,.18)}
 .ms-step.warn small{color:var(--st-over)}
 @keyframes msDot{from{transform:scale(.4);opacity:.2}}
+/* số ngày giữa 2 mốc liền nhau (trên đường nối, giữa 2 chấm): ~ = có ngày dự kiến; âm (ngày ngược thứ tự) = cam */
+.ms-gap{position:absolute;top:0;transform:translateX(-50%);font-size:10.5px;font-weight:600;color:var(--muted);white-space:nowrap;line-height:1.3;
+  padding:0 5px;border-radius:999px;background:var(--panel2);z-index:2}
+.ms-gap.est{font-style:italic;font-weight:500}
+.ms-gap.neg{color:var(--st-over)}
+@media (max-width:640px){.ms-gap .u{display:none}}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;
     transition-duration:.01ms!important;transition-delay:0s!important;scroll-behavior:auto!important}
@@ -3373,8 +3379,21 @@ function msTrack(x){
   return `<div class="ms-track" style="--p:${Math.max(0, t.reached) / (n - 1)}" aria-label="${tr('Milestones','Các mốc')}"><span class="ms-line"></span>${t.reached > 0 ? '<span class="ms-fill"></span>' : ''}` +
     t.steps.map((s, i) => `<div class="ms-step${s.done ? ' done' : ''}${s.skip ? ' skip' : ''}${s.warn ? ' warn' : ''}${i === next ? ' next' : ''}" style="--k:${i}">` +
       `<span class="d">${s.done ? '✓' : s.warn ? '!' : ''}</span>${L[s.key]}` +
-      `<small>${s.date ? fmtD(s.date) + (s.actual ? '' : tr(' (exp.)',' (dk)')) : s.skip ? tr('no date','thiếu ngày') : '—'}</small></div>`).join('') + `</div>`;
+      `<small>${s.date ? fmtD(s.date) + (s.actual ? '' : tr(' (exp.)',' (dk)')) : s.skip ? tr('no date','thiếu ngày') : '—'}</small></div>`).join('') + msGaps(t.steps) + `</div>`;
 }
+/* số ngày giữa 2 mốc liền nhau, chỉ khi cả 2 mốc có ngày. Tâm mốc i ở (i+0.5)/n → giữa mốc i và i+1 ở (i+1)/n.
+   Có ngày dự kiến → "~" + nghiêng; âm → cam (thứ tự ngày sai, nên kiểm tra lại dữ liệu). Chỉ hiển thị, không tính gì mới. */
+function msGaps(steps){
+  const n = steps.length;
+  return steps.slice(0, -1).map((a, i) => {
+    const b = steps[i + 1]; if(!a.date || !b.date) return '';
+    const d = DM.days(a.date, b.date), est = !a.actual || !b.actual;
+    const t = `${est ? '~' : ''}${d.toLocaleString(NUMLOC)}<span class="u">${tr(' d',' ngày')}</span>`;
+    return `<span class="ms-gap${est ? ' est' : ''}${d < 0 ? ' neg' : ''}" style="left:${((i + 1) / n * 100).toFixed(3)}%" title="${tr(`${L_MS(a.key)} → ${L_MS(b.key)}: ${d} days`,`${L_MS(a.key)} → ${L_MS(b.key)}: ${d} ngày`)}${est ? tr(' (includes an expected date)',' (có ngày dự kiến)') : ''}">${t}</span>`;
+  }).join('');
+}
+const L_MS = k => tr({ordered:'Ordered', shipped:'Ex-works', port:'At port', arrived:'At plant', installing:'Installing', testing:'Test run', commissioned:'Commissioned'},
+                     {ordered:'Đặt hàng', shipped:'Xuất xưởng', port:'Cập cảng', arrived:'Về NM', installing:'Lắp đặt', testing:'Chạy thử', commissioned:'Nghiệm thu'})[k] || k;
 /* ===== Chi tiết 1 thiết bị — đầy đủ các cột như file Excel ===== */
 function openM(w){ mCard.classList.toggle('wide', !!w); mBg.classList.add('show'); }
 window.showDetail = i => {
