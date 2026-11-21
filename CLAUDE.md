@@ -387,4 +387,5 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 ## 📤 Xuất dữ liệu — Thứ tự máy (2026-11-21)
 - User chọn "kéo-thả từng máy". Mục "Thứ tự máy" trong popup 📤 (export.js): kéo ≡ (HTML5), ▲▼, ⤒⤓, ô tìm máy (tô dòng khớp, không lọc bớt), ↺ Theo Danh sách. `R` = dòng xuất theo thứ tự; sao chép / .xlsx / xem trước dùng `R`.
 - Mặc định = thứ tự Danh sách (`__listView`). Tự xếp → `localStorage['tdmv_exp_ord']` (mảng `_id`, giữ cả ID máy đang bị lọc ra). Mẫu báo cáo nay lưu `{ fields, order }` (mẫu cũ là mảng trường vẫn đọc được). Máy chưa có trong thứ tự → cuối theo thứ tự Danh sách (`applyOrder`). Không đổi dữ liệu / bảng Danh sách.
+- **Bỏ máy khỏi file xuất (2026-11-21):** ô tick từng máy trong mục Thứ tự máy (bỏ tick = mờ + gạch, không xuất, vẫn kéo/▲▼ được); ☑ Chọn hết / ☐ Bỏ hết (đang tìm: chỉ máy khớp). `out()` = `R` bỏ máy không tick — mọi đường xuất dùng `out()`. Nhớ ở `localStorage['tdmv_exp_off']` + mẫu `{ fields, order, off }`; ↺ = thứ tự gốc + tick hết; máy mới mặc định tick.
 - Test: `e2e_export_order_test.py` (kéo-thả cần danh sách hiện trọn trong khung nhìn — Playwright cuộn lúc kéo làm dragstart rơi vào dòng khác).
