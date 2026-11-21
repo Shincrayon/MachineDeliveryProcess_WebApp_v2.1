@@ -18,6 +18,8 @@ Quy tắc Mã máy:
 - STT tăng theo công ty + năm trong `machine_code_seq`; không dùng lại số đã cấp.
 - Cấp tự động phía DB (trigger `machines_code_trg`) khi `venm_tt` đổi từ trống sang có ngày và máy chưa có mã — mọi đường ghi (Cập nhật nhanh, Xác nhận hàng loạt, nạp Excel, thêm máy) đều đi qua trigger. App không tự tính mã.
 - Mã đã cấp **không đổi**, kể cả khi sửa / xoá `venm_tt`. Máy có mã nhưng mất ngày về → app cảnh báo ⚠ "Máy đã có mã nhưng mất ngày về TT".
+  **Gỡ mã (migration 23, 2026-11-21):** máy thật ra chưa về → admin bấm "↩ Gỡ mã — máy chưa về" (🏷 Cấp mã máy, chi tiết máy) → RPC `release_machine_code(id, version)` (chỉ admin, chỉ máy không có `venm_tt`; trigger chỉ cho xoá trống mã khi hàm bật cờ `app.release_code`). Số đã cấp không dùng lại; nhập ngày về sau đó → mã mới. Xoá ngày về KHÔNG tự gỡ mã. Số ⚠ trên 🏷 = `mcBadge()` (gọi trong `quAfterSave`). Còn ngày lắp đặt sót → ô tick xoá luôn.
+  ⚡ xoá Ngày về NM TT mà còn ngày lắp đặt / chạy thử / nghiệm thu TT → `quAskLd` hỏi "🧹 Xoá luôn / Giữ lại". Máy không mã còn sót các ngày đó → nút 🧹 trong chi tiết (`clearLdLeft`). Test: `e2e_release_code_test.py`.
 - Chỉ admin đổi được mã (đổi tay → bộ đếm nhảy theo).
 - Ràng buộc DB (migration 08): `venm_tt is null or ma_may is not null`; `ma_may` UNIQUE (cho phép NULL).
 

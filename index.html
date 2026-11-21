@@ -63,6 +63,9 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .perm-ro input,.perm-ro select,.perm-ro textarea{pointer-events:none;opacity:.7;cursor:not-allowed;background:var(--panel2)}
 .perm-ro button{pointer-events:none;opacity:.4}
 .pg-hide{display:none!important}
+.mc-lost{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+.nbtn2.mc-rel{border-color:var(--st-over);color:var(--st-over)}
+.mc-ldck{display:flex;gap:8px;align-items:flex-start;margin:10px 0 0;font-size:13px;text-align:left}
 /* đang khởi động (đăng nhập, mở khoá, tải dữ liệu): chưa biết quyền → chưa hiện tab / nút / thẻ nào, tránh viewer thấy thoáng
    những phần sẽ bị ẩn. Gỡ class ở cuối mainSrc (đã áp quyền tab/nút/trường) và trong start() phòng mainSrc lỗi giữa chừng.
    visibility (không display) để bố cục vẫn tính đúng kích thước. Khung chờ #moBoot (motion) vẫn hiện như cũ. */
@@ -3459,6 +3462,8 @@ window.showDetail = i => {
       ${PERM.act('delivery','payment') && dS('value') ? `<button class="nbtn2 ghost" onclick="showPayments(${i})">${tr(`💳 Payments`,`💳 Thanh toán`)}</button>` : ''}
       ${dW('delete') ? `<button class="nbtn2 ghost" onclick="askDelete(${i})">${tr(`🗑 Delete machine`,`🗑 Xoá máy`)}</button>` : ''}
       ${dW('quick') ? `<button class="nbtn2 ghost" onclick="quickEdit(${i})">${tr(`⚡ Quick update`,`⚡ Cập nhật nhanh`)}</button>` : ''}
+      ${window.__role==='admin' && x.ma_may && !x.venm_tt ? `<button class="nbtn2 ghost mc-rel" onclick="releaseCode('${x._id}')" title="${MC_REL_TIP()}">${MC_REL()}</button>` : ''}
+      ${ldLeftOver(x).length && canClearLd() ? `<button class="nbtn2 ghost mc-rel" onclick="clearLdLeft('${x._id}')">${tr('🧹 Clear leftover installation dates','🧹 Xoá ngày lắp đặt còn sót')}</button>` : ''}
       ${dW('clone') ? `<button class="nbtn2 ghost" onclick="cloneMachine(${i})" title="${tr('Add a new machine pre-filled from this one','Thêm máy mới, điền sẵn từ máy này')}">${tr(`📋 Clone`,`📋 Nhân bản`)}</button>` : ''}
       ${dW('edit') ? `<button class="nbtn2" onclick="editMachine(${i})">${tr(`✏️ Edit`,`✏️ Sửa thông tin`)}</button>` : ''}</div>
     <div class="dt-note">${tr(`Planned arrival date = Order date + advance-payment wait (plan) + shipping time (plan) + clearance &amp; pickup (plan) + manufacturing days (CTM).<br>
@@ -3763,6 +3768,19 @@ function quDiff(x,f,batch){
 }
 const quPortSkip = (x,f) => 'hinh_thuc_mua' in f && (f.hinh_thuc_mua||x.hinh_thuc_mua)==='domestic' && QU_PORT.some(k=>f[k]);
 const quLdSkip = (x,f,batch) => batch && !quArrived(x, quDiff(x,f,true)) && QU_LD.some(k=>f[k]!=='');
+/* xoá Ngày về NM TT mà máy còn ngày lắp đặt / chạy thử / nghiệm thu TT → hỏi xoá luôn (user chọn 2026-11-21).
+   Đồng ý: thêm các ngày đó = null vào ch; Giữ lại: lưu như cũ; bấm ra ngoài: không lưu gì. */
+const quLdLeft = (x,ch) => ('venm_tt' in ch && !ch.venm_tt && x.venm_tt) ? INST_KEYS.filter(k=>(k in ch ? ch[k] : x[k])) : [];
+function quAskLd(items, go){
+  const hit = items.filter(p=>quLdLeft(p.x,p.ch).length);
+  if(!hit.length) return go();
+  confirmBox({ title: tr('Also clear the installation dates?','Xoá luôn ngày lắp đặt / chạy thử / nghiệm thu TT?'),
+    sub: tr('You are clearing the actual arrival date, but these machines still have dates that only exist after arrival:','Bạn đang xoá Ngày máy về NM TT nhưng máy còn các ngày chỉ có sau khi về:')
+      + '<br>' + hit.map(p=>`<b>${p.x.ten}</b>: ${quLdLeft(p.x,p.ch).map(k=>quLbl(k)+' '+fmtD(k in p.ch ? p.ch[k] : p.x[k])).join(' · ')}`).join('<br>'),
+    ok: tr('🧹 Clear them too','🧹 Xoá luôn'), no: tr('Keep them','Giữ lại'),
+    onOk: () => { hit.forEach(p=>quLdLeft(p.x,p.ch).forEach(k=>{ p.ch[k] = null; })); go(); },
+    onNo: go });
+}
 async function quSaveOne(x,ch){
   const sb = window.__sb; if(!sb) throw {code:'nodb'};
   const upd = {};
@@ -3810,6 +3828,7 @@ window.__reloadDelivery = async () => {
 function quAfterSave(){
   render();
   try{ OV_HOOKS.forEach(f=>f()); }catch(e){}
+  mcBadge();                                      // số ⚠ trên 🏷 theo dữ liệu vừa lưu (xoá / nhập ngày về)
   setTimeout(()=>{ window.__selfWriting = false; }, 1500);
 }
 function quToast(msg){
@@ -3916,11 +3935,12 @@ function quForm(list, keep){
     if(quWarn(x0,ch).length && !armed){ armed = true; quEl('quSave').textContent = tr('⚠ Save anyway','⚠ Vẫn lưu');
       quEl('quMsg').style.color = 'var(--amber)'; quEl('quMsg').textContent = tr('Check the warning above. Press the button again to save anyway.','Kiểm tra cảnh báo ở trên. Bấm nút lần nữa để vẫn lưu.'); return; }
     if('dathang' in ch && x0.dathang){
-      confirmBox({ title: tr('Change the order date?','Đổi ngày đặt hàng?'), sub: QU_DH_MSG(), ok: tr('Continue','Tiếp tục'), onOk: ()=>quDoSave(ch) });
+      confirmBox({ title: tr('Change the order date?','Đổi ngày đặt hàng?'), sub: QU_DH_MSG(), ok: tr('Continue','Tiếp tục'), onOk: ()=>quGo(ch) });
       return;
     }
-    quDoSave(ch);
+    quGo(ch);
   };
+  const quGo = ch => quAskLd([{ x:x0, ch }], ()=>quDoSave(ch));
   const quDoSave = async ch => {
     quEl('quSave').disabled = true; quEl('quMsg').style.color = 'var(--muted)'; quEl('quMsg').textContent = tr('Saving…','Đang lưu…');
     window.__selfWriting = true;
@@ -3963,8 +3983,8 @@ function quReview(list, f, plan){
   quEl('quBack').onclick = () => quForm(list, f);
   const nDh = plan.filter(p=>'dathang' in p.ch && p.x.dathang).length;
   quEl('quGoSave').onclick = () => nDh
-    ? confirmBox({ title: tr(`Change the order date of ${nDh} machine(s)?`,`Đổi ngày đặt hàng của ${nDh} máy?`), sub: QU_DH_MSG(), ok: tr('Continue','Tiếp tục'), onOk: quRun })
-    : quRun();
+    ? confirmBox({ title: tr(`Change the order date of ${nDh} machine(s)?`,`Đổi ngày đặt hàng của ${nDh} máy?`), sub: QU_DH_MSG(), ok: tr('Continue','Tiếp tục'), onOk: ()=>quAskLd(plan, quRun) })
+    : quAskLd(plan, quRun);
   const quRun = async () => {
     quEl('quGoSave').disabled = quEl('quBack').disabled = true;
     window.__selfWriting = true;
@@ -4183,7 +4203,7 @@ window.mcOpen = async () => {
       + `<span>${tr('Unknown company','Không xác định công ty')}: ${nNote('kxd')}</span><span>${tr('Names to trim','Tên cần cắt khoảng trắng')}: ${MC.trim.length}</span>`
       + `<span>${tr('Overdue – unconfirmed (sheet 2, no code yet)','Quá hạn – chưa xác nhận (sheet 2, chưa cấp mã)')}: ${MC.overdue.length}</span></div>`
     : tr('Every arrived machine already has a code.','Mọi máy đã về đều đã có mã.');
-  const lostHtml = MC.lost.length ? `<div class="m-gt" style="margin-bottom:10px">⚠ ${tr(`${MC.lost.length} machine(s) have a code but lost the actual arrival date (the code is kept). Re-enter the date with ⚡ Quick update if it was deleted by mistake:`,`${MC.lost.length} máy đã có mã nhưng mất ngày về TT (mã vẫn giữ). Nếu ngày bị xoá nhầm, nhập lại bằng ⚡ Cập nhật nhanh:`)}<br>${MC.lost.map(o=>`<b>${o.r.ma_may}</b> ${escH(o.raw.trim())}`).join('<br>')}</div>` : '';
+  const lostHtml = MC.lost.length ? `<div class="m-gt" style="margin-bottom:10px">⚠ ${tr(`${MC.lost.length} machine(s) have a code but lost the actual arrival date (the code is kept). Re-enter the date with ⚡ Quick update if it was deleted by mistake, or press ↩ Remove code if the machine has not actually arrived:`,`${MC.lost.length} máy đã có mã nhưng mất ngày về TT (mã vẫn giữ). Nếu ngày bị xoá nhầm, nhập lại bằng ⚡ Cập nhật nhanh; nếu máy thật ra chưa về, bấm ↩ Gỡ mã:`)}<br>${MC.lost.map(o=>`<div class="mc-lost"><b>${o.r.ma_may}</b> ${escH(o.raw.trim())} <button type="button" class="nbtn2 ghost mc-rel" onclick="releaseCode('${o.r.id}','mc')" title="${MC_REL_TIP()}">${MC_REL()}</button></div>`).join('')}</div>` : '';
   if(!MC.plan.length && !MC.trim.length){ mBody.innerHTML = lostHtml + `<div class="m-ok">✅ ${tr('Nothing to assign. You can now run supabase/migrations/20261031_08_machine_code_arrived_check.sql.','Không còn máy nào cần cấp mã. Có thể chạy supabase/migrations/20261031_08_machine_code_arrived_check.sql.')}</div>`; return; }
   mBody.innerHTML = lostHtml + `<div class="qu-tbl mc-tbl"><table><thead><tr><th>${tr('Proposed code','Mã đề xuất')}</th><th>${tr('Machine','Tên hạng mục')}</th><th>${tr('Site','Nơi lắp đặt')}</th>
       <th data-pd="supplier">${tr('Supplier','NCC')}</th><th>${tr('Arrival at plant (actual)','Ngày về NM TT')}</th><th>${tr('Notes','Ghi chú')}</th></tr></thead><tbody>
@@ -4238,9 +4258,62 @@ async function mcRun(){
     + `<div class="add-actions" style="margin-top:12px"><button type="button" class="nbtn2" onclick="location.reload()">🔄 ${tr('Reload the page','Tải lại trang')}</button></div>`;
 }
 /* nút 🏷 chỉ hiện với admin khi còn máy ĐÃ VỀ chưa có mã (kể cả trong thùng rác) hoặc máy có mã nhưng mất ngày về TT */
-if(window.__role === 'admin' && window.__sb){
+/* số ⚠ trên nút 🏷 = máy có mã mà mất ngày về; gọi lại sau khi ↩ Gỡ mã để số giảm ngay (không cần tải lại) */
+function mcBadge(){
+  const b = quEl('btnMc'); if(!b || window.__role !== 'admin') return;
+  if(!b.dataset.base) b.dataset.base = b.textContent.replace(/ · ⚠ \d+$/, '');
   const lost = DATA.filter(x=>x.ma_may && !x.venm_tt).length;
-  if(lost){ quEl('btnMc').hidden = false; quEl('btnMc').textContent += ` · ⚠ ${lost}`; quEl('btnMc').classList.add('mc-warn'); quEl('btnMc').title = MC_LOST(); }
+  b.textContent = b.dataset.base + (lost ? ` · ⚠ ${lost}` : '');
+  b.classList.toggle('mc-warn', !!lost); b.title = lost ? MC_LOST() : '';
+  if(lost) b.hidden = false;
+}
+/* ↩ Gỡ mã máy chưa về (admin, migration 23 release_machine_code). Máy còn ngày lắp đặt / chạy thử / nghiệm thu TT → ô tick xoá luôn (mặc định tick).
+   from = 'mc' (popup 🏷 → mở lại) | khác (chi tiết máy → vẽ lại chi tiết) */
+const MC_REL = () => tr('↩ Remove code — not arrived','↩ Gỡ mã — máy chưa về');
+const MC_REL_TIP = () => tr('The machine has not actually arrived: remove its code. The number is not reused; a new code is assigned when you enter the arrival date.','Máy thật ra chưa về: gỡ mã. Số này không cấp lại; khi nhập Ngày máy về NM TT máy nhận mã mới.');
+const relErr = e => (e && (e.code==='PGRST202' || e.code==='42883') && /release_machine_code/.test(e.message||''))
+  ? tr('The database cannot remove codes yet. An admin needs to run <b>supabase/migrations/20261121_23_release_machine_code.sql</b> in Supabase > SQL Editor.','Máy chủ chưa hỗ trợ gỡ mã. Admin cần chạy <b>supabase/migrations/20261121_23_release_machine_code.sql</b> trong Supabase > SQL Editor.')
+  : dbErrText(e);
+const relAfter = (x, from) => { quAfterSave(); mcBadge(); if(from==='mc') mcOpen(); else if(DATA.includes(x)) showDetail(DATA.indexOf(x)); };
+window.releaseCode = (id, from) => {
+  const x = DATA.find(d=>d._id===id); if(!x || window.__role !== 'admin' || !x.ma_may || x.venm_tt) return;
+  const ld = INST_KEYS.filter(k=>x[k]), code = x.ma_may;
+  confirmBox({ title: tr(`Remove code ${code}?`,`Gỡ mã ${code}?`),
+    sub: `<b>${x.ten}</b><br>` + tr('Use this only when the machine has NOT actually arrived. The number is not reused; when you enter the actual arrival date the machine gets a new code. If the arrival date was deleted by mistake, re-enter it with ⚡ Quick update instead.',
+      'Chỉ dùng khi máy THẬT RA CHƯA VỀ. Số này không cấp lại; khi nhập Ngày máy về NM TT máy nhận mã mới. Nếu ngày về bị xoá nhầm, hãy nhập lại ngày bằng ⚡ Cập nhật nhanh thay vì gỡ mã.'),
+    extra: ld.length ? `<label class="mc-ldck"><input type="checkbox" id="relLd" checked> 🧹 ${tr('Also clear','Xoá luôn')}: ${ld.map(k=>quLbl(k)+' '+fmtD(x[k])).join(' · ')}</label>` : '',
+    ok: tr('↩ Remove code','↩ Gỡ mã'),
+    onOk: async () => {
+      const clr = ld.length && document.getElementById('relLd') && document.getElementById('relLd').checked;
+      window.__selfWriting = true;
+      try{
+        if(clr) await quSaveOne(x, Object.fromEntries(ld.map(k=>[k, null])));
+        const { error } = await window.__sb.rpc('release_machine_code', { p_id: x._id, p_version: x._ver });
+        if(error) throw error;
+        await refreshOne(x._id);
+        relAfter(x, from);
+        quToast('↩ ' + tr(`Code <b>${code}</b> removed`,`Đã gỡ mã <b>${code}</b>`) + ' · ' + x.ten + (clr ? tr(' · installation dates cleared',' · đã xoá ngày lắp đặt') : ''));
+      }catch(err){ if(clr) relAfter(x, from); showNotice({ type:'error', title: tr('Could not remove the code','Chưa gỡ được mã'), sub: relErr(err) }); }
+      finally{ setTimeout(()=>{ window.__selfWriting = false; }, 1500); }
+    } });
+};
+/* 🧹 máy KHÔNG có mã nhưng còn sót ngày lắp đặt / chạy thử / nghiệm thu TT khi không có ngày về (nhãn "⚠ mất ngày về") */
+const ldLeftOver = x => !x.venm_tt && !x.ma_may ? INST_KEYS.filter(k=>x[k]) : [];
+const canClearLd = () => dW('quick') && INST_KEYS.every(k=>dE(k));
+window.clearLdLeft = id => {
+  const x = DATA.find(d=>d._id===id), ld = x ? ldLeftOver(x) : []; if(!ld.length || !canClearLd()) return;
+  confirmBox({ title: tr('Clear the leftover installation dates?','Xoá ngày lắp đặt còn sót?'),
+    sub: `<b>${x.ten}</b><br>` + tr('The machine has no actual arrival date, so these dates are no longer valid:','Máy chưa có Ngày máy về NM TT nên các ngày này không còn đúng:') + '<br>' + ld.map(k=>quLbl(k)+' '+fmtD(x[k])).join(' · '),
+    ok: tr('🧹 Clear','🧹 Xoá'),
+    onOk: async () => {
+      window.__selfWriting = true;
+      try{ await quSaveOne(x, Object.fromEntries(ld.map(k=>[k, null]))); relAfter(x); quToast('🧹 ' + tr('Installation dates cleared','Đã xoá ngày lắp đặt còn sót') + ' · ' + x.ten); }
+      catch(err){ showNotice({ type:'error', title: tr('Could not save','Chưa lưu được'), sub: dbErrText(err) }); }
+      finally{ setTimeout(()=>{ window.__selfWriting = false; }, 1500); }
+    } });
+};
+if(window.__role === 'admin' && window.__sb){
+  mcBadge();
   window.__sb.from('machines').select('id', { count:'exact', head:true }).is('ma_may', null).not('venm_tt', 'is', null)
     .then(r => { if(!r.error && r.count) quEl('btnMc').hidden = false; });
 }
@@ -4345,9 +4418,9 @@ function confirmBox(o){
   if(!bg){ bg=document.createElement('div'); bg.id='noticeBg'; bg.className='notice-bg'; document.body.appendChild(bg); }
   bg.innerHTML = `<div class="notice err" style="--nc:#fbbf24"><div class="ic-wrap"><div class="ic-core">❓</div></div>
     <h4 style="font-size:19px">${o.title}</h4><p>${o.sub||''}</p>${o.extra||''}
-    <div class="confirm-row"><button class="nbtn2 ghost" id="cfNo">${tr(`Cancel`,`Hủy`)}</button><button class="nbtn2" id="cfYes">${o.ok||tr('OK','Đồng ý')}</button></div></div>`;
+    <div class="confirm-row"><button class="nbtn2 ghost" id="cfNo">${o.no||tr(`Cancel`,`Hủy`)}</button><button class="nbtn2" id="cfYes">${o.ok||tr('OK','Đồng ý')}</button></div></div>`;
   bg.classList.add('show');
-  bg.querySelector('#cfNo').onclick = ()=> bg.classList.remove('show');
+  bg.querySelector('#cfNo').onclick = ()=>{ bg.classList.remove('show'); o.onNo && o.onNo(); };   // o.no / o.onNo: nút thứ hai (mặc định Hủy)
   bg.querySelector('#cfYes').onclick = ()=>{ bg.classList.remove('show'); o.onOk && o.onOk(); };
   bg.onclick = e=>{ if(e.target===bg) bg.classList.remove('show'); };
 }
