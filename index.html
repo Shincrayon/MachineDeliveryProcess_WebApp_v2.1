@@ -773,14 +773,14 @@ td.qu-c input,th.qu-h input{width:16px;height:16px;vertical-align:middle;accent-
 .topbar{flex-wrap:wrap;gap:10px 6px}
 .topbar .tabs{margin-left:auto}
 #btnUpd,#btnTrash,#btnPw,#btnLogout{padding-left:11px;padding-right:11px}
-/* ===== 2 phân hệ: Danh mục MMTB / Tiến độ máy về ===== */
+/* ===== 2 phân hệ: Danh mục máy / Tiến độ máy về ===== */
 .mods{display:flex;gap:2px;padding:3px;border:1px solid var(--border);border-radius:12px;background:var(--panel)}
 .mod{padding:6px 11px;border-radius:9px;border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.2s}
 .mod:hover{color:var(--txt)}
 .mod.active{background:linear-gradient(160deg,rgba(52,211,153,.24),rgba(34,211,238,.16));color:var(--strong);box-shadow:inset 0 0 0 1px rgba(52,211,153,.35)}
 body[data-mod="mmtb"] .mod-delivery,body[data-mod="delivery"] .mod-mmtb{display:none!important}
 /* phân hệ Tiến độ nhiều nút hơn: màn hình hẹp thì thu tên app về logo, nút phân hệ không chọn chỉ còn icon */
-@media(max-width:1500px){body[data-mod="delivery"] #btnPick .btn-t{display:none}}
+@media(max-width:1560px){body[data-mod="delivery"] #btnPick .btn-t{display:none}}
 /* thêm tab Kế hoạch: màn hình ≤ 1440px thu nhỏ chữ tab / nút để header phân hệ Tiến độ vẫn 1 dòng */
 @media(max-width:1440px){body[data-mod="delivery"] .tab{font-size:12.5px;padding:8px 6px;gap:5px}
   body[data-mod="delivery"] .upd-btn{padding-left:7px;padding-right:7px}
@@ -1142,21 +1142,16 @@ label:has(> .cb-src){position:relative}
 <body>
 
 <div class="topbar">
-  <div class="brand"><span class="logo">🏭</span><h1 class="bt"><b>Machinery &amp; Equipment</b><span><i></i><em> · Duy Tân Recycling</em></span></h1></div>
+  <div class="brand"><img class="dtr-logo" src="logo-dtr.png" alt="Duy Tân Recycling" width="2561" height="561" draggable="false"><h1 class="bt"><b>Machinery &amp; Equipment</b><span><i></i><em> · Duy Tân Recycling</em></span></h1></div>
   <div class="mods" id="mods">
     <button class="mod" data-m="mmtb" title="Machinery catalog">🏭 <span class="mod-t">Catalog</span></button>
     <button class="mod" data-m="delivery" title="Machine delivery tracking">🚢 <span class="mod-t">Delivery</span></button>
   </div>
   <div class="tabs">
     <button class="tab mod-mmtb" data-p="c1">📊 Overview</button>
-    <button class="tab mod-mmtb" data-p="c2">📋 Machines</button>
-    <button class="tab mod-mmtb" data-p="c4">🧩 Arrange</button>
-    <button class="tab mod-mmtb" data-p="c3">📚 Library</button>
+    <button class="tab tab-dt mod-mmtb" data-dt="mmtb">🗂 Details</button>
     <button class="tab mod-delivery active" data-p="p1">📊 Overview</button>
-    <button class="tab mod-delivery" data-p="p2">📈 Analytics</button>
-    <button class="tab mod-delivery" data-p="p4">🏅 Evaluation</button>
-    <button class="tab mod-delivery" data-p="p5">📅 Planning</button>
-    <button class="tab mod-delivery" data-p="p3">📋 Machines</button>
+    <button class="tab tab-dt mod-delivery" data-dt="delivery">🗂 Details</button>
   </div>
   <button class="upd-btn" id="btnUpd" title="Refresh — reload the latest data">🔄</button>
   <button class="upd-btn mod-mmtb" id="btnAddM" hidden title="Add a machine to the catalog">➕ Add</button>
@@ -1172,6 +1167,15 @@ label:has(> .cb-src){position:relative}
   <button class="upd-btn theme-btn" id="btnTheme" title="Switch to light theme">☀️</button>
   <input type="file" id="fileUpd" accept=".xlsx,.xlsm" style="display:none">
   <div class="updated" style="text-align:center;line-height:1.35">📅 <b id="updDate">02/07/2026</b><span id="updTime" style="display:block;font-size:10.5px;color:var(--muted)"></span></div>
+  <div class="subtabs" id="subtabs">
+    <button class="tab mod-mmtb" data-p="c2">📋 Machines</button>
+    <button class="tab mod-mmtb" data-p="c4">🧩 Arrange</button>
+    <button class="tab mod-mmtb" data-p="c3">📚 Library</button>
+    <button class="tab mod-delivery" data-p="p2">📈 Analytics</button>
+    <button class="tab mod-delivery" data-p="p4">🏅 Evaluation</button>
+    <button class="tab mod-delivery" data-p="p5">📅 Planning</button>
+    <button class="tab mod-delivery" data-p="p3">📋 Machines</button>
+  </div>
 </div>
 
 <div class="pages">
@@ -1423,7 +1427,7 @@ const dEdRow = k => k === 'danhgia' ? (dE('dates') || dE('status')) : dE(k);
 let DATA = window.__DATA || [];
 if(window.MO) MO.ready();                // gỡ khung chờ lúc mở trang
 let DATA_TS = window.__DATA_TS || new Date().toISOString();
-window.__trackRows = () => DATA;          // Danh mục MMTB tra mã Tiến độ theo tracking_machine_id (catalog_sync.js)
+window.__trackRows = () => DATA;          // Danh mục máy tra mã Tiến độ theo tracking_machine_id (catalog_sync.js)
 
 
 /* ===== trạng thái ngày về NM: CHỈ một nơi tính — DM.arrivalStatus (metrics.js) =====
@@ -2078,20 +2082,35 @@ const inited = {};
    Tab không có quyền bị gỡ khỏi trang; mở bằng đường khác (console, liên kết) thì về tab đầu tiên được phép của cùng phân hệ, không có thì không mở gì (null).
    Chỉ là giao diện — lịch thanh toán / mặt bằng / lịch sử ngày được máy chủ chặn (migration 17, 22). */
 const TAB_ORDER = { mmtb:['c1','c2','c4','c3'], delivery:['p1','p2','p4','p5','p3'] };
+const TWO_LAST = { mmtb:'c2', delivery:'p3' };   // mục chi tiết vừa xem của mỗi phân hệ
 const tabMod = id => /^c/.test(id) ? 'mmtb' : 'delivery';
 window.__modOk = m => !!TAB_ORDER[m] && TAB_ORDER[m].some(k=>PERM.tab(m, k));   // phân hệ có ít nhất 1 tab được phép
 window.__tabOk = id => PERM.tab(tabMod(id), id) ? id : (TAB_ORDER[tabMod(id)].find(k=>PERM.tab(tabMod(id), k)) || null);
-document.querySelectorAll('.tab').forEach(t=>{ if(!PERM.tab(tabMod(t.dataset.p), t.dataset.p)) t.remove(); });
+document.querySelectorAll('.tab:not(.tab-dt)').forEach(t=>{ if(!PERM.tab(tabMod(t.dataset.p), t.dataset.p)) t.remove(); });
 function showPage(id){
   id = window.__tabOk(id); if(!id) return;
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id===id));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.p===id));
+  document.querySelectorAll('.tab:not(.tab-dt)').forEach(t=>t.classList.toggle('active', t.dataset.p===id));
+  twoPart(id);
   if(!inited[id]){ inited[id]=true; if(id==='p1') initP1(); if(id==='p2') initP2(); if(id==='p4') initP4(); if(id==='p5') initP5(); }
   else {
     document.querySelectorAll('#'+id+' [_echarts_instance_]').forEach(el=>{ const c = echarts.getInstanceByDom(el); if(c) c.resize(); });
   }
 }
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showPage(t.dataset.p));
+document.querySelectorAll('.tab:not(.tab-dt)').forEach(t=>t.onclick=()=>showPage(t.dataset.p));
+/* 2 phần: Tổng quan | Chi tiết (2026-11-21). Chỉ là giao diện: các trang + showPage giữ nguyên; "Chi tiết" mở lại mục chi tiết vừa xem
+   (mặc định Danh sách), hàng thẻ con (#subtabs) chỉ hiện khi đang ở một mục chi tiết. Không có mục chi tiết nào được phép → bỏ nút. */
+function twoPart(id){
+  const m = tabMod(id), dt = TAB_ORDER[m].slice(1).includes(id);
+  if(dt) TWO_LAST[m] = id;
+  document.querySelectorAll('.tab-dt').forEach(b=>b.classList.toggle('active', dt && b.dataset.dt===m));
+  document.body.classList.toggle('dt-on', dt);
+}
+document.querySelectorAll('.tab-dt').forEach(b=>{
+  const m = b.dataset.dt, ok = TAB_ORDER[m].slice(1).filter(k=>PERM.tab(m, k)), def = m === 'mmtb' ? 'c2' : 'p3';
+  if(!ok.length){ b.remove(); return; }
+  b.onclick = () => showPage(ok.includes(TWO_LAST[m]) ? TWO_LAST[m] : (ok.includes(def) ? def : ok[0]));
+});
 
 /* ===== counters ===== */
 document.querySelectorAll('[data-count]').forEach(el=>{
@@ -3677,7 +3696,7 @@ async function refreshOne(id){
     else DATA.push(setArrival(o));
   }catch(e){ console.warn('[Lưu máy] chưa đọc lại được', e); }
 }
-/* 🔗 khối "Danh mục MMTB" trong popup chi tiết: đã chuyển (bấm mở hồ sơ) / chưa chuyển + lý do */
+/* 🔗 khối "Danh mục máy" trong popup chi tiết: đã chuyển (bấm mở hồ sơ) / chưa chuyển + lý do */
 function csBlock(x){
   const li = window.CS && CS.linkInfo(x);
   if(!li || !li.ready) return '';
@@ -3687,7 +3706,7 @@ function csBlock(x){
       + (li.conflicts ? ` <span class="badge sm b-overdue">⚖️ ${li.conflicts} ${tr('difference(s)','trường lệch')}</span>` : '')
     : li.pending ? `${tr('Not copied yet','Chưa chuyển')} — <span class="badge sm b-wait_install">${tr('waiting to sync (create)','chờ đồng bộ (tạo mới)')}</span>`
     : `${tr('Not copied','Chưa chuyển')} — <span style="color:var(--muted)">${escH(li.reason)}</span>`;
-  return `<div class="dt-sec"><h5>${tr('Machinery catalog','Danh mục MMTB')}</h5><div class="cs-info">🔗 ${body}</div></div>`;
+  return `<div class="dt-sec"><h5>${tr('Machinery catalog','Danh mục máy')}</h5><div class="cs-info">🔗 ${body}</div></div>`;
 }
 /* 🔗 sau khi lưu bên Tiến độ: đọc lại dòng vừa lưu rồi đồng bộ sang Danh mục (catalog_sync.js).
    Lưu Tiến độ trước, đồng bộ sau — lỗi đồng bộ chỉ báo, máy nằm lại trong hàng chờ (🔗 Danh mục > Đồng bộ lại). */
@@ -4162,7 +4181,7 @@ if(canGate('confirm')) quEl('btnAc').hidden = false;
 if(window.__role === 'admin' && window.CS){
   quEl('btnCs').hidden = false;
   const n = CS.pendingCount(); if(n) quEl('btnCs').textContent += ` · ${n}`;
-  quEl('btnCs').title = n ? tr(`${n} machine(s) waiting to sync to the Catalog`,`${n} máy chờ đồng bộ sang Danh mục`) : tr('Pairing, sync and differences with the Machinery catalog','Ghép cặp, đồng bộ và lệch dữ liệu với Danh mục MMTB');
+  quEl('btnCs').title = n ? tr(`${n} machine(s) waiting to sync to the Catalog`,`${n} máy chờ đồng bộ sang Danh mục`) : tr('Pairing, sync and differences with the Machinery catalog','Ghép cặp, đồng bộ và lệch dữ liệu với Danh mục máy');
 }
 /* ---- 🏷 Cấp mã máy cho máy ĐÃ VỀ từ trước (chỉ admin; migrations/20261031_05 + 07) ----
    Máy về sau khi chạy 07: trigger tự cấp lúc nhập Ngày máy về NM TT. Máy chưa về: không có mã.
@@ -4842,11 +4861,11 @@ const coName = c => { const x = MM.companies.find(o=>o.code===c); return x ? x.n
 
 /* ----- trang trống khi chưa có bảng / chưa có dữ liệu ----- */
 function emptyHTML(){
-  if(MM.err) return `<div class="mm-empty"><h3>${tr('The machinery catalog is not set up yet','Danh mục MMTB chưa được cài đặt')}</h3>
+  if(MM.err) return `<div class="mm-empty"><h3>${tr('The machinery catalog is not set up yet','Danh mục máy chưa được cài đặt')}</h3>
     ${tr('An admin needs to run <code>supabase/05_mmtb_schema.sql</code> then <code>supabase/import/mmtb_import.sql</code> in Supabase › SQL Editor.',
          'Admin cần chạy <code>supabase/05_mmtb_schema.sql</code> rồi <code>supabase/import/mmtb_import.sql</code> trong Supabase › SQL Editor.')}
     <div style="margin-top:8px;font-size:12px">${tr('Server message','Thông báo từ máy chủ')}: ${E(MM.err)}</div></div>`;
-  return `<div class="mm-empty"><h3>${tr('No machines in the catalog yet','Danh mục MMTB chưa có máy nào')}</h3>
+  return `<div class="mm-empty"><h3>${tr('No machines in the catalog yet','Danh mục máy chưa có máy nào')}</h3>
     ${canW ? tr('Press <b>➕ Add</b> to add the first machine.','Bấm <b>➕ Thêm</b> để nhập máy đầu tiên.') : ''}
     ${window.__role==='admin' ? `<div style="margin-top:14px">${tr('Or load the prepared file <code>supabase/import/mmtb_rows.json</code>. It is read on this computer and encrypted in the browser before anything is sent.',
       'Hoặc nạp file đã chuẩn bị <code>supabase/import/mmtb_rows.json</code>. File được đọc trên máy này và mã hoá trong trình duyệt trước khi gửi đi.')}
@@ -5249,7 +5268,7 @@ function buildForm(){
   bg.innerHTML = `<div class="modal add-modal" style="position:relative;max-width:760px">
     <button class="m-close" onclick="mmClose()">✕</button>
     <h4 id="mmFTitle"></h4>
-    <div class="m-sub">${tr('Saved to the catalog; everyone with the link sees it right away. Fields marked * are required.','Lưu vào Danh mục MMTB, ai mở link cũng thấy ngay. Ô có dấu * là bắt buộc.')}</div>
+    <div class="m-sub">${tr('Saved to the catalog; everyone with the link sees it right away. Fields marked * are required.','Lưu vào Danh mục máy, ai mở link cũng thấy ngay. Ô có dấu * là bắt buộc.')}</div>
     <div id="mmClone"></div>
     <div class="add-grid" id="mmGrid">
       ${L(tr('Plant *','Nhà máy *'), `<select id="m_co" class="req">${MM.companies.map(c=>`<option value="${E(c.id)}">${E(c.code)} — ${E(c.name)}</option>`).join('')}</select>`)}
@@ -5393,7 +5412,7 @@ function openForm(x, clone){
   editId = x ? x.id : null;
   m_code.dataset.touched = x ? '1' : '';
   CB.clearHints();
-  mmFTitle.textContent = x ? tr('✏️ Edit: ','✏️ Sửa: ') + x.name : tr('➕ Add machine to the catalog','➕ Thêm máy vào Danh mục MMTB');
+  mmFTitle.textContent = x ? tr('✏️ Edit: ','✏️ Sửa: ') + x.name : tr('➕ Add machine to the catalog','➕ Thêm máy vào Danh mục máy');
   mmSave.textContent = x ? tr('💾 Save changes','💾 Lưu thay đổi') : tr('➕ Add machine','➕ Thêm máy');
   // nhóm: chọn từ thư viện; nhóm cũ của máy (nếu không còn trong thư viện) vẫn giữ để không mất
   const gNames = (MM.groups || []).map(g=>g.name);
@@ -6405,7 +6424,7 @@ showPage = function(id){
 /* dòng phụ khối thương hiệu: tên phân hệ đang mở (chỉ hiển thị) */
 function brandSub(){
   const i = document.querySelector('.brand .bt i');
-  if(i) i.textContent = document.body.dataset.mod === 'delivery' ? tr('Delivery','Tiến độ máy về') : tr('Catalog','Danh mục MMTB');
+  if(i) i.textContent = document.body.dataset.mod === 'delivery' ? tr('Delivery','Tiến độ máy về') : tr('Catalog','Danh mục máy');
 }
 function noAccess(){
   document.querySelectorAll('.mod').forEach(b=>b.hidden = true);
@@ -6445,16 +6464,18 @@ function tr(en, vi){ return LANG==='vi' ? vi : en; }
 const NUMLOC = tr('en-US', 'vi-VN');
 const STATIC_VI = new Map([
   ['Machine Delivery Tracker','Tiến Độ Máy Về'],
-  ['Machinery & Equipment','Thông tin MMTB'],
-  ['Catalog','Danh mục MMTB'],
+  ['Machinery & Equipment','Thông tin máy móc thiết bị'],
+  ['Catalog','Danh mục máy'],
+  ['Details','Chi tiết'],
   ['Delivery','Tiến độ máy về'],
   ['Import','Nạp Excel'],
   ['Machinery catalog','Danh mục máy móc thiết bị'],
   ['Machine delivery tracking','Theo dõi tiến độ máy về'],
-  ['Add a machine to the catalog','Thêm máy vào Danh mục MMTB'],
+  ['Add a machine to the catalog','Thêm máy vào Danh mục máy'],
   ['📚 Library','📚 Thư viện'],
   ['🧩 Arrange','🧩 Sắp xếp'],
   ['📊 Overview','📊 Tổng quan'],
+  ['🗂 Details','🗂 Chi tiết'],
   ['📈 Analytics','📈 Phân tích'],
   ['🏅 Evaluation','🏅 Đánh giá'],
   ['📅 Planning','📅 Kế hoạch'],
@@ -6555,7 +6576,7 @@ const STATIC_VI = new Map([
 ]);
 (function applyStaticLang(){
   document.documentElement.lang = LANG;
-  document.title = tr('Machinery & Equipment', 'Thông tin MMTB');
+  document.title = tr('Machinery & Equipment', 'Thông tin máy móc thiết bị');
   let mod = 'mmtb'; try{ if(localStorage.getItem('tdmv_mod')==='delivery') mod = 'delivery'; }catch(e){}
   document.body.dataset.mod = mod;   // phân hệ đang mở; mmtbSrc đổi khi bấm nút trên header
   if(LANG==='vi'){
@@ -6595,7 +6616,9 @@ function showWho(){
     menu.querySelector('[data-a="out"]').innerHTML = ic('logout', '⎋') + ' ' + escH(tr('Sign out', 'Đăng xuất')); };
   label();
   /* bảng xổ chỉ dùng ở màn hẹp (CSS ẩn 🔑 ⎋ trên thanh, xem theme.css); màn rộng bấm không mở gì */
-  const set = on => { if(on) label(); whoMe.classList.toggle('open', on); bt.setAttribute('aria-expanded', on ? 'true' : 'false'); };
+  const set = on => { if(on) label(); whoMe.classList.toggle('open', on); bt.setAttribute('aria-expanded', on ? 'true' : 'false');
+    /* bảng neo mép phải ô tên; ô tên nằm sát trái (điện thoại, thanh xuống dòng) thì đẩy bảng vào trong màn hình */
+    menu.style.right = ''; if(on){ const r = menu.getBoundingClientRect(); if(r.left < 8) menu.style.right = (r.left - 8) + 'px'; } };
   const narrow = () => getComputedStyle(menu).getPropertyValue('--who-menu').trim() === '1';
   bt.onclick = () => set(narrow() && !whoMe.classList.contains('open'));
   menu.querySelector('[data-a="pw"]').onclick = () => { set(false); btnPw.click(); };
@@ -7006,7 +7029,7 @@ window.encryptExisting = async () => {
     });
     document.documentElement.classList.remove('booting');   // phòng mainSrc lỗi giữa chừng: không để trang trống mãi
   }
-  /* Danh mục MMTB: bảng riêng (05_mmtb_schema.sql). Lỗi ở đây không chặn phần Tiến độ máy về. */
+  /* Danh mục máy: bảng riêng (05_mmtb_schema.sql). Lỗi ở đây không chặn phần Tiến độ máy về. */
   async function loadMmtb(sb){
     const empty = { machines:[], companies:[], areas:[], lines:[], suppliers:[], milestones:[] };
     try{
@@ -7069,8 +7092,6 @@ window.encryptExisting = async () => {
     });
     return mm;
   }
-  /* logo nhà xưởng (cùng đường vẽ với ICONS 'logo' trong icons.js) — nhúng sẵn để thẻ không phụ thuộc icons.js nạp sau */
-  const LOGO_SVG = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V10l5 3V10l5 3V5h3l1 3h4v13z"/><path d="M7 17h2M12 17h2M17 17h2"/></svg>';
   /* icon nét (cùng kiểu Lucide với icons.js) cho thẻ đăng nhập — nhúng sẵn vì icons.js nạp sau thẻ */
   const LG_ICO = {
     mail:   '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
@@ -7099,12 +7120,12 @@ window.encryptExisting = async () => {
     /* chỉ phần trình bày: đầu thẻ = khối thương hiệu + nút đổi ngôn ngữ, chân thẻ = ghi chú mã hoá; nội dung/nút/id của từng thẻ giữ nguyên */
     const to = LANG === 'vi' ? 'en' : 'vi';
     bg.innerHTML = '<div class="login-card"><button type="button" class="lg-lang" id="lgLang" title="' + tr('Chuyển sang tiếng Việt','Switch to English') + '">' + LG_FLAG[to] + '<span>' + to.toUpperCase() + '</span></button>'
-      + '<div class="lg-brand"><span class="logo">' + LOGO_SVG + '</span><div><b>' + tr('Machinery & Equipment','Thông tin MMTB') + '</b><span>'
+      + '<div class="lg-brand"><img class=\"dtr-logo\" src=\"logo-dtr.png\" alt=\"Duy Tân Recycling\" width=\"2561\" height=\"561\" draggable=\"false\"><div><b>' + tr('Machinery & Equipment','Thông tin máy móc thiết bị') + '</b><span>'
       + tr('Machinery & equipment tracking · Duy Tân Recycling','Theo dõi máy móc thiết bị · Duy Tân Recycling') + '</span></div></div>'
       + inner + '<div class="lg-ft">' + lgSvg('lock') + tr('Data is encrypted in your browser','Dữ liệu được mã hoá ngay trên trình duyệt') + '</div></div>';
     bg.querySelector('#lgLang').onclick = () => switchLang();
     const h2 = bg.querySelector('.login-card > h2');   // thẻ nào lấy tên app làm tiêu đề: ẩn cho khỏi trùng khối thương hiệu
-    if(h2 && /Machinery & Equipment|Thông tin MMTB/.test(h2.textContent)) h2.classList.add('brand-dup');
+    if(h2 && /Machinery & Equipment|Thông tin máy móc thiết bị/.test(h2.textContent)) h2.classList.add('brand-dup');
     bg.querySelectorAll('.login-card input[type="password"]').forEach(lgEye);
     return bg;
   }
@@ -7247,7 +7268,7 @@ window.encryptExisting = async () => {
     sb.channel('mmtb-changes')
       .on('postgres_changes', { event:'*', schema:'public', table:'mmtb_machines' }, ()=>{
         if(window.__selfWritingM) return;
-        showBanner(tr('Someone just updated the machinery catalog.','Có người vừa cập nhật Danh mục MMTB.'), '', true);
+        showBanner(tr('Someone just updated the machinery catalog.','Có người vừa cập nhật Danh mục máy.'), '', true);
       }).subscribe();
   }catch(e){}
 })();

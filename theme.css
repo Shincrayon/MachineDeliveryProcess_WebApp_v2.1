@@ -333,3 +333,30 @@ span.flatpickr-weekday{color:var(--muted)}
   .who-btn{padding:0 3px;cursor:pointer}
   .who-menu{--who-menu:1}
   .who.open .who-menu{display:flex}}
+
+/* logo Duy Tân (file gốc logo-dtr.png, không vẽ lại / đổi màu): nền trắng để chữ xám RECYCLING đọc được ở giao diện tối */
+.dtr-logo{display:block;width:auto;height:22px;padding:4px 7px;background:#fff;border-radius:8px;box-sizing:content-box;flex:none;user-select:none}
+:root[data-theme="light"] .dtr-logo{padding:4px 2px}
+.brand .bt{padding-left:8px;border-left:1px solid var(--border)}
+/* logo chiếm thêm chỗ: tab Tiến độ bỏ icon ở ≤1900px (trước là ≤1700px) để tab không bị cắt */
+
+.brand .bt em{display:none}  /* logo đã có tên công ty */
+@media(max-width:1440px){body[data-mod="delivery"] .tab{padding:0 6px}body[data-mod="delivery"] .topbar{gap:7px}}
+@media(max-width:1300px){.brand .dtr-logo{height:20px;padding:3px 6px}.brand .bt{padding-left:7px}.brand{gap:7px}body[data-mod="delivery"] .tab{padding:0 5px}body[data-mod="delivery"] .topbar{gap:6px}}
+/* điện thoại: thanh trên quá chật — logo chỉ hiện ở thẻ đăng nhập */
+@media(max-width:640px){.brand .dtr-logo{display:none}.brand .bt{border-left:0;padding-left:0}}
+.lg-brand{flex-direction:column;align-items:flex-start;gap:12px}
+.lg-brand .dtr-logo{height:38px}
+.login-card .lg-brand .dtr-logo{height:36px}
+@media(max-width:480px){.login-card .lg-brand .dtr-logo{height:30px}}
+
+/* ===== 2 phần Tổng quan | Chi tiết (2026-11-21): thanh trên chỉ còn 2 thẻ, mục chi tiết ở hàng thẻ con bên dưới ===== */
+.topbar{flex-wrap:wrap!important;row-gap:0}
+.subtabs{order:100;flex:0 0 100%;display:none;align-items:center;gap:2px;margin:8px 0 -8px;padding:4px 0 0;border-top:1px solid var(--border);background:var(--panel)}
+body.dt-on .subtabs{display:flex}
+.subtabs .tab{height:34px;border-radius:8px 8px 0 0}
+.tab-dt.active{background:var(--accent-soft);box-shadow:inset 0 -2px 0 var(--accent);color:var(--txt)}
+/* tên app viết đầy đủ, to hơn */
+.brand .bt b{font-size:22px}
+@media(max-width:1300px){.brand .bt b{font-size:19px}}
+@media(max-width:640px){.brand .bt b{font-size:16px}.subtabs{margin:6px 0 -4px;overflow-x:auto}}

@@ -1,6 +1,6 @@
 /* =====================================================================
    perms.js — phân quyền từng người (window.PERM). Nạp sau config.js, trước script chính của index.html.
-   - REG: danh mục khoá (tab / nút / nhóm trường) của 2 phân hệ: mmtb = Danh mục MMTB, delivery = Tiến độ máy về.
+   - REG: danh mục khoá (tab / nút / nhóm trường) của 2 phân hệ: mmtb = Danh mục máy, delivery = Tiến độ máy về.
      THÊM TRƯỜNG MỚI vào form / cột Danh sách thì phải đăng ký vào nhóm tương ứng ở đây (không đăng ký = người không phải admin không thấy).
    - perms (cột app_users.perms): { mmtb:{tabs,actions,view,edit}, delivery:{...} }; phần tử "*" = tất cả.
      perms = null: người cũ chưa cấu hình → dùng PERM.defaults(role) (đúng như quy tắc theo role trước đây).

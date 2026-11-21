@@ -41,6 +41,7 @@
     if(el.id === 'btnTheme') return document.documentElement.dataset.theme === 'light' ? 'moon' : 'sun';
     if(el.id === 'btnLang') return (typeof LANG !== 'undefined' && LANG === 'en') ? 'flagVN' : 'flagUK';
     if(el.classList.contains('mod')) return el.dataset.m === 'mmtb' ? 'catalog' : 'delivery';
+    if(el.classList.contains('tab-dt')) return 'library';
     if(el.classList.contains('tab')) return TAB[el.dataset.p];
     if(el.classList.contains('updated')) return 'calendar';
     if(el.classList.contains('logo')) return 'logo';

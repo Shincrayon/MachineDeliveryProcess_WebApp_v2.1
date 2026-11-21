@@ -394,3 +394,9 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 ## 🔐 Thẻ đăng nhập v2 (2026-11-21, chỉ phần nhìn, user duyệt)
 - `card()` (index.html, dùng chung cho đăng nhập / tạo + mở khoá mật khẩu dữ liệu / đặt mật khẩu / chưa có quyền): nút đổi ngôn ngữ `#lgLang` góc phải (cờ ngôn ngữ sẽ chuyển sang + VI/EN), chân thẻ có icon khoá, và **tự gắn nút 👁 (`lgEye`) cho MỌI `input[type=password]`** — id `<id ô>Eye` (vd `lgPassEye`, `cgP1Eye`), 2 icon SVG cùng nét cùng cỡ (`LG_ICO.eye` / `eyeOff`), `aria-pressed`. Thêm ô mật khẩu mới vào thẻ thì không cần tự làm nút.
 - Form đăng nhập: tiêu đề "Đăng nhập", ô `.lg-in` có icon ✉ / 🔒 + chữ gợi ý, cao 44px; lỗi `.err` chỉ hiện khi có chữ (khung đỏ nhạt); nút đang chờ (`disabled`) có vòng xoay CSS. CSS ở theme.css mục "thẻ đăng nhập v2" (input checkbox/radio không bị áp chiều cao). Test: `e2e_login_card_test.py`.
+
+## Logo Duy Tân (2026-11-21)
+- File gốc `logo-dtr.png` (2561×561, nền trong suốt) — quy định CIP: không vẽ lại / đổi màu / xoay / cắt. Dùng ở thanh trên (`.brand .dtr-logo`) và đầu thẻ đăng nhập (`card()`).
+- Luôn đặt trên nền trắng (`.dtr-logo` có nền #fff) để chữ xám RECYCLING đọc được ở giao diện tối.
+- Thanh trên: logo cao 22px (≤1300px: 20px); điện thoại ≤640px ẩn logo (chỉ còn ở thẻ đăng nhập). Logo chiếm chỗ nên tab Tiến độ bỏ icon ở ≤1900px, chữ Nạp ẩn ở ≤1560px. Dòng phụ " · Duy Tân Recycling" ẩn (logo đã có tên).
+- Test: `e2e_ui_b1_test.py` [8], `e2e_user_name_test.py` (tab không bị cắt ở mọi bề ngang).

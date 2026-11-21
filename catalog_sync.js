@@ -1,5 +1,5 @@
 /* =====================================================================
-   🔗 LIÊN KẾT Tiến độ máy về (machines) → Danh mục MMTB (mmtb_machines) — migrations/20261101_10
+   🔗 LIÊN KẾT Tiến độ máy về (machines) → Danh mục máy (mmtb_machines) — migrations/20261101_10
    Cả 2 bảng mã hoá trường nhạy cảm trong trình duyệt (cột sec) nên đồng bộ chạy ở đây, sau khi giải mã — không bằng trigger DB.
    Một chiều Tiến độ → Danh mục. Liên kết: mmtb_machines.tracking_machine_id = machines.id (UNIQUE).
 
@@ -346,7 +346,7 @@ const LCN = () => L({ planned:'Planned', ordered:'Ordered', manufacturing:'Manuf
                     { planned:'Kế hoạch', ordered:'Đã đặt hàng', manufacturing:'Đang chế tạo', shipping:'Đang vận chuyển', arrived:'Đã về', installing:'Đang lắp đặt', in_operation:'Đang vận hành', idle:'Dừng / dự phòng', disposed:'Thanh lý' });
 function needCtx(){
   const C = ctx();
-  if(!C){ mBody.innerHTML = `<div class="m-gt">${L('The Catalog could not be loaded. Reload the page.','Chưa tải được Danh mục MMTB. Tải lại trang.')}</div>`; return null; }
+  if(!C){ mBody.innerHTML = `<div class="m-gt">${L('The Catalog could not be loaded. Reload the page.','Chưa tải được Danh mục máy. Tải lại trang.')}</div>`; return null; }
   if(!C.ready){ mBody.innerHTML = `<div class="m-gt">${L('The database is not linked yet. An admin needs to run <b>supabase/migrations/20261101_10_link_tracking_catalog.sql</b> in Supabase > SQL Editor.',
     'Cơ sở dữ liệu chưa có cột liên kết. Admin cần chạy file <b>supabase/migrations/20261101_10_link_tracking_catalog.sql</b> trong Supabase > SQL Editor.')}</div>`; return null; }
   return C;
@@ -356,7 +356,7 @@ const pendingCount = () => { const C = ctx(); return C && C.ready ? planAll(rows
 /* menu 🔗 */
 window.csOpen = () => {
   mTitle.textContent = L('🔗 Delivery ↔ Catalog','🔗 Tiến độ ↔ Danh mục');
-  mSub.textContent = L('One-way: delivery tracking updates the Machinery catalog.','Một chiều: Tiến độ máy về cập nhật Danh mục MMTB.');
+  mSub.textContent = L('One-way: delivery tracking updates the Machinery catalog.','Một chiều: Tiến độ máy về cập nhật Danh mục máy.');
   if(typeof openM === 'function') openM();
   const C = needCtx(); if(!C) return;
   const P = planAll(rowsT(), C), pend = P.filter(p => p.action === 'create' || p.action === 'update').length;

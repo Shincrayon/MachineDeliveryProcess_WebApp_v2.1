@@ -1,5 +1,5 @@
 /* =====================================================================
-   🧩 SẮP XẾP — Danh mục MMTB: Nhà máy → Chuyền → ⭐ Máy chính / ◇ Máy phụ → ↳ Máy con
+   🧩 SẮP XẾP — Danh mục máy: Nhà máy → Chuyền → ⭐ Máy chính / ◇ Máy phụ → ↳ Máy con
    Dùng cột có sẵn của mmtb_machines (05_mmtb_schema.sql): line_id, area_id, parent_machine_id, role, sort_order.
    Các cột này KHÔNG nằm trong sec (mã hoá) nên ghi thẳng, không cần __seal; chống ghi đè bằng version như form Sửa.
 

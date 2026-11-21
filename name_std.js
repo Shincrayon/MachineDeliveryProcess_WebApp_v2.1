@@ -1,5 +1,5 @@
 /* =====================================================================
-   ✏️ TÊN TÀI SẢN CHUẨN — Danh mục MMTB (migrations/20261102_11_standard_name.sql)
+   ✏️ TÊN TÀI SẢN CHUẨN — Danh mục máy (migrations/20261102_11_standard_name.sql)
    Mẫu: <Loại thiết bị> <Vật liệu> <Đặc điểm> <Công suất + đơn vị chuẩn>, VD "Máy băm PET 3 t/h", "Băng tải nghiêng 600 mm".
    Tên máy mã hoá trong trình duyệt (sec) nên mọi kiểm tra / đề xuất chạy ở đây, trên dữ liệu đã giải mã (window.__MMTB).
    Chỉ CẢNH BÁO, không chặn lưu. Đổi sang tên chuẩn: tên cũ chuyển vào "Tên gọi khác" (alias_names) để vẫn tìm được.

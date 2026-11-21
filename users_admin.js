@@ -102,7 +102,7 @@
   const REG = () => window.PERM.REG;
   const validKeys = (m, part) => part === 'view' || part === 'edit' ? REG()[m].groups.map(g => g.k) : REG()[m][part].map(x => x.k);
   const WRITE_KEYS = m => REG()[m].actions.filter(a => a.write).map(a => a.k);
-  const MOD_NAME = { mmtb: () => tr('MMTB Catalog', 'Danh mục MMTB'), delivery: () => tr('Delivery progress', 'Tiến độ máy về') };
+  const MOD_NAME = { mmtb: () => tr('MMTB Catalog', 'Danh mục máy'), delivery: () => tr('Delivery progress', 'Tiến độ máy về') };
   let permRows = {};            // email thường -> { role, perms } đọc từ app_users (admin đọc được mọi dòng theo RLS)
   let permsOk = true;           // false: DB chưa có cột perms (chưa chạy migration 22) -> ẩn bảng tick
   let pm = null;                // bảng đang mở: { email, role, origRole, wasNull, st }
