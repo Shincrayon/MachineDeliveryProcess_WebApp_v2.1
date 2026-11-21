@@ -372,3 +372,11 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - `#whoMe` đứng trước 🔑: vòng chữ cái đầu + họ tên + quyền. Tên = `app_users.ho_ten` (admin nhập ở 👥, chỉ chữ lót + tên, vd "Tiến Dũng"), đọc chung lần đọc `role, perms` lúc đăng nhập → `window.__userName`; trống → phần trước @ email. Chữ cái đầu = chữ đầu + chữ cuối. Không ghi DB.
 - Màn hẹp (Tiến độ ≤1820px, mọi phân hệ ≤1500px — đo: thanh Tiến độ admin không còn chỗ cho tên ~108px): chỉ vòng chữ cái, 🔑 ⎋ ẩn khỏi thanh, bấm vòng mở bảng xổ (tên, quyền · email, 🔑 Đổi mật khẩu, ⎋ Đăng xuất — gọi `btnPw.click()` / `btnLogout.click()`). JS biết chế độ hẹp qua biến CSS `--who-menu` trên `.who-menu`; đổi breakpoint thì chỉ sửa theme.css. Bảng xổ không có ô nhập → đóng khi bấm ra ngoài / Esc.
 - Test: `e2e_user_name_test.py` (so bố cục với bản không có ô tên ở nhiều bề ngang, 2 phân hệ).
+
+## ➕ Thêm máy mới (Tiến độ) = chỉ kế hoạch (2026-11-20)
+- User: "khi tạo máy mới, tất cả chỉ là kế hoạch". Form ➕ Thêm và 📋 Nhân bản: `#addGrid.add-new` ẩn 3 ô `.tt-only` (Ngày tạm ứng TT, TG đi tàu TT, TG lãnh máy TT). Các ô này luôn trống khi thêm mới → lưu tamungtt=null, đi tàu/lãnh máy TT = KH như trước (test so với bản gốc: giống hệt).
+- 🧮 Trạng thái máy mới: ngày dự kiến đã qua → "Chưa có ngày thực tế máy về · nhập bằng ⚡ khi máy về" (không đỏ, không "Quá hạn"). ✏️ Sửa: bỏ `add-new`, đủ ô + cảnh báo như cũ. Test: `e2e_add_plan_only_test.py` (`--dump`/`--base` để so với bản gốc).
+
+## Khởi động không thoáng hiện phần không có quyền (2026-11-20)
+- `<html class="booting">`: trong lúc đăng nhập / mở khoá / tải dữ liệu, ẩn (visibility) tab, nút thao tác, ô tên, ngày cập nhật, `.page`; chỉ còn khối thương hiệu + nút ngôn ngữ/giao diện + khung chờ `#moBoot`. Gỡ class ở CUỐI mainSrc (sau permCss, gỡ tab, appState) và trong `start()` (phòng mainSrc lỗi). Thêm phần tử thanh trên / trang mới mà phụ thuộc quyền: nằm trong các vùng trên là tự được che.
+- Test: `e2e_boot_flash_test.py` (ghi từng khung hình lúc F5, viewer / viewer 1 tab / editor ít quyền; bản cũ lộ p2/p4/p5 + ➕ 📂 ~1 giây).
