@@ -63,6 +63,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .perm-ro input,.perm-ro select,.perm-ro textarea{pointer-events:none;opacity:.7;cursor:not-allowed;background:var(--panel2)}
 .perm-ro button{pointer-events:none;opacity:.4}
 .pg-hide{display:none!important}
+.lk-tbl tr.lk-no td{color:var(--muted)}
+.lk-tbl td small{color:var(--muted)}
 .mc-lost{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
 .nbtn2.mc-rel{border-color:var(--st-over);color:var(--st-over)}
 .mc-ldck{display:flex;gap:8px;align-items:flex-start;margin:10px 0 0;font-size:13px;text-align:left}
@@ -5256,7 +5258,7 @@ function buildForm(){
       ${L(tr('Supplier','Nhà cung cấp'), `<select id="m_sup"></select>`)}
       ${L(tr('Currency','Tiền tệ'), `<select id="m_cur"><option>VND</option><option>USD</option><option>EUR</option></select>`)}
       ${L(tr('Contract amount — unit price per set','Giá trị hợp đồng — đơn giá 1 set'), `<input id="m_amt" type="number" step="any" min="0"><div class="price-tot" id="m_tot" hidden></div><div class="price-tot" id="m_conv" hidden></div>`)}
-      ${L(tr('Locked exchange rate (VND per unit)','Tỷ giá khoá (VNĐ / 1 đơn vị)'), `<input id="m_rate" type="number" step="any" min="0" placeholder="${tr('empty = current rate','trống = tỷ giá hiện hành')}">`)}
+      ${L(tr('Locked exchange rate (VND per unit)','Tỷ giá khoá (VNĐ / 1 đơn vị)'), `<input id="m_rate" type="number" step="any" min="0" placeholder="${tr('empty = rate on the contract date (filled on save)','trống = tự lấy tỷ giá ngày ký HĐ khi lưu')}">`)}
       ${L(tr('Proposal approval date','Ngày duyệt ĐXĐT'), `<input id="m_appr" type="date">`)}
       ${L(tr('Manufacturing days (CTM)','Số ngày chế tạo máy (CTM)'), `<input id="m_ctm" type="number" min="0" step="1">`)}
       ${L(tr('Lifecycle status','Trạng thái'), `<select id="m_st">${LC.map(s=>`<option value="${s}">${LCL[s]}</option>`).join('')}</select>`)}
@@ -5621,6 +5623,12 @@ async function save(){
     if(row.parent_machine_id) row.role = 'sub_unit';         // vai trò đi theo máy cha (ràng buộc DB)
     else if(row.role === 'sub_unit') row.role = 'main';
   }
+  // 🔒 hợp đồng ngoại tệ, ô Tỷ giá khoá trống → tự điền tỷ giá 💱 tại ngày ký HĐ (rateDateOf); không có ngày / tỷ giá thì để trống như cũ
+  if(row.contract_currency && row.contract_currency !== 'VND' && row.contract_amount != null && row.locked_rate == null && PERM.edit('mmtb', 'value')){
+    const dd = rateDateOf({ id: editId, tracking_machine_id: cur0 && cur0.tracking_machine_id, approved_date: row.approved_date }, dt('m_ms_contract_signed'));
+    const r = dd && rateAt(row.contract_currency, dd.d);
+    if(r) row.locked_rate = Number(r.rate_to_vnd);
+  }
   if(MM.hasGroups){   // có cột code_temp (07_library.sql): mã tự cấp = tạm; admin gõ mã khác = mã kế toán
     const cur = editId ? byId.get(editId) : null;
     if(!cur) row.code_temp = !m_code.dataset.touched;
@@ -5891,6 +5899,7 @@ function drawLib(k){
     'Thư viện này cần chạy <code>supabase/migrations/20261113_20_units.sql</code> trong Supabase › SQL Editor (admin).')}</div>`; return; }
   libBody.innerHTML = `<div class="toolbar">
       <div class="search"><input id="libQ" type="text" placeholder="${tr('Search…','Tìm…')}" value="${E(libQ)}"></div>
+      ${isAdmin && k==='rates' && lockPlan().length ? `<button class="nbtn2 ghost" onclick="libLockRates()" title="${tr('Fix the VND value of foreign-currency contracts at the rate on their contract date','Cố định giá trị VNĐ của hợp đồng ngoại tệ theo tỷ giá ngày ký HĐ')}">${tr(`🔒 Lock rates (${lockPlan().length} machines)`,`🔒 Khoá tỷ giá (${lockPlan().length} máy)`)}</button>` : ''}
       ${isAdmin && k==='lines' && oldLines().length ? `<button class="nbtn2 ghost" onclick="libConvertLines()">${tr(`🎲 Standardize ${oldLines().length} old line codes`,`🎲 Chuẩn hoá ${oldLines().length} mã chuyền cũ`)}</button>` : ''}
       ${isAdmin ? `<button class="nbtn2" onclick="libEdit('${k}')">${tr('➕ Add','➕ Thêm')}</button>` : ''}</div>
     <div class="tablewrap"><table><thead><tr>${d.cols.map(c=>`<th>${LABEL(d, c)}</th>`).join('')}<th>${tr('Machines using it','Số máy đang dùng')}</th>${isAdmin?'<th></th>':''}</tr></thead>
@@ -6245,6 +6254,68 @@ window.libCode = id => {
 };
 /* chuẩn hoá mã tạm cũ (9 số, DTR-004…) -> DTR-XXXX. Chỉ máy đang "tạm"; mã kế toán + mã Tiến độ không đụng.
    Mã mới tạo sẵn để xem trước đúng từng dòng; mã đầu tiên của máy giữ ở legacy_code. Tiến độ liên kết bằng id nên tự thấy mã mới. */
+/* 🔒 Khoá tỷ giá (2026-11-21, user chọn): hợp đồng ngoại tệ (USD / EUR) lấy tỷ giá thư viện 💱 TẠI NGÀY KÝ HĐ / ĐẶT HÀNG và ghi cố định
+   vào Tỷ giá khoá (locked_rate, trong sec) → giá trị VNĐ không nhảy khi thư viện thêm tỷ giá mới. Công thức v_machines / deriveMmtb không đổi.
+   Ngày lấy tỷ giá, theo thứ tự: mốc Ký hợp đồng (form: m_ms_contract_signed) → Ngày ký HĐ/đặt hàng bên Tiến độ (máy đã liên kết)
+   → Ngày duyệt ĐXĐT. Tỷ giá = dòng cùng loại tiền có ngày áp dụng gần nhất ≤ ngày đó; không có → không tự đoán. */
+function rateDateOf(x, formMs){
+  const ms = formMs || (x.id && msBy.get(x.id) && msBy.get(x.id).contract_signed && msBy.get(x.id).contract_signed.actual_date);
+  if(ms) return { d: String(ms).slice(0, 10), src: tr('contract signed','ký hợp đồng') };
+  const t = x.tracking_machine_id && (window.__trackRows ? window.__trackRows() : []).find(r=>r._id === x.tracking_machine_id);
+  if(t && t.dathang) return { d: String(t.dathang).slice(0, 10), src: tr('order date (Arrival progress)','ngày đặt hàng (Tiến độ)') };
+  if(x.approved_date) return { d: String(x.approved_date).slice(0, 10), src: tr('investment approval','ngày duyệt ĐXĐT') };
+  return null;
+}
+function rateAt(cur, d){
+  return (MM.xrates || []).filter(r=>r.currency === cur && String(r.effective_date).slice(0, 10) <= d)
+    .sort((a,b)=>String(b.effective_date).localeCompare(String(a.effective_date)))[0] || null;
+}
+const noLock = x => x.locked_rate == null || x.locked_rate === '';
+function lockPlan(){
+  return MM.machines.filter(x=>!x.__locked && x.contract_currency && x.contract_currency !== 'VND' && x.contract_amount != null && x.contract_amount !== '' && noLock(x))
+    .sort((a,b)=>String(a.machine_code).localeCompare(b.machine_code))
+    .map(x=>{ const dd = rateDateOf(x), r = dd && rateAt(x.contract_currency, dd.d); return { x, dd, r }; });
+}
+window.libLockRates = () => {
+  const plan = lockPlan(); if(!plan.length || !isAdmin) return;
+  const nOk = plan.filter(p=>p.r).length, warn = s => `<span style="color:var(--st-over)">${s}</span>`;
+  mTitle.textContent = tr('🔒 Lock exchange rates','🔒 Khoá tỷ giá');
+  mSub.innerHTML = tr(`<b>${plan.length}</b> foreign-currency contract(s) have no locked rate, so their VND value follows the newest rate. Lock each one at the rate on its contract / order date. Only ticked rows are saved; machines that already have a locked rate are not touched.`,
+                      `<b>${plan.length}</b> máy hợp đồng ngoại tệ chưa có Tỷ giá khoá nên giá trị VNĐ đang theo tỷ giá mới nhất. Khoá từng máy theo tỷ giá tại ngày ký HĐ / đặt hàng. Chỉ ghi dòng được tick; máy đã có tỷ giá khoá không bị đụng.`);
+  mBody.innerHTML = `<div class="qu-tbl lk-tbl"><table><thead><tr><th><input type="checkbox" id="lkAll"${nOk ? ' checked' : ' disabled'} aria-label="${tr('Select all','Chọn hết')}"></th>
+      <th>${tr('Code','Mã máy')}</th><th>${tr('Machine','Tên máy')}</th><th>${tr('Contract','Hợp đồng')}</th><th>${tr('Rate date','Ngày lấy tỷ giá')}</th><th>${tr('Proposed rate','Tỷ giá đề xuất')}</th><th>≈ VNĐ</th></tr></thead><tbody>
+    ${plan.map((p,i)=>`<tr${p.r ? '' : ' class="lk-no"'}><td>${p.r ? `<input type="checkbox" class="lk-ck" data-i="${i}" checked>` : ''}</td>
+      <td>${E(p.x.machine_code)}</td><td class="name">${E(p.x.name)}</td><td>${N(p.x.contract_amount)} ${E(p.x.contract_currency)}</td>
+      <td>${p.dd ? D(p.dd.d) + `<small> · ${E(p.dd.src)}</small>` : warn(tr('no date — enter the contract-signed milestone','chưa có ngày — nhập mốc Ký hợp đồng'))}</td>
+      <td>${p.r ? `<b>${N(p.r.rate_to_vnd, 2)}</b><small> (${tr('from','áp dụng từ')} ${D(p.r.effective_date)})</small>` : p.dd ? warn(tr(`no ${p.x.contract_currency} rate on or before this date — add one in 💱`,`chưa có tỷ giá ${p.x.contract_currency} ở / trước ngày này — thêm ở 💱`)) : '—'}</td>
+      <td>${p.r ? N(Number(p.x.contract_amount) * Number(p.r.rate_to_vnd)) : '—'}</td></tr>`).join('')}</tbody></table></div>
+    <div id="lkMsg" style="min-height:1.2em;font-size:13px;margin:8px 0"></div>
+    <div class="add-actions"><button type="button" class="nbtn2 ghost" onclick="mBg.classList.remove('show')">${tr('Cancel','Hủy')}</button>
+      <button type="button" class="nbtn2" id="lkGo"></button></div>`;
+  openM(1);
+  const sel = () => [...mBody.querySelectorAll('.lk-ck:checked')].map(c=>plan[+c.dataset.i]);
+  const upd = () => { const n = sel().length; lkGo.disabled = !n; lkGo.textContent = tr(`🔒 Lock ${n} machine(s)`,`🔒 Khoá ${n} máy`); };
+  lkAll.onchange = e => { mBody.querySelectorAll('.lk-ck').forEach(c=>{ c.checked = e.target.checked; }); upd(); };
+  mBody.querySelectorAll('.lk-ck').forEach(c=>{ c.onchange = upd; }); upd();
+  lkGo.onclick = async () => {
+    const list = sel(); if(!list.length) return;
+    lkGo.disabled = true; window.__selfWritingM = true; let n = 0;
+    const sb = window.__sb, SF = SEC.mmtb_machines.f;
+    try{
+      for(const { x, r } of list){
+        lkMsg.textContent = tr(`Saving ${n + 1}/${list.length}…`,`Đang ghi ${n + 1}/${list.length}…`);
+        const pk = {}; SF.forEach(f=>{ if(f in x) pk[f] = x[f] ?? null; }); pk.locked_rate = Number(r.rate_to_vnd);   // sec: mã hoá lại cả gói
+        const { data, error } = await sb.from('mmtb_machines').update(await window.__seal('mmtb_machines', pk))
+          .eq('id', x.id).eq('version', x.version == null ? 1 : x.version).is('deleted_at', null).select('id');
+        if(error) throw error; if(!data || !data.length) throw { code:'conflict' };
+        n++;
+      }
+      await reload(); mBg.classList.remove('show');
+      toast('🔒 ' + tr('Locked rates','Đã khoá tỷ giá') + `: <b>${n}</b> ${tr('machine(s)','máy')}`);
+    }catch(ex){ await reload(); lkMsg.style.color = 'var(--red)'; lkMsg.innerHTML = tr(`Stopped after ${n} machine(s): `,`Dừng sau ${n} máy: `) + errText(ex); }
+    finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+  };
+};
 window.libConvertCodes = () => {
   const used = new Set(MM.machines.flatMap(x=>[x.machine_code, x.legacy_code]).filter(Boolean));
   const list = oldTemps().sort((a,b)=>String(a.machine_code).localeCompare(b.machine_code))

@@ -340,7 +340,8 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
   Máy cũ: có USD → USD, chỉ VNĐ → VND. Lưu `gia_tien_te` khi `hasGT()` (cột migration 21).
 - Đồng bộ `want()`: `gia_tien_te === 'USD'` và có USD → hợp đồng Danh mục USD.
 - Danh mục: `#m_conv` "≈ … ₫ / $ theo tỷ giá …" (tỷ giá khoá nếu có, không thì mới nhất).
-- 📚 › 💱 Tỷ giá (`LIB.rates`, bảng `exchange_rates` có sẵn, admin sửa): loại tiền / tỷ giá / ngày áp dụng; `MM.xrates`. libInput thêm type `decimal`, `date`, `select`.
+- 📚 › 💱 Tỷ giá (`LIB.rates`, bảng `exchange_rates` có sẵn, admin sửa): loại tiền / tỷ giá / ngày áp dụng; `MM.xrates`.
+- **🔒 Khoá tỷ giá (2026-11-21, user chọn "cách b"):** Tiến độ lưu cố định cả VNĐ + USD nên không đổi theo thư viện; Danh mục hợp đồng ngoại tệ KHÔNG có `locked_rate` thì `value_vnd` theo tỷ giá MỚI NHẤT (v_machines). Nút "🔒 Khoá tỷ giá (N máy)" ở tab 💱 (admin, `libLockRates`): xem trước + tick → ghi `locked_rate` (trong sec, mã hoá lại cả gói, chống ghi đè bằng version). Ngày lấy tỷ giá `rateDateOf`: mốc Ký hợp đồng → `dathang` Tiến độ (máy liên kết) → `approved_date`; tỷ giá `rateAt` = dòng cùng loại tiền gần nhất ≤ ngày đó; không có → không đoán. Form Danh mục lưu hợp đồng ngoại tệ mà ô trống → tự điền như trên (người có quyền Sửa nhóm value). Test: `e2e_lock_rate_test.py`. libInput thêm type `decimal`, `date`, `select`.
 - `.add-grid > div.full` chiếm cả hàng (trước chỉ `label.full`). Test: `e2e_currency_test.py`.
 
 ## 🎨 Giao diện B1 — Slate + Xanh dương (2026-11-18, chỉ phần nhìn)
