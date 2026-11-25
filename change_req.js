@@ -223,6 +223,8 @@
     CR.paint(); fire();
   }
 
+  /* "Yêu cầu của tôi": người duyệt / từ chối hiện "Admin" thay vì email (user 2026-11-25); tự rút = "Bạn". 📜 Nhật ký (chỉ admin) vẫn ghi email. */
+  const decider = r => String(r.decided_by || '').toLowerCase() === me() ? tr('You', 'Bạn') : 'Admin';
   const rowHTML = (r, d, open) => {
     const st = r.status, mine = String(r.requested_by || '').toLowerCase() === me();
     return `<details class="al-row cr-row" data-id="${esc(r.id)}" data-s="${esc(st)}" data-t="${esc(r.target_id || '')}" data-m="${esc(r.module)}"${open ? ' open' : ''}>
@@ -230,7 +232,7 @@
       + `<span class="al-t">${esc(d.title || (d.__locked ? tr('(could not decrypt)', '(không giải mã được)') : tr('(no name)', '(không tên)')))}</span>`
       + `<span class="cr-st" data-s="${esc(st)}">${esc(STAT()[st] || st)}</span><span class="al-mod">${esc(MOD()[r.module] || r.module)}</span></summary>
       <div class="al-body">${st === 'rejected' && r.reject_note ? `<div class="cr-why">${esc(tr('Reason', 'Lý do'))}: ${esc(r.reject_note)}</div>` : ''}${diffHTML(r, d)}`
-      + (r.decided_at && st !== 'pending' ? `<div class="cr-meta">${esc(STAT()[st] || st)} · ${esc(r.decided_by || '')} · ${esc(fmtDT(r.decided_at))}</div>` : '')
+      + (r.decided_at && st !== 'pending' ? `<div class="cr-meta">${esc(STAT()[st] || st)} · ${esc(decider(r))} · ${esc(fmtDT(r.decided_at))}</div>` : '')
       + (st === 'pending' && mine ? `<div class="cr-acts"><button type="button" class="nbtn2 ghost cr-wd">${esc(tr('↩ Withdraw', '↩ Rút lại'))}</button></div>` : '')
       + `</div></details>`;
   };
