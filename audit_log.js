@@ -1,7 +1,10 @@
 /* audit_log.js — 📜 Nhật ký thao tác (chỉ admin, 2026-11-23). window.AL. Chỉ ĐỌC: không ghi gì vào DB.
    Gộp nhiều nguồn, mới nhất trên cùng. AL.sources: mảng { key, label(), fetch(before, n) } — fetch trả tối đa n Row có at < before
-   (before = null: không lọc), xếp at giảm dần. Đợt 2 push thêm nguồn change_requests vào AL.sources.
-   Row = { key, at, who, module: 'delivery'|'mmtb'|'users', kind: 'insert'|'update'|'delete'|'trash'|'restore'|'user', title, html, act?, code? }
+   (before = null: không lọc), xếp at giảm dần. change_req.js (đợt 2) push thêm 2 nguồn: 'change_requests' (kind 'request': Gửi / Duyệt / Từ chối / Rút)
+   và 'login_log' (kind 'login', module 'users'). Khoá của các nguồn đó: 'cr:<id>:<status>' và 'login:<id>'.
+   Row = { key, at, who, module: 'delivery'|'mmtb'|'users', kind: 'insert'|'update'|'delete'|'trash'|'restore'|'user'|'request'|'login', title, html, act?, code?, mid? }
+     mid = machine_id của dòng audit_log. AL.annotators: mảng async rows => void, chạy 1 lần cho mỗi trang audit_log vừa tải, được sửa row.html
+     (change_req.js dùng để thêm "theo yêu cầu của <editor>" vào dòng sửa máy do admin duyệt — xem CLAUDE.md).
      key: duy nhất trong mọi nguồn (vd 'audit_log:12') — dùng để không lặp dòng khi tải thêm; act: nhãn hành động riêng (nguồn users).
    Tải thêm: mỗi nguồn nhớ con trỏ riêng = at của dòng cuối nó đã trả + 1 ms, bỏ dòng đã thấy theo key. Nhiều dòng cùng 1 thời điểm
    (vd nạp Excel: cả lệnh chung 1 now()) vẫn không mất: trang đầy mà không có dòng mới thì lấy trang to gấp đôi.
@@ -9,14 +12,15 @@
    Cần: tr, fmtDT, escH, openM, mTitle/mSub/mBody (index.html), window.__open (giải mã), window.__histRow + __dvHist (Tiến độ) + __mmHist (Danh mục), DM.fold. */
 (function(){
   'use strict';
-  const AL = window.AL = { busy: false, sources: [] };
+  const AL = window.AL = { busy: false, sources: [], annotators: [] };
   const N = () => Number(window.AL_PAGE) || 200;
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const fold = v => (window.DM && DM.fold) ? DM.fold(v) : String(v || '').toLowerCase();
   const LOCK = () => tr('(could not decrypt)', '(không giải mã được)');
   const MOD = () => ({ delivery: tr('Delivery', 'Tiến độ'), mmtb: tr('Catalog', 'Danh mục'), users: tr('Users', 'Người dùng') });
   const KIND = () => ({ insert: tr('Added', 'Thêm máy'), update: tr('Edited', 'Sửa'), delete: tr('Deleted permanently', 'Xoá hẳn'),
-    trash: tr('Moved to trash', 'Chuyển vào thùng rác'), restore: tr('Restored', 'Khôi phục'), user: tr('User management', 'Quản lý người dùng') });
+    trash: tr('Moved to trash', 'Chuyển vào thùng rác'), restore: tr('Restored', 'Khôi phục'), user: tr('User management', 'Quản lý người dùng'),
+    request: tr('Approval request', 'Yêu cầu duyệt'), login: tr('Signed in', 'Đăng nhập') });
   const UA_LBL = () => ({ create: tr('Added', 'Thêm'), set_role: tr('Changed permission', 'Đổi quyền'), set_perms: tr('Set permissions', 'Đặt quyền chi tiết'),
     reset_password: tr('Reset password', 'Đặt lại mật khẩu'), revoke: tr('Revoked', 'Thu hồi') });
   const txt = v => v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
@@ -41,7 +45,7 @@
                 : window.__histRow(r, window.__dvHist.keys(), window.__dvHist.lbl);
     }
     const title = (name || code || (locked ? '' : tr('(no name)', '(không tên)'))) + (locked ? (name || code ? ' · ' : '') + LOCK() : '');
-    return { key: 'audit_log:' + h.id, at: h.at, who: h.user_email || '', module: mm ? 'mmtb' : 'delivery', kind, title, code: name ? code : '', html };
+    return { key: 'audit_log:' + h.id, at: h.at, who: h.user_email || '', module: mm ? 'mmtb' : 'delivery', kind, title, code: name ? code : '', html, mid: h.machine_id || '' };
   }
   AL.sources.push({ key: 'audit_log', label: () => tr('Machine data', 'Dữ liệu máy'),
     fetch: async (before, n) => {
@@ -51,6 +55,7 @@
       if(error) throw error;
       const out = [];
       for(const h of data || []) out.push(await auditRow(h));
+      for(const f of AL.annotators){ try{ await f(out); }catch(e){ console.warn('[Nhật ký] chưa chú thích được', e); } }
       return out;
     } });
 
@@ -108,7 +113,7 @@
     return ROWS.filter(r => (!m || r.module === m) && (!w || r.who === (w === '-' ? '' : w)) && (!k || r.kind === k)
       && (!f || day(r.at) >= f) && (!t || day(r.at) <= t) && (!q || fold(r.title + ' ' + (r.code || '')).includes(q)));
   }
-  const COL = { insert: 'var(--green)', restore: 'var(--green)', delete: 'var(--red)', trash: 'var(--red)', update: 'var(--blue)', user: 'var(--violet)' };
+  const COL = { insert: 'var(--green)', restore: 'var(--green)', delete: 'var(--red)', trash: 'var(--red)', update: 'var(--blue)', user: 'var(--violet)', request: 'var(--amber, #d9a441)', login: 'var(--muted)' };
   const rowHTML = r => `<details class="al-row" data-k="${esc(r.key)}" data-m="${esc(r.module)}" data-w="${esc(r.who)}"${openK.has(r.key) ? ' open' : ''}>
     <summary><span class="al-at">${esc(fmtDT(r.at))}</span><span class="al-who">${esc(r.who || tr('Admin (SQL)', 'Quản trị (SQL)'))}</span>`
     + `<span class="al-act" style="color:${COL[r.kind] || 'var(--muted)'}">${esc(r.act || KIND()[r.kind] || r.kind)}</span>`
@@ -149,7 +154,7 @@
     mBody.innerHTML = `<div class="al-wrap"><div class="al-bar">
         <select id="alMod" aria-label="${esc(tr('Module', 'Phân hệ'))}">${o('', 'All modules', 'Mọi phân hệ')}${o('delivery', 'Delivery tracking', 'Tiến độ máy về')}${o('mmtb', 'Machine catalog', 'Danh mục máy')}${o('users', 'Users', 'Người dùng')}</select>
         <select id="alWho" aria-label="${esc(tr('Done by', 'Người thực hiện'))}"></select>
-        <select id="alKind" aria-label="${esc(tr('Action', 'Thao tác'))}">${o('', 'All actions', 'Mọi thao tác')}${o('insert', 'Added', 'Thêm máy')}${o('update', 'Edited', 'Sửa')}${o('trash', 'Moved to trash', 'Thùng rác')}${o('restore', 'Restored', 'Khôi phục')}${o('delete', 'Deleted permanently', 'Xoá hẳn')}${o('user', 'User management', 'Quản lý người dùng')}</select>
+        <select id="alKind" aria-label="${esc(tr('Action', 'Thao tác'))}">${o('', 'All actions', 'Mọi thao tác')}${o('insert', 'Added', 'Thêm máy')}${o('update', 'Edited', 'Sửa')}${o('trash', 'Moved to trash', 'Thùng rác')}${o('restore', 'Restored', 'Khôi phục')}${o('delete', 'Deleted permanently', 'Xoá hẳn')}${o('user', 'User management', 'Quản lý người dùng')}${o('request', 'Approval request', 'Duyệt')}${o('login', 'Sign-in', 'Đăng nhập')}</select>
         <input id="alFrom" class="al-date" placeholder="${esc(tr('From date', 'Từ ngày'))}" aria-label="${esc(tr('From date', 'Từ ngày'))}">
         <input id="alTo" class="al-date" placeholder="${esc(tr('To date', 'Đến ngày'))}" aria-label="${esc(tr('To date', 'Đến ngày'))}">
         <button type="button" class="nbtn2 ghost al-clear" id="alClear">${esc(tr('✕ Clear filters', '✕ Bỏ lọc'))}</button>

@@ -45,11 +45,11 @@ body{background:var(--bg)}
 .upd-btn:hover{background:var(--panel2);color:var(--txt);transform:none}
 #btnAdd,#btnAddM{background:var(--accent);color:var(--on-accent);border-color:transparent;padding:0 12px}
 #btnAdd:hover,#btnAddM:hover{background:var(--accent);color:var(--on-accent);filter:brightness(1.08)}
-#btnUpd,#btnTrash,#btnPw,#btnLogout,#btnUsers,#btnLog{padding-left:8px;padding-right:8px}
+#btnUpd,#btnTrash,#btnPw,#btnLogout,#btnUsers,#btnLog,#btnReq{padding-left:8px;padding-right:8px}
 .topbar .updated{position:relative;display:flex;align-items:center;gap:6px;flex:none;border:0;background:transparent;padding:0 0 0 4px;border-radius:0;text-align:left!important;line-height:1.2!important;white-space:nowrap;font-size:12px;color:var(--muted)}
 @media(max-width:640px){.topbar .updated{display:none}}
 .topbar .updated b{color:var(--txt);font-weight:600}
-.topbar .updated #updTime{display:inline!important;margin:0;font-size:12px!important;color:var(--muted)!important}
+.topbar .updated #updTime{font-variant-numeric:tabular-nums;display:inline!important;margin:0;font-size:12px!important;color:var(--muted)!important}
 .topbar .updated .ico{color:var(--muted)}
 /* man hinh hep: chu an thi icon nam giua (bo margin cua .ico-t) */
 @media(max-width:1760px){body[data-mod="delivery"] .mod:not(.active) .ico.ico-t{margin-right:0}}
@@ -401,3 +401,31 @@ body.dt-on .subtabs{display:flex}
   .al-bar input{flex:1 1 calc(50% - 6px);width:auto}
   .al-list{max-height:calc(100vh - 360px)}
   .al-body{padding-left:12px}}
+/* ===== Hàng chờ duyệt (change_req.js, 2026-11-25): nhãn ⏳, "Yêu cầu của tôi" (dùng chung khung .al-*) ===== */
+.cr-by{margin-top:6px;font-size:12.5px;color:var(--muted)}
+.cr-badge{display:inline-block;margin-left:6px;padding:0 7px;border-radius:999px;border:1px solid color-mix(in srgb,var(--amber,#d9a441) 55%,var(--border));color:var(--amber,#d9a441);background:color-mix(in srgb,var(--amber,#d9a441) 10%,transparent);font-size:11px;font-weight:600;line-height:18px;white-space:nowrap;vertical-align:1px}
+#mSub .cr-badge{margin:0 8px 0 0}
+.cr-st{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;border:1px solid var(--border);white-space:nowrap;color:var(--muted)}
+.cr-st[data-s="pending"]{color:var(--amber,#d9a441);border-color:color-mix(in srgb,var(--amber,#d9a441) 55%,var(--border))}
+.cr-st[data-s="approved"]{color:var(--green);border-color:color-mix(in srgb,var(--green) 55%,var(--border))}
+.cr-st[data-s="rejected"]{color:var(--red);border-color:color-mix(in srgb,var(--red) 55%,var(--border))}
+.cr-why{margin:0 0 6px;font-size:12.5px;color:var(--red)}
+.cr-note{font-size:12.5px;color:var(--txt)}
+.cr-meta{margin-top:6px;font-size:11.5px;color:var(--muted)}
+.cr-acts{display:flex;justify-content:flex-end;margin-top:8px}
+.cr-acts .nbtn2{height:30px;padding:0 12px;font-size:12.5px}
+/* admin 📝 Chờ duyệt (Task 4): cảnh báo đổi sau lúc gửi / máy đã xoá, chọn bên giữ cho trường xung đột, ô lý do từ chối */
+.cr-adm .cr-by{font-size:12px}
+.cr-warn,.cr-gone{margin:0 0 8px;padding:6px 10px;border-radius:8px;font-size:12.5px;line-height:1.45;border:1px solid color-mix(in srgb,var(--amber,#d9a441) 50%,var(--border));background:color-mix(in srgb,var(--amber,#d9a441) 10%,transparent);color:var(--txt)}
+.cr-gone{border-color:color-mix(in srgb,var(--red) 50%,var(--border));background:color-mix(in srgb,var(--red) 9%,transparent)}
+.cr-cf{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.cr-cfh{font-size:12.5px;font-weight:600;color:var(--txt)}
+.cr-cfk{display:flex;flex-direction:column;gap:3px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);font-size:12.5px}
+.cr-cfk label{display:flex;gap:6px;align-items:baseline;cursor:pointer;overflow-wrap:anywhere}
+.cr-cfk span{color:var(--txt);font-weight:600}
+.cr-rej{display:flex;gap:8px;align-items:flex-start;margin-top:8px}
+.cr-rej textarea{flex:1 1 auto;min-width:0;min-height:34px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--txt);font:inherit;font-size:12.5px;resize:vertical}
+.cr-rej textarea:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px var(--accent-soft)}
+.cr-rej .nbtn2{height:34px;padding:0 12px;font-size:12.5px;flex:none}
+.cr-acts .nbtn2:disabled,.cr-rej .nbtn2:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:640px){.cr-rej{flex-direction:column;align-items:stretch}}

@@ -28,6 +28,7 @@
 <script src="page_fit.js"></script>
 <script src="users_admin.js"></script>
 <script src="audit_log.js"></script>
+<script src="change_req.js"></script>
 <style>
 :root{color-scheme:dark;
   --bg:#0b1220; --panel:#121c31; --panel2:#17233d; --border:rgba(148,163,184,.14);
@@ -1160,6 +1161,7 @@ label:has(> .cb-src){position:relative}
   <button class="upd-btn mod-delivery" id="btnAdd" title="Add a new machine">➕ Add</button>
   <button class="upd-btn mod-delivery" id="btnExport" hidden title="Download the full list as an Excel file; the last column (System ID) is the key when you import it back — do not change it">⬇️ Excel</button>
   <button class="upd-btn mod-delivery" id="btnTrash" hidden title="Deleted machines — restore or delete permanently">🗑</button>
+  <button class="upd-btn" id="btnReq" hidden title="My requests">📨</button>
   <button class="upd-btn" id="btnLog" hidden title="Activity log">📜</button>
   <button class="upd-btn" id="btnUsers" hidden title="Manage users">👥</button>
   <div class="who" id="whoMe" hidden><button type="button" class="who-btn" aria-haspopup="menu" aria-expanded="false"><span class="who-av" aria-hidden="true"></span><span class="who-t"><b></b><small></small></span></button><div class="who-menu" role="menu"><div class="who-mh"><b></b><small></small></div><button type="button" role="menuitem" data-a="pw">🔑 Change password</button><button type="button" role="menuitem" data-a="out">⎋ Sign out</button></div></div>
@@ -1464,9 +1466,7 @@ let AGG = (function(){
 })();
 
 /* ===== nút cập nhật ===== */
-updDate.textContent = DATA_TS.slice(0,10).split('-').reverse().join('/');
-const _dts = new Date(DATA_TS);
-updTime.textContent = isNaN(_dts) ? '' : '🕐 ' + String(_dts.getHours()).padStart(2,'0') + ':' + String(_dts.getMinutes()).padStart(2,'0');
+/* đồng hồ thời gian thực: xem updClockTick (phần CHUYỂN PHÂN HỆ) */
 const XLSX_FILE = 'TienDoMayVe.xlsx';   // tên file dữ liệu cùng thư mục với dashboard
 
 /* IndexedDB nhỏ gọn để ghi nhớ file đã chọn (không phải chọn lại mỗi lần) */
@@ -1729,7 +1729,13 @@ btnUpd.onclick  = ()=> location.reload();
 btnPick.onclick = ()=>{ if(dW('import')) fileUpd.click(); };
 
 /* ===== form nhập máy mới ===== */
-btnAdd.onclick = ()=>{ window.__editId=null; CLONE_SRC = null; addGrid.classList.add('add-new'); resetAddForm(); cloneHl(f_nld, false); addClonePicker(); addTitle.textContent=tr('➕ Add new machine','➕ Nhập máy mới'); addSubmit.textContent=tr('➕ Add machine','➕ Thêm máy'); permForm('delivery', D_FORM, true); addBg.classList.add('show'); };
+btnAdd.onclick = ()=>{ window.__editId=null; CLONE_SRC = null; addGrid.classList.add('add-new'); resetAddForm(); cloneHl(f_nld, false); addClonePicker(); addTitle.textContent=tr('➕ Add new machine','➕ Nhập máy mới'); addSubmit.textContent=crSend() || tr('➕ Add machine','➕ Thêm máy'); permForm('delivery', D_FORM, true); addBg.classList.add('show'); };
+/* hàng chờ duyệt (change_req.js): editor → nút lưu form thành "📨 Gửi duyệt" ('' = lưu thẳng như cũ) */
+const crSend = () => window.CR && CR.must('delivery') ? tr('📨 Send for approval','📨 Gửi duyệt') : '';
+/* form mở trước khi CR dò bảng xong: dò xong thì đặt lại chữ nút theo kết quả (vd chưa chạy 26 → về "Lưu thay đổi" / "Thêm máy") */
+if(window.CR) CR.onChange.push(()=>{ if(addBg.classList.contains('show') && !addSubmit.disabled)
+  addSubmit.textContent = crSend() || (window.__editId ? tr('💾 Save changes','💾 Lưu thay đổi') : tr('➕ Add machine','➕ Thêm máy')); });
+const dvTitle = x => unescH(x.ten) + (x.ma_may ? ' · ' + x.ma_may : '');
 function closeAdd(){ addBg.classList.remove('show'); }
 /* popup có ô nhập / sửa (form, ô chữ, ô chọn, ô tick): chỉ đóng bằng ✕ hoặc Hủy — bấm ra ngoài không đóng (user 2026-11-14).
    Popup chỉ để xem (chi tiết máy, xem trước…) vẫn đóng khi bấm ra ngoài. Form Thêm/Sửa máy (addBg, mmBg) luôn chỉ đóng bằng ✕ / Hủy. */
@@ -1841,13 +1847,18 @@ function calcDates(){
   const dtTT = dom ? vc : (xlNum(val('f_dttt')) || dt);                      // trống hoặc 0 -> lấy theo KH
   const lmTT = dom ? 0 : (xlNum(val('f_lmtt')) || lm);
   const wd  = (val('f_wd')||'no').toLowerCase();
+  const { veKH, veNM, dg } = calcCore(dathang, xxg, ctu, ctm, dt, lm, dtTT, lmTT, wd);
+  return {dathang, xxg, ctu, ctm, dt, lm, dtTT, lmTT, wd, veKH, veNM, dg};
+}
+/* lõi công thức của calcDates (ngày dạng serial; dtTT / lmTT đã lấy KH khi TT trống / 0) — dùng chung với dvDerive (hàng chờ duyệt) */
+function calcCore(dathang, xxg, ctu, ctm, dt, lm, dtTT, lmTT, wd){
   const base = dathang + ctu + dt + lm;
   const veKH = dathang===0 ? 0 : (wd==='yes' ? workday(base,ctm) : base + ctm);  // giống công thức Root data
   const veNM = xxg===0 ? 0 : xxg + dtTT + lmTT;
   const okDate = s => s>=20000 && s<=80000;                      // chỉ đánh giá khi có đủ 2 ngày hợp lệ
   const dg = (!okDate(veKH) || !okDate(veNM)) ? ''
            : (veKH===veNM ? 'Đúng tiến độ' : (veKH>veNM ? 'Sớm' : 'Trễ'));
-  return {dathang, xxg, ctu, ctm, dt, lm, dtTT, lmTT, wd, veKH, veNM, dg};
+  return {veKH, veNM, dg};
 }
 
 /* khung "Tự động tính" trong form: cập nhật mỗi khi sửa một ô */
@@ -2035,9 +2046,17 @@ async function submitAdd(){
   /* lưu lên kho dữ liệu chung của app */
   const editing = window.__editId || null;
   addSubmit.disabled = true;
-  try{ await saveMachine(m, editing); }
+  let res;
+  try{ res = await saveMachine(m, editing); }
   catch(err){ showNotice({type:'error', title:tr('Could not save the machine','Chưa lưu được máy'), sub:dbErrText(err)}); return; }
   finally{ addSubmit.disabled = false; }
+
+  /* hàng chờ duyệt: đã gửi yêu cầu, dữ liệu máy KHÔNG đổi — đóng form, báo, vẽ lại Danh sách (nhãn ⏳) */
+  if(res && res.requested){
+    window.__editId = null; closeAdd(); render();
+    quToast('📨 ' + tr('Sent — waiting for admin approval','Đã gửi, chờ admin duyệt') + `: “${escH(ten)}”`);
+    return;
+  }
 
   /* lưu xong: đóng form, báo ngắn; bảng đã cập nhật tại chỗ (saveMachine). Cần file Excel thì bấm ⬇️ Excel. */
   window.__editId = null;
@@ -3352,7 +3371,7 @@ function render(){
   const alBy = new Map(((window.__MMTB || {}).machines || []).filter(c=>c.tracking_machine_id && c.alias_names).map(c=>[c.tracking_machine_id, window.__aliasTxt ? window.__aliasTxt(c.alias_names) : c.alias_names]));
   tb.innerHTML = view.map((x,i)=>`<tr class="${x.status!=='arrived'&&x.danhgia==='Trễ'?'late-flag':''} slide-in" data-mo="${x._id}" style="--i:${i};cursor:pointer" onclick="showDetail(${DATA.indexOf(x)})" title="${tr('Click to view full machine details','Bấm để xem đầy đủ thông tin thiết bị')}">
     ${qw ? `<td class="qu-c" onclick="event.stopPropagation()"><input type="checkbox" class="qu-ck" data-id="${x._id}"${QU_SEL.has(x._id)?' checked':''} aria-label="${tr('Select for quick update','Chọn để cập nhật nhanh')}"><button type="button" class="qu-btn" title="${tr('⚡ Quick update','⚡ Cập nhật nhanh')}" onclick="quickEdit(${DATA.indexOf(x)})">⚡</button></td>` : ''}
-    <td class="name" data-pd="name">${x.ten}${alBy.get(x._id) ? `<small class="nm-alias" title="${escH(tr('Other names','Tên gọi khác'))}: ${escH(alBy.get(x._id))}">${escH(alBy.get(x._id))}</small>` : x.congsuat && dS('capacity')?`<small>${x.congsuat}</small>`:''}</td>
+    <td class="name" data-pd="name">${x.ten}${window.CR ? CR.badge('delivery', x._id) : ''}${alBy.get(x._id) ? `<small class="nm-alias" title="${escH(tr('Other names','Tên gọi khác'))}: ${escH(alBy.get(x._id))}">${escH(alBy.get(x._id))}</small>` : x.congsuat && dS('capacity')?`<small>${x.congsuat}</small>`:''}</td>
     <td data-pd="qty">${x.sl}</td><td data-pd="location">${x.noilapdat}</td><td data-pd="supplier">${thCell(x)}</td><td data-pd="origin">${ctT(x.xuatxu)}${dS('purchase') ? ptSub(x) : ''}</td>
     <td data-pd="person">${x.phutrach||'—'}</td>
     <td class="money" data-pd="value">${fmtM(x.vnd)} ₫${x.sl >= 2 && x.vnd ? `<small class="unit-p">${fmtM(x.vnd / x.sl)} ₫ / set</small>` : ''}</td>
@@ -3446,7 +3465,7 @@ window.showDetail = i => {
   const ins = DM.installStatus(x);
 
   mTitle.textContent = [dS('code') && x.ma_may, dS('name') && unescH(x.ten)].filter(Boolean).join(' · ');
-  mSub.innerHTML = (!dS('status') ? '' : `<span class="badge b-${INST_STAGE(ins) ? ins.stage : x.status}" style="font-size:10.5px;padding:2px 8px">${INST_STAGE(ins) ? ILBL[ins.stage] : LBL[x.status]||tr('Unknown','Chưa xác định')}</span>
+  mSub.innerHTML = (window.CR ? CR.badge('delivery', x._id) : '') + (!dS('status') ? '' : `<span class="badge b-${INST_STAGE(ins) ? ins.stage : x.status}" style="font-size:10.5px;padding:2px 8px">${INST_STAGE(ins) ? ILBL[ins.stage] : LBL[x.status]||tr('Unknown','Chưa xác định')}</span>
     &nbsp;${tr('Rating','Đánh giá')}: <b style="color:${dgColor}">${dgT(x.danhgia)}</b>
     &nbsp;·&nbsp; `) + (!dS('dates') ? '' : `${x.daysleft==null ? tr('no arrival date yet','chưa có ngày về')
       : x.status==='arrived' ? tr(`arrived ${Math.abs(x.daysleft)} days ago`,`đã về ${Math.abs(x.daysleft)} ngày trước`)
@@ -3514,6 +3533,7 @@ window.showDetail = i => {
         : `<div class="m-ok">✅ ${tr(`No delay note.`,`Không có giải trình.`)}</div>`}
     </div>`}
     <div class="dt-actions">
+      ${window.CR && CR.mine('delivery', x._id).length ? `<button class="nbtn2 ghost" onclick="CR.view('delivery','${x._id}')">${tr(`⏳ View request`,`⏳ Xem yêu cầu`)}</button>` : ''}
       ${window.__role==='admin' ? `<button class="nbtn2 ghost" onclick="showHistory(${i})">${tr(`🕘 History`,`🕘 Lịch sử`)}</button>` : ''}
       ${PERM.act('delivery','payment') && dS('value') ? `<button class="nbtn2 ghost" onclick="showPayments(${i})">${tr(`💳 Payments`,`💳 Thanh toán`)}</button>` : ''}
       ${dW('delete') ? `<button class="nbtn2 ghost" onclick="askDelete(${i})">${tr(`🗑 Delete machine`,`🗑 Xoá máy`)}</button>` : ''}
@@ -3654,15 +3674,48 @@ function toRow(m){
   if(!o.sl) o.sl = 1;
   return o;
 }
-async function saveMachine(m, editId){
+/* hàng chờ duyệt: chuẩn hoá 1 bản ghi form như toRow sẽ ghi (số ngày trống = 0, chữ trống = '', ngày sai = null, SL 0 = 1),
+   chỉ các khoá REC_KEYS có trên bản ghi; khoá khác giữ nguyên. toRow(dvNorm(m)) = toRow(m). */
+function dvNorm(m){
+  const r = toRow(m), o = Object.assign({}, m);
+  REC_KEYS.forEach(k=>{ if(k in o) o[k] = r[k]; });
+  return o;
+}
+/* hàng chờ duyệt: Ngày dự kiến KH / về NM + Đánh giá của 1 bản ghi, đúng công thức form Sửa (calcCore) — dùng khi duyệt yêu cầu
+   mà người khác đã đổi ô ngày sau lúc gửi (TT trống / 0 → KH như calcDates) */
+function dvDerive(m){
+  const n = k => Math.round(Number(m[k])||0), dt = n('ditaukh'), lm = n('lanhkh');
+  const c = calcCore(isoToSerial(m.dathang||''), isoToSerial(m.xuatxuong||''), n('ctu'), n('sonagyctm'), dt, lm, n('ditautt')||dt, n('lanhtt')||lm,
+    String(m.workingday||'no').toLowerCase());
+  return { vekh: serialToISO(c.veKH), vedukienn: serialToISO(c.veNM), danhgia: c.dg };
+}
+/* giá trị hiện tại của 1 máy cho form / yêu cầu (chữ đã bỏ thoát HTML; CTM cũ 'sonagytm'; loại tiền như curLoad) */
+const dvOld = cur => k => cur[k] === undefined ? null : typeof cur[k] === 'string' ? unescH(cur[k]) : cur[k];
+const dvPrev = cur => { const old = dvOld(cur);
+  return k => k === 'sonagyctm' ? (old(k) ?? old('sonagytm')) : k === 'gia_tien_te' ? (old(k) || (+cur.usd > 0 ? 'USD' : 'VND')) : old(k); };
+/* out (tuỳ chọn): out.id = ID máy vừa ghi (applier "Thêm" của hàng chờ duyệt cần ID máy mới); out.newId = ID đặt sẵn cho máy mới
+   (duyệt Thêm: = ID yêu cầu, để duyệt lại không tạo máy thứ 2).
+   Trả về {requested:true} khi editor gửi yêu cầu chờ duyệt (KHÔNG ghi bảng máy), undefined khi đã ghi như cũ. */
+async function saveMachine(m, editId, out){
   const sb = window.__sb; if(!sb) throw {code:'nodb'};
-  window.__selfWriting = true;
   const cur = editId ? DATA.find(x=>x._id===editId) : null;
+  const old = cur ? dvOld(cur) : null;
   // phân quyền trường: trường không được sửa lấy giá trị cũ (máy mới: bỏ). Hình thức mua / loại tiền không mã hoá → bỏ hẳn (không gửi = giữ, không "xác nhận")
   if(!PERM.isAdmin()){
-    m = permKeep('delivery', Object.assign({}, m), cur ? (k => typeof cur[k] === 'string' ? unescH(cur[k]) : cur[k]) : null, dEdRow);
+    m = permKeep('delivery', Object.assign({}, m), old, dEdRow);
     ['hinh_thuc_mua','gia_tien_te'].forEach(k=>{ if(!dE(k)) delete m[k]; });
   }
+  // hàng chờ duyệt (migration 26, change_req.js): editor gửi yêu cầu thay vì ghi. Chờ CR dò bảng xong rồi mới quyết định (không lưu thẳng chỉ vì chưa tải xong).
+  // before = giá trị hiện tại cùng các khoá; before + payload cùng chuẩn hoá như toRow (dvNorm) để cũ → mới không có dòng (trống) → 0 giả
+  if(window.CR && !PERM.isAdmin()) await CR.loaded;
+  if(window.CR && CR.must('delivery', editId ? 'edit' : (CLONE_SRC ? 'clone' : 'add'))){
+    const prev = cur ? dvPrev(cur) : null;   // như curLoad
+    const before = cur ? dvNorm(Object.fromEntries(Object.keys(m).map(k=>[k, prev(k)]))) : null;
+    await CR.submit({ module:'delivery', kind: editId ? 'update' : 'insert', target_id: editId || null, base_version: cur ? cur._ver : null,
+      payload: dvNorm(m), before, title: cur ? dvTitle(cur) : String(m.ten || '') });
+    return { requested: true };
+  }
+  window.__selfWriting = true;
   const r0 = toRow(m);
   // cột của migration 09 chỉ gửi khi có giá trị (cơ sở dữ liệu chưa chạy 09 vẫn lưu được máy).
   // ghichu_ld: giữ ghi chú đang có — sec được mã hoá lại cả gói, thiếu trường là mất ghi chú
@@ -3680,10 +3733,12 @@ async function saveMachine(m, editId){
     if(!data || !data.length) throw {code:'conflict'};
   } else {
     row.sort_order = DATA.reduce((a,x)=>Math.max(a, isFinite(x._order)?x._order:0), 0) + 1;
+    if(out && out.newId) row.id = out.newId;
     const { data, error } = await sb.from('machines').insert(row).select('id');
     if(error) throw error;
     editId = data && data[0] && data[0].id;
   }
+  if(out) out.id = editId;
   if(editId){ await refreshOne(editId); csAfter([editId]); if(window.MO) MO.saved(editId); }
   quAfterSave();
 }
@@ -4505,12 +4560,29 @@ window.editMachine = i => {
   window.__editId = x._id; CLONE_SRC = null; clonePicker(document.getElementById('addClone'), null); cloneHl(f_nld, false);
   addGrid.classList.remove('add-new'); updCalc();     // ✏️ Sửa: hiện đủ ô thực tế + cảnh báo quá hạn
   addTitle.textContent = tr('✏️ Edit: ','✏️ Sửa: ') + unescH(x.ten);
-  addSubmit.textContent = tr('💾 Save changes','💾 Lưu thay đổi');
+  addSubmit.textContent = crSend() || tr('💾 Save changes','💾 Lưu thay đổi');
   permForm('delivery', D_FORM, false);
   addBg.classList.add('show');
 };
-window.askDelete = i => {
+let CR_DEL_BUSY = false;     // chặn bấm 2 lần khi đang gửi yêu cầu xoá
+window.askDelete = async i => {
   const x = DATA[i]; if(!x || !dW('delete')) return;
+  if(window.CR && !PERM.isAdmin()) await CR.loaded;     // chờ CR dò bảng xong rồi mới quyết định gửi duyệt hay xoá thẳng
+  if(window.CR && CR.must('delivery', 'delete')){      // hàng chờ duyệt: editor gửi yêu cầu xoá, máy vẫn hiện tới khi admin duyệt
+    confirmBox({ title:tr('Send a delete request?','Gửi yêu cầu xoá?'), sub:`<b>${x.ten}</b><br>${tr('The machine stays in the list until an admin approves the request.','Máy vẫn còn trong danh sách cho tới khi admin duyệt yêu cầu.')}`, ok:tr('📨 Send request','📨 Gửi yêu cầu'),
+      onOk: async ()=>{
+        if(CR_DEL_BUSY) return;
+        CR_DEL_BUSY = true;
+        try{
+          const before = Object.fromEntries(REC_KEYS.map(k=>[k, typeof x[k] === 'string' ? unescH(x[k]) : (x[k] === undefined ? null : x[k])]));
+          await CR.submit({ module:'delivery', kind:'delete', target_id:x._id, base_version:x._ver, payload:null, before, title:dvTitle(x) });
+          mBg.classList.remove('show');
+          quToast('📨 ' + tr('Sent — waiting for admin approval','Đã gửi, chờ admin duyệt') + ': <b>' + escH(unescH(x.ten)) + '</b>');
+        }catch(err){ showNotice({type:'error', title:tr('Could not send the request','Chưa gửi được yêu cầu'), sub:dbErrText(err)}); }
+        finally{ CR_DEL_BUSY = false; }
+      }});
+    return;
+  }
   confirmBox({ title:tr('Delete this machine?','Xoá máy này?'), sub:`<b>${x.ten}</b><br>${tr('The machine moves to the trash. An admin can restore it at any time.','Máy được chuyển vào thùng rác. Admin khôi phục được bất cứ lúc nào.')}`, ok:tr('🗑 Delete machine','🗑 Xoá máy'),
     onOk: async ()=>{
       try{
@@ -4524,6 +4596,46 @@ window.askDelete = i => {
       }catch(err){ showNotice({type:'error', title:tr('Could not delete','Chưa xoá được'), sub:dbErrText(err)}); }
     }});
 };
+/* hàng chờ duyệt: hàm ghi thật khi ADMIN duyệt yêu cầu Tiến độ (change_req.js gọi; admin nên saveMachine ghi thẳng như cũ) */
+if(window.CR) CR.appliers.delivery = {
+  update: async (req, d) => { await saveMachine(d.payload, req.target_id); return [req.target_id]; },
+  /* ID máy mới = ID yêu cầu: máy đã có (lần duyệt trước ghi được mà chưa đổi trạng thái) hoặc trùng khoá ID → coi như đã ghi, không thêm lần 2 */
+  insert: async (req, d) => {
+    const had = async () => { if(!req.id) return false; const { data, error } = await window.__sb.from('machines').select('id').eq('id', req.id).maybeSingle(); if(error) throw error; return !!data; };
+    const done = async () => { await refreshOne(req.id); quAfterSave(); return [req.id]; };
+    if(await had()) return done();
+    const o = req.id ? { newId: req.id } : {};
+    try{ await saveMachine(d.payload, null, o); }
+    catch(e){ if(e && e.code === '23505' && await had()) return done(); throw e; }
+    return o.id ? [o.id] : [];
+  },
+  delete: async req => {
+    const x = DATA.find(d => d._id === req.target_id); if(!x) throw {code:'conflict'};
+    window.__selfWriting = true;
+    const { data, error } = await window.__sb.rpc('soft_delete_machine', { p_id: x._id, p_version: x._ver });
+    if(error) throw error;
+    if(data !== true) throw {code:'conflict'};
+    const k = DATA.findIndex(d => d._id === x._id); if(k >= 0) DATA.splice(k, 1);
+    quAfterSave();
+    return [x._id];
+  }
+};
+/* hàng chờ duyệt (admin duyệt): bản hiện tại cùng dạng before (dvNorm), base = khoá saveMachine cần (ghi cả dòng REC_KEYS + nghiệm thu KH) */
+const DV_CR_KEYS = REC_KEYS.concat(['nghiemthu_kh','thuong_hieu','hinh_thuc_mua','gia_tien_te']);
+if(window.CR){
+  CR.getters.delivery = id => { const x = DATA.find(d => d._id === id); if(!x) return null; const p = dvPrev(x);
+    return { row: dvNorm(Object.fromEntries(DV_CR_KEYS.map(k=>[k, p(k)]))), version: x._ver, base: REC_KEYS.concat(['nghiemthu_kh']) }; };
+  CR.derive.delivery = m => dvDerive(m);
+  /* đọc lại 1 máy trước khi so: đã xoá → bỏ khỏi DATA; version khác → refreshOne */
+  CR.sync.delivery = async id => {
+    if(!id) return;
+    const { data, error } = await window.__sb.from('machines').select('id,version,deleted_at').eq('id', id).maybeSingle();
+    if(error) throw error;
+    const k = DATA.findIndex(d => d._id === id);
+    if(!data || data.deleted_at){ if(k >= 0){ DATA.splice(k, 1); quAfterSave(); } return; }
+    if(k < 0 || DATA[k]._ver !== data.version) await refreshOne(id);
+  };
+}
 
 /* ---- Lịch sử từng máy ---- */
 function fmtDT(s){ const d=new Date(s); return isNaN(d)?'':pad2(d.getDate())+'/'+pad2(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad2(d.getHours())+':'+pad2(d.getMinutes()); }
@@ -4793,6 +4905,7 @@ window.purgeTrash = j => {
   if(window.__userEmail){ btnLogout.hidden = false; btnLogout.title = tr('Sign out (','Đăng xuất (') + (window.__userName || window.__userEmail) + ')';
     btnPw.hidden = false; btnPw.onclick = openChangePw; showWho(); }
   btnLogout.onclick = async ()=>{ await appSignOut(); location.reload(); };
+  if(window.CR) CR.init();      // hàng chờ duyệt (migration 26): dò bảng, tải yêu cầu, vẽ #btnReq + nhãn ⏳ (chưa có bảng → lưu thẳng như cũ)
   const note = window.__DB_NOTE;
   if(note==='empty' && window.__canWrite) showBanner(tr('No data yet. Press <b>📂 Import Excel</b> to load the TienDoMayVe.xlsx file.','Chưa có dữ liệu. Bấm <b>📂 Nạp Excel</b> để nạp file TienDoMayVe.xlsx.'), 'warn');
   else if(note==='empty') showBanner(tr('No machine data yet.','Chưa có dữ liệu máy nào.'), 'warn');
@@ -5178,7 +5291,7 @@ function renderList(){
   mmTb.innerHTML = view.map((x,i)=>{
     const nk = (kids.get(x.id) || []).length, par = x.parent_machine_id && byId.get(x.parent_machine_id);
     return `<tr class="slide-in" data-mo="${x.id}" style="--i:${i};cursor:pointer" onclick="mmShow('${x.id}')">
-      <td class="name" data-pm="name">${E(x.name)}${nk ? ` <span class="mm-kidtag" title="${E((kids.get(x.id) || []).map(c=>c.name).join(', '))}">🧩 ${nk} ${tr(nk > 1 ? 'sub-units' : 'sub-unit','bộ phận con')}</span>` : ''}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${aliasTxt(x.alias_names) || x.tracking_machine_id ? `<small class="nm-alias">${aliasTxt(x.alias_names) ? `<span title="${E(tr('Other names','Tên gọi khác'))}: ${E(aliasTxt(x.alias_names))}">${E(aliasTxt(x.alias_names))}</span>` : ''}${aliasTxt(x.alias_names) && x.tracking_machine_id ? ' · ' : ''}${x.tracking_machine_id ? `<span title="${tr('Linked to Delivery','Đã liên kết Tiến độ máy về')}">🔗</span>` : ''}</small>` : ''}${par && mS('location') ? `<small class="mm-of" onclick="event.stopPropagation();mmShow('${par.id}')" title="${tr('Open the parent machine','Mở máy cha')}">↳ ${tr('part of','thuộc')}: ${E(par.name)}</small>` : ''}</td>
+      <td class="name" data-pm="name">${E(x.name)}${window.CR ? CR.badge('mmtb', x.id) : ''}${nk ? ` <span class="mm-kidtag" title="${E((kids.get(x.id) || []).map(c=>c.name).join(', '))}">🧩 ${nk} ${tr(nk > 1 ? 'sub-units' : 'sub-unit','bộ phận con')}</span>` : ''}${x.needs_info ? NEEDS() : ''}${F.st==='__name' && nameIss(x).length ? NAME_BAD() : ''}${aliasTxt(x.alias_names) || x.tracking_machine_id ? `<small class="nm-alias">${aliasTxt(x.alias_names) ? `<span title="${E(tr('Other names','Tên gọi khác'))}: ${E(aliasTxt(x.alias_names))}">${E(aliasTxt(x.alias_names))}</span>` : ''}${aliasTxt(x.alias_names) && x.tracking_machine_id ? ' · ' : ''}${x.tracking_machine_id ? `<span title="${tr('Linked to Delivery','Đã liên kết Tiến độ máy về')}">🔗</span>` : ''}</small>` : ''}${par && mS('location') ? `<small class="mm-of" onclick="event.stopPropagation();mmShow('${par.id}')" title="${tr('Open the parent machine','Mở máy cha')}">↳ ${tr('part of','thuộc')}: ${E(par.name)}</small>` : ''}</td>
       <td data-pm="location">${E(x.company_code)}</td><td data-pm="location">${T(x.area_name)}</td><td data-pm="location"${x.line_notes ? ` title="${E(x.line_notes)}"` : ''}>${T(x.line_name)}${x.line_notes ? ' <span style="color:var(--muted)">ⓘ</span>' : ''}</td><td data-pm="classify">${T(x.group_name)}</td>
       <td data-pm="supplier">${T(x.supplier_name)}</td><td data-pm="supplier">${T(x.manufacturer)}</td><td data-pm="qty">${N(x.quantity || 1)}</td>
       <td class="money" data-pm="value">${money(x)}${(+x.quantity || 1) >= 2 && (LANG==='vi' ? x.value_vnd : x.value_usd) ? `<small class="unit-p">${LANG==='vi' ? N(x.value_vnd / x.quantity) + ' ₫' : '$' + N(x.value_usd / x.quantity)} / set</small>` : ''}</td><td data-pm="status">${badge(x.lifecycle_status)}</td></tr>`; }).join('')
@@ -5207,7 +5320,7 @@ window.mmShow = id => {
   const cap = x.capacity_value != null ? N(x.capacity_value, 3) + ' ' + E(x.capacity_unit || '') : '—';
   const ch = (kids.get(x.id) || []);
   mTitle.textContent = mS('name') ? x.name : (mS('code') ? x.machine_code : '');
-  mSub.innerHTML = [mS('code') && E(x.machine_code), mS('location') && (E(x.company_code) + (x.area_name ? ' · ' + E(x.area_name) : '')), mS('status') && badge(x.lifecycle_status),
+  mSub.innerHTML = (window.CR ? CR.badge('mmtb', x.id) : '') + [mS('code') && E(x.machine_code), mS('location') && (E(x.company_code) + (x.area_name ? ' · ' + E(x.area_name) : '')), mS('status') && badge(x.lifecycle_status),
     mS('classify') && (ROLEL[x.role] || '')].filter(Boolean).join(' · ') + (x.needs_info && mS('status') ? ' ' + NEEDS() : '');
   const trk = x.tracking_machine_id
     ? `<a class="cs-link" onclick="window.__goTracking('${x.tracking_machine_id}')">${E(x.tracking_code || tr('(no code yet)','(chưa có mã)'))} ↗</a>`
@@ -5245,6 +5358,7 @@ window.mmShow = id => {
       ch.map(c=>`<a onclick="mmShow('${c.id}')">↳ ${E(c.machine_code)} — ${E(c.name)}</a>`).join('')}</div></div>` : ''}
     ${x.notes && mS('notes') ? `<div class="dt-sec"><h5>${tr('Notes','Ghi chú')}</h5><div class="m-gt" style="white-space:pre-wrap">${E(x.notes)}</div></div>` : ''}
     <div class="dt-actions">
+      ${window.CR && CR.mine('mmtb', x.id).length ? `<button class="nbtn2 ghost" onclick="CR.view('mmtb','${x.id}')">${tr('⏳ View request','⏳ Xem yêu cầu')}</button>` : ''}
       ${window.__role==='admin' ? `<button class="nbtn2 ghost" onclick="mmHistory('${x.id}')">${tr('🕘 History','🕘 Lịch sử')}</button>` : ''}
       ${PERM.act('mmtb','delete') ? `<button class="nbtn2 ghost" onclick="mmDelete('${x.id}')">${tr('🗑 Delete machine','🗑 Xoá máy')}</button>` : ''}
                 ${PERM.act('mmtb','split') && splitMax(x) >= 2 ? `<button class="nbtn2 ghost" onclick="mmSplit('${x.id}')" title="${tr('Split into separate machines (e.g. same model installed in 2 places)','Tách thành nhiều máy riêng (VD 2 máy giống nhau lắp ở 2 nơi)')}">${tr('✂️ Split','✂️ Tách máy')}</button>` : ''}
@@ -5264,11 +5378,14 @@ window.MM_HIST_LBL = {name:['Machine name','Tên máy'], machine_code:['Code','M
   engineer:['Engineer in charge','Kỹ sư phụ trách'], manager:['Manager','Người quản lý'], notes:['Notes','Ghi chú'], alias_names:['Other names / old names','Tên gọi khác / tên cũ'],
   asset_code:['Asset code','Mã tài sản'], quantity:['Quantity','Số lượng'], locked_rate:['Locked exchange rate','Tỷ giá khoá'],
   serial_number:['Serial number','Số serial'], capacity_value:['Capacity','Công suất'], company_id:['Plant','Nhà máy'], materials:['Materials','Nguyên liệu'],
-  approved_date:['Proposal approval date','Ngày duyệt ĐXĐT'], manufacturing_days:['Manufacturing days','Số ngày chế tạo máy']};
+  approved_date:['Proposal approval date','Ngày duyệt ĐXĐT'], manufacturing_days:['Manufacturing days','Số ngày chế tạo máy'],
+  code_temp:['Temporary code','Mã tạm'], legacy_code:['Old code','Mã cũ'], needs_info:['Needs more info','Cần bổ sung thông tin']};
 const MM_HIST_GRP = {name:'name', alias_names:'name', machine_code:'code', asset_code:'code', model:'model', serial:'model', manufacturer:'supplier', supplier_id:'supplier',
   origin:'origin', capacity:'capacity', capacity_unit:'capacity', equipment_type:'classify', group_name:'classify', role:'classify', line_id:'location', area_id:'location',
   parent_machine_id:'location', lifecycle_status:'status', commissioned_date:'dates', contract_amount:'value', contract_currency:'value', locked_rate:'value',
-  engineer:'person', manager:'person', notes:'notes', quantity:'qty', serial_number:'model', capacity_value:'capacity', company_id:'location', approved_date:'dates', manufacturing_days:'dates'};
+  engineer:'person', manager:'person', notes:'notes', quantity:'qty', serial_number:'model', capacity_value:'capacity', company_id:'location', approved_date:'dates', manufacturing_days:'dates',
+  code_temp:'code', legacy_code:'code', needs_info:'status'};
+const mmHistGrp = k => k.startsWith('ms.') ? 'dates' : MM_HIST_GRP[k];      // 'ms.<mốc>' = mốc thực tế trong yêu cầu chờ duyệt (change_req.js)
 /* giá trị hiện trong lịch sử Danh mục: khoá tham chiếu -> tên (tra MM đang tải; không thấy thì giữ giá trị gốc), mảng nối " · ", object JSON gọn */
 const mmHistRef = {
   supplier_id: v => { const s = (MM.suppliers||[]).find(x=>x.id===v); return s && s.name; },
@@ -5280,7 +5397,8 @@ const mmHistRef = {
 const mmHistVal = (k, v) => {
   if(v===null || v===undefined || v==='') return showVal(k, v);
   if(mmHistRef[k]) return mmHistRef[k](v) || String(v);
-  if(k==='approved_date' || k==='commissioned_date') return String(v).slice(0,10).split('-').reverse().join('/');   // d/m/Y như các ngày khác
+  if(typeof v==='boolean') return v ? tr('Yes','Có') : tr('No','Không');
+  if(k.startsWith('ms.') || k==='approved_date' || k==='commissioned_date') return String(v).slice(0,10).split('-').reverse().join('/');   // d/m/Y như các ngày khác
   if(Array.isArray(v)) return v.map(x=> x!==null && typeof x==='object' ? JSON.stringify(x) : String(x)).join(' · ');
   if(typeof v==='object') return JSON.stringify(v);
   return showVal(k, v);
@@ -5289,9 +5407,9 @@ const mmHistVal = (k, v) => {
 const mmHistKeys = rows => {
   const SKIP = ['id','sec','version','created_at','updated_at','updated_by','created_by','tracking_synced_at'], ks = new Set();
   rows.forEach(h => [h.old_data, h.new_data].forEach(d => d && Object.keys(d).forEach(k => { if(!SKIP.includes(k) && k!=='__locked') ks.add(k); })));
-  return [...ks].filter(k => !MM_HIST_GRP[k] || mS(MM_HIST_GRP[k]));      // chỉ trường nhóm được phép xem
+  return [...ks].filter(k => !mmHistGrp(k) || mS(mmHistGrp(k)));      // chỉ trường nhóm được phép xem
 };
-const mmHistLbl = k => { const l = window.MM_HIST_LBL[k]; return E(l ? l[LANG==='vi' ? 1 : 0] : k); };
+const mmHistLbl = k => { if(k.startsWith('ms.')) return E(MSL[k.slice(3)] || k.slice(3)); const l = window.MM_HIST_LBL[k]; return E(l ? l[LANG==='vi' ? 1 : 0] : k); };
 window.__mmHist = { keys: mmHistKeys, lbl: mmHistLbl, val: mmHistVal };   // 📜 Nhật ký dùng chung
 window.mmHistory = async id => {
   if(window.__role!=='admin') return;
@@ -5312,7 +5430,7 @@ window.mmHistory = async id => {
 };
 
 /* ===================== THÊM / SỬA / XOÁ ===================== */
-let editId = null, fps = {};
+let editId = null, formClone = false, fps = {};
 /* ✏️ tên chuẩn (name_std.js): cảnh báo + gợi ý dưới ô Tên máy — chỉ nhắc, không chặn lưu */
 function nameHint(){
   const el = document.getElementById('m_nameHint'); if(!el || !window.NS) return;
@@ -5480,11 +5598,11 @@ const setDate = (id, v) => { if(fps[id]){ v ? fps[id].setDate(String(v).slice(0,
 function openForm(x, clone){
   buildForm();
   const src = clone ? x : null; if(clone) x = null;
-  editId = x ? x.id : null;
+  editId = x ? x.id : null; formClone = !!clone;
   m_code.dataset.touched = x ? '1' : '';
   CB.clearHints();
   mmFTitle.textContent = x ? tr('✏️ Edit: ','✏️ Sửa: ') + x.name : tr('➕ Add machine to the catalog','➕ Thêm máy vào Danh mục máy');
-  mmSave.textContent = x ? tr('💾 Save changes','💾 Lưu thay đổi') : tr('➕ Add machine','➕ Thêm máy');
+  mmSave.textContent = mmSaveLbl();
   // nhóm: chọn từ thư viện; nhóm cũ của máy (nếu không còn trong thư viện) vẫn giữ để không mất
   const gNames = (MM.groups || []).map(g=>g.name);
   if(x && x.group_name && !gNames.includes(x.group_name)) gNames.push(x.group_name);
@@ -5698,6 +5816,61 @@ function mmTot(){
   cv.hidden = t == null || !vnd; if(cv.hidden){ cv.innerHTML = ''; return; }
   cv.innerHTML = `≈ ${m_cur.value !== 'VND' ? '<b>' + N(vnd) + ' ₫</b>' : ''}${m_cur.value === 'VND' && usdR ? '<b>$' + N(vnd / usdR) + '</b>' : ''}${m_cur.value === 'EUR' && usdR ? ' · $' + N(vnd / usdR) : ''} <span>${tr('at rate','theo tỷ giá')} ${N(m_cur.value === 'VND' ? usdR : rOf(m_cur.value))}</span>`;
 }
+/* hàng chờ duyệt (migration 26, change_req.js): nút Lưu của editor = "📨 Gửi duyệt" (Sửa / Thêm / Nhân bản theo quyền nút) */
+const mmAct = () => editId ? 'edit' : (formClone ? 'clone' : 'add');
+const mmSaveLbl = () => (window.CR && CR.must('mmtb', mmAct()) ? tr('📨 Send for approval','📨 Gửi duyệt') : '')
+  || (editId ? tr('💾 Save changes','💾 Lưu thay đổi') : tr('➕ Add machine','➕ Thêm máy'));
+/* nội dung yêu cầu: cũ (byId / msBy) và mới (form) cùng 1 dạng để trường không đổi không hiện thành 1 dòng khác —
+   '' / undefined = null, số = Number, ngày = YYYY-MM-DD, vật liệu = mảng đã sắp xếp (null = []), needs_info = boolean.
+   Chỉ dùng cho payload / before của yêu cầu; đường ghi của admin (mmWrite từ save) không qua đây. */
+const MM_NUM = ['quantity','capacity_value','contract_amount','locked_rate','manufacturing_days'], MM_DATE = ['commissioned_date','approved_date'];
+function mmNorm(r){
+  const o = {};
+  Object.keys(r || {}).forEach(k=>{
+    let v = r[k]; if(v === undefined || v === '') v = null;
+    if(k === 'materials') v = Array.isArray(v) ? v.slice().sort() : [];
+    else if(k === 'needs_info') v = !!v;
+    else if(v != null && MM_NUM.includes(k)) v = Number(v);
+    else if(v != null && MM_DATE.includes(k)) v = String(v).slice(0,10);
+    o[k] = v;
+  });
+  return o;
+}
+const mmMsNorm = ms => Object.fromEntries(Object.keys(ms || {}).map(k=>[k, ms[k] ? String(ms[k]).slice(0,10) : null]));
+/* các trường form Danh mục (before của yêu cầu Xoá) */
+const MM_ROW_KEYS = ['machine_code','name','company_id','area_id','line_id','parent_machine_id','role','supplier_id','manufacturer','model','serial_number',
+  'quantity','capacity_value','capacity_unit','materials','contract_currency','contract_amount','locked_rate','lifecycle_status','commissioned_date','approved_date',
+  'manufacturing_days','group_name','equipment_type','origin','engineer','manager','notes','needs_info','alias_names'];
+const mmTitle = x => (x.name || '') + (x.machine_code ? ' · ' + x.machine_code : '');
+/* GHI 1 máy Danh mục — form Lưu (admin, hoặc khi chưa có hàng chờ duyệt) và duyệt yêu cầu (CR.appliers.mmtb).
+   row = bản ghi CHƯA niêm phong; editId = máy đang sửa (null = thêm, kiểm version theo byId hiện tại);
+   ms = {mốc: ngày thực tế | null} các mốc cần ghi (đã lọc theo quyền ngày / mốc). Niêm phong → update / insert → upsert mốc. Trả về id máy. */
+async function mmWrite(row, editId, ms){
+  const sb = window.__sb; if(!sb) throw {};
+  window.__selfWritingM = true;
+  try{
+    const r = Object.assign({}, row, await window.__seal('mmtb_machines', row));   // mã hoá trường nhạy cảm (nếu đã bật)
+    let id = editId;
+    if(editId){
+      const cur = byId.get(editId);
+      const { data, error } = await sb.from('mmtb_machines').update(r).eq('id', editId)
+        .eq('version', cur ? cur.version : -1).is('deleted_at', null).select('id');
+      if(error) throw error;
+      if(!data || !data.length) throw { code:'conflict' };
+    } else {
+      const { data, error } = await sb.from('mmtb_machines').insert(r).select('id').single();
+      if(error) throw error;
+      id = data.id;
+    }
+    const ups = Object.keys(ms || {}).map(k=>({ machine_id:id, milestone:k, actual_date:ms[k] || null }));
+    if(ups.length){
+      const { error } = await sb.from('delivery_milestones').upsert(ups, { onConflict:'machine_id,milestone' });
+      if(error) throw error;
+    }
+    return id;
+  }finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+}
+window.__mmWrite = mmWrite;
 async function save(){
   const val = id => (document.getElementById(id).value || '').trim();
   const num = id => { const s = val(id); return s==='' ? null : Number(s); };
@@ -5742,42 +5915,60 @@ async function save(){
     showNotice({ type:'error', title:tr('Missing information','Thiếu thông tin'), sub:tr('Plant, code and machine name are required.','Cần nhập Nhà máy, Mã máy và Tên máy.') }); return; }
   const sb = window.__sb;
   if(!sb){ showNotice({ type:'error', title:tr('Could not save','Chưa lưu được'), sub:dbErrText({}) }); return; }
-  mmSave.disabled = true; window.__selfWritingM = true;
+  // mốc tiến độ thực tế: ghi những mốc có ngày, hoặc đã có trước đó (để xoá ngày); không được sửa ngày / mốc: không ghi mốc
+  const old = (editId && msBy.get(editId)) || {};
+  const ms = !PERM.edit('mmtb', 'dates') ? {} : Object.fromEntries(FORM_MS.filter(k=>dt('m_ms_'+k) || (old[k] && old[k].actual_date)).map(k=>[k, dt('m_ms_'+k)]));
+  const shownName = row.name;
+  let asked = false;
+  mmSave.disabled = true;
   try{
-    const shownName = row.name;
-    Object.assign(row, await window.__seal('mmtb_machines', row));   // mã hoá trường nhạy cảm (nếu đã bật)
-    let id = editId;
-    if(editId){
-      const cur = byId.get(editId);
-      const { data, error } = await sb.from('mmtb_machines').update(row).eq('id', editId)
-        .eq('version', cur ? cur.version : -1).is('deleted_at', null).select('id');
-      if(error) throw error;
-      if(!data || !data.length) throw { code:'conflict' };
-    } else {
-      const { data, error } = await sb.from('mmtb_machines').insert(row).select('id').single();
-      if(error) throw error;
-      id = data.id;
+    // hàng chờ duyệt: editor gửi yêu cầu {row, ms} thay vì ghi. Chờ CR dò bảng xong rồi mới quyết định (không lưu thẳng chỉ vì chưa tải xong).
+    // before = giá trị hiện tại cùng các khoá (byId / msBy); before + payload cùng chuẩn hoá (mmNorm) để cũ → mới không có dòng giả
+    if(window.CR && !PERM.isAdmin()) await CR.loaded;
+    if(window.CR && CR.must('mmtb', mmAct())){
+      asked = true;
+      const cur = editId ? byId.get(editId) : null;
+      const before = cur ? { row: mmNorm(Object.fromEntries(Object.keys(row).map(k=>[k, cur[k] === undefined ? null : cur[k]]))),
+                             ms: mmMsNorm(Object.fromEntries(Object.keys(ms).map(k=>[k, old[k] ? old[k].actual_date : null]))) } : null;
+      await CR.submit({ module:'mmtb', kind: editId ? 'update' : 'insert', target_id: editId || null, base_version: cur ? cur.version : null,
+        payload: { row: mmNorm(row), ms: mmMsNorm(ms) }, before, title: mmTitle(cur || row) });
+      mmClose();
+      toast('📨 ' + tr('Sent — waiting for admin approval','Đã gửi, chờ admin duyệt') + ': <b>' + E(shownName) + '</b>');
+      return;
     }
-    // mốc tiến độ thực tế: ghi những mốc có ngày, hoặc đã có trước đó (để xoá ngày)
-    const old = msBy.get(id) || {};
-    const ups = !PERM.edit('mmtb', 'dates') ? [] : FORM_MS.filter(k=>dt('m_ms_'+k) || (old[k] && old[k].actual_date))   // không được sửa ngày / mốc: không ghi mốc
-      .map(k=>({ machine_id:id, milestone:k, actual_date:dt('m_ms_'+k) }));
-    if(ups.length){
-      const { error } = await sb.from('delivery_milestones').upsert(ups, { onConflict:'machine_id,milestone' });
-      if(error) throw error;
-    }
+    window.__selfWritingM = true;
+    const id = await mmWrite(row, editId, ms);
     mmClose();
     if(window.MO) MO.saved(id);
     await reload();
     toast('✅ ' + (editId ? tr('Saved','Đã lưu') : tr('Added','Đã thêm')) + ': <b>' + E(shownName) + '</b>');
-  }catch(e){ showNotice({ type:'error', title:tr('Could not save the machine','Chưa lưu được máy'), sub:errText(e) }); }
-  finally{ mmSave.disabled = false; setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+  }catch(e){ showNotice({ type:'error', title: asked ? tr('Could not send the request','Chưa gửi được yêu cầu') : tr('Could not save the machine','Chưa lưu được máy'), sub:errText(e) }); }
+  finally{ mmSave.disabled = false; if(!asked) setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
 }
-window.mmDelete = id => {
+let MM_DEL_BUSY = false;     // chặn bấm 2 lần khi đang gửi yêu cầu xoá
+window.mmDelete = async id => {
   const x = byId.get(id); if(!x || !PERM.act('mmtb','delete')) return;
   const ch = kids.get(id) || [];
   if(ch.length){ showNotice({ type:'error', title:tr('This machine has sub-units','Máy này còn bộ phận con'),
     sub:tr(`Move or delete its ${ch.length} sub-units first.`,`Hãy chuyển hoặc xoá ${ch.length} bộ phận con trước.`) }); return; }
+  if(window.CR && !PERM.isAdmin()) await CR.loaded;     // chờ CR dò bảng xong rồi mới quyết định gửi duyệt hay xoá thẳng
+  if(window.CR && CR.must('mmtb', 'delete')){           // hàng chờ duyệt: editor gửi yêu cầu xoá, máy vẫn hiện tới khi admin duyệt
+    confirmBox({ title:tr('Send a delete request?','Gửi yêu cầu xoá?'),
+      sub:`<b>${E(x.machine_code)} — ${E(x.name)}</b><br>${tr('The machine stays in the catalog until an admin approves the request.','Máy vẫn còn trong Danh mục cho tới khi admin duyệt yêu cầu.')}`,
+      ok:tr('📨 Send request','📨 Gửi yêu cầu'),
+      onOk: async ()=>{
+        if(MM_DEL_BUSY) return;
+        MM_DEL_BUSY = true;
+        try{
+          const before = { row: mmNorm(Object.fromEntries(MM_ROW_KEYS.filter(k=>k in x).map(k=>[k, x[k]]))), ms: {} };
+          await CR.submit({ module:'mmtb', kind:'delete', target_id:id, base_version:x.version, payload:null, before, title:mmTitle(x) });
+          mBg.classList.remove('show');
+          toast('📨 ' + tr('Sent — waiting for admin approval','Đã gửi, chờ admin duyệt') + ': <b>' + E(x.name) + '</b>');
+        }catch(e){ showNotice({ type:'error', title:tr('Could not send the request','Chưa gửi được yêu cầu'), sub:errText(e) }); }
+        finally{ MM_DEL_BUSY = false; }
+      } });
+    return;
+  }
   confirmBox({ title:tr('Delete this machine?','Xoá máy này?'),
     sub:`<b>${E(x.machine_code)} — ${E(x.name)}</b><br>${tr('The machine moves to the trash; an admin can restore it in Supabase.','Máy được chuyển vào thùng rác; admin khôi phục được trong Supabase.')}`,
     ok:tr('🗑 Delete','🗑 Xoá'),
@@ -5795,6 +5986,85 @@ window.mmDelete = id => {
       finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
     } });
 };
+/* hàng chờ duyệt: hàm ghi thật khi ADMIN duyệt yêu cầu Danh mục (change_req.js gọi). d.payload = {row, ms} (bản đã gộp, xem change_req.js);
+   ghi với version HIỆN TẠI (byId). Trả về [id]. Thêm mà mã máy đã có máy khác dùng → cấp mã tạm mới (window.__tempCode), ghi chú cho admin ở ids.note. */
+if(window.CR) CR.appliers.mmtb = {
+  update: async (req, d) => {
+    const p = (d && d.payload) || {}, row = Object.assign({}, p.row), cur = byId.get(req.target_id);
+    // như save(): trường mã hoá thiếu trên dòng giữ giá trị hiện tại — __seal chỉ niêm phong trường có trên dòng, thiếu là mất
+    if(cur && !cur.__locked) SEC.mmtb_machines.f.forEach(k=>{ if(!(k in row) && k in cur) row[k] = cur[k] ?? null; });
+    const id = await mmWrite(row, req.target_id, p.ms || {});
+    await reload(); return [id];
+  },
+  insert: async (req, d) => {
+    const p = (d && d.payload) || {}, row = Object.assign({}, p.row, req.id ? { id: req.id } : {});     // ID máy mới = ID yêu cầu (duyệt lại không thêm lần 2)
+    const had = async () => { if(!req.id) return false; const { data, error } = await window.__sb.from('mmtb_machines').select('id').eq('id', req.id).maybeSingle(); if(error) throw error; return !!data; };
+    const done = async () => {      // đã ghi ở lần trước: chỉ ghi lại mốc (upsert, vô hại) rồi tải lại
+      const ups = Object.keys(p.ms || {}).map(k=>({ machine_id:req.id, milestone:k, actual_date:p.ms[k] || null }));
+      if(ups.length){ const { error } = await window.__sb.from('delivery_milestones').upsert(ups, { onConflict:'machine_id,milestone' }); if(error) throw error; }
+      await reload(); return [req.id];
+    };
+    if(await had()) return done();
+    let note = '';
+    if(row.machine_code && MM.machines.some(m => m.machine_code === row.machine_code)){
+      const was = row.machine_code;
+      row.machine_code = window.__tempCode((MM.companies.find(c => c.id === row.company_id) || {}).code || 'M');
+      if(MM.hasGroups) row.code_temp = true;
+      note = tr(`Code ${was} is already used by another machine — the new machine got temporary code ${row.machine_code}.`,
+                `Mã ${was} đã có máy khác dùng — máy mới được cấp mã tạm ${row.machine_code}.`);
+    }
+    let id;
+    try{ id = await mmWrite(row, null, p.ms || {}); }
+    catch(e){ if(e && e.code === '23505' && await had()) return done(); throw e; }
+    await reload();
+    const out = [id]; if(note) out.note = note;
+    return out;
+  },
+  delete: async req => {
+    const x = byId.get(req.target_id); if(!x) throw { code:'conflict' };
+    window.__selfWritingM = true;
+    try{
+      const { data, error } = await window.__sb.from('mmtb_machines').update({ deleted_at:new Date().toISOString() })
+        .eq('id', x.id).eq('version', x.version).is('deleted_at', null).select('id');
+      if(error) throw error;
+      if(!data || !data.length) throw { code:'conflict' };
+    }finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+    await reload(); return [x.id];
+  }
+};
+/* hàng chờ duyệt (admin duyệt): bản hiện tại {row, ms} cùng dạng before (mmNorm / mmMsNorm); sync: máy đã xoá / version khác → tải lại;
+   null (duyệt Thêm) → tải lại để kiểm mã trùng trên dữ liệu mới. derive: mã máy đổi (giống save) → hết "tạm", giữ mã cũ ở legacy_code */
+if(window.CR){
+  CR.getters.mmtb = id => { const x = byId.get(id); if(!x) return null; const o = msBy.get(id) || {};
+    const row = mmNorm(Object.fromEntries(Object.keys(x).filter(k => k !== 'sec' && !k.startsWith('__')).map(k=>[k, x[k]])));
+    return { row: { row, ms: mmMsNorm(Object.fromEntries(Object.keys(o).map(k=>[k, o[k].actual_date]))) }, version: x.version }; };
+  /* luôn đọc lại dòng + mốc của máy từ DB: catalog_sync.js (writeMs) ghi delivery_milestones KHÔNG tăng version của máy */
+  CR.sync.mmtb = async id => {
+    if(!id){ await reload(); return; }
+    const [a, m] = await Promise.all([
+      window.__sb.from('mmtb_machines').select('id,version,deleted_at').eq('id', id).maybeSingle(),
+      window.__sb.from('delivery_milestones').select('milestone,actual_date').eq('machine_id', id)]);
+    if(a.error) throw a.error;
+    if(m.error) throw m.error;
+    const data = a.data, x = byId.get(id);
+    if((!data || data.deleted_at) ? !!x : (!x || x.version !== data.version)){ await reload(); return; }
+    if(!data || data.deleted_at) return;
+    const D = v => v ? String(v).slice(0,10) : null, loc = msBy.get(id) || {}, db = {};
+    (m.data || []).forEach(r=>{ db[r.milestone] = D(r.actual_date); });
+    const ks = new Set(Object.keys(loc).concat(Object.keys(db)));
+    if([...ks].some(k => D(loc[k] && loc[k].actual_date) !== (db[k] ?? null))) await reload();
+  };
+  CR.derive.mmtb = (m, cur) => {
+    if(!MM.hasGroups || !m.machine_code || m.machine_code === cur.machine_code) return {};
+    return Object.assign({ code_temp: false }, cur.legacy_code ? {} : { legacy_code: cur.machine_code });
+  };
+}
+/* CR tải xong / gửi / rút: vẽ lại nhãn ⏳ ở Danh sách + chữ nút Lưu của form đang mở */
+if(window.CR) CR.onChange.push(()=>{
+  if(listDrawn) renderList();
+  const bg = document.getElementById('mmBg');
+  if(bg && bg.classList.contains('show') && window.mmSave && !mmSave.disabled) mmSave.textContent = mmSaveLbl();
+});
 if(PERM.act('mmtb','add') && !MM.err){ btnAddM.hidden = false; btnAddM.onclick = ()=>openForm(null); }
 
 /* ===================== THƯ VIỆN =====================
@@ -6473,14 +6743,23 @@ window.libPasteCodes = () => {
   };
 };
 /* ===================== CHUYỂN PHÂN HỆ ===================== */
-const delTs = [updDate.textContent, updTime.textContent];
-function updHeaderTs(){
-  if(document.body.dataset.mod!=='mmtb'){ updDate.textContent = delTs[0]; updTime.textContent = delTs[1]; return; }
-  const ts = MM.machines.reduce((a,x)=> x.updated_at && x.updated_at > a ? x.updated_at : a, '');
-  const d = ts ? new Date(ts) : null;
-  updDate.textContent = d ? D(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')) : '—';
-  updTime.textContent = d ? '🕐 ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') : '';
+/* Ô trên thanh: ngày + giờ thật theo máy, chạy mỗi giây (1 setInterval duy nhất: window.__clock).
+   Giờ cập nhật dữ liệu nằm trong title của ô (đổi theo phân hệ đang mở). */
+const _p2 = n => String(n).padStart(2,'0');
+function updClockTick(){
+  const d = new Date();
+  updDate.textContent = _p2(d.getDate()) + '/' + _p2(d.getMonth()+1) + '/' + d.getFullYear();
+  updTime.textContent = '🕐 ' + _p2(d.getHours()) + ':' + _p2(d.getMinutes()) + ':' + _p2(d.getSeconds());
 }
+function updHeaderTs(){
+  let d = null;
+  if(document.body.dataset.mod!=='mmtb') d = new Date(DATA_TS);
+  else { const ts = MM.machines.reduce((a,x)=> x.updated_at && x.updated_at > a ? x.updated_at : a, ''); d = ts ? new Date(ts) : null; }
+  const txt = (d && !isNaN(d)) ? _p2(d.getDate()) + '/' + _p2(d.getMonth()+1) + '/' + d.getFullYear() + ' ' + _p2(d.getHours()) + ':' + _p2(d.getMinutes()) : '—';
+  updDate.closest('.updated').title = tr('Data updated: ','Dữ liệu cập nhật: ') + txt;
+  updClockTick();
+}
+if(!window.__clock){ updClockTick(); window.__clock = setInterval(updClockTick, 1000); }
 const last = { mmtb:'c1', delivery:'p1' };
 const _show = showPage;
 showPage = function(id){
@@ -6562,6 +6841,7 @@ const STATIC_VI = new Map([
   ['Change password','Đổi mật khẩu'],
   ['Manage users','Quản lý người dùng'],
   ['Activity log','Nhật ký thao tác'],
+  ['My requests','Yêu cầu của tôi'],
   ['Total equipment','Tổng thiết bị'],
   ['Total value','Tổng giá trị'],
   ['Awaiting','Đang chờ về'],
@@ -7272,6 +7552,9 @@ window.encryptExisting = async () => {
         lgErr.textContent = loginErrText(error);
         return;
       }
+      /* 📜 nhật ký đăng nhập (migration 26 log_login): ghi 1 lần ngay sau đăng nhập thành công — chỉ ở nút này, KHÔNG ở lần tải lại trang với phiên cũ.
+         Lỗi (chưa chạy 26) bỏ qua. Chờ tối đa 1,5 giây vì ngay sau đó trang tải lại (yêu cầu đang bay có thể bị huỷ). */
+      try{ await Promise.race([sb.rpc('log_login', { p_agent: navigator.userAgent }), new Promise(r => setTimeout(r, 1500))]); }catch(e){}
       /* không phải admin: mở khoá luôn bằng bản gói; không mở được thì đánh dấu để báo "chưa kích hoạt" */
       try{
         const { data: me0 } = await sb.from('app_users').select('role').eq('email', email.trim().toLowerCase()).maybeSingle();

@@ -25,6 +25,7 @@
     sun:      '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     moon:     '<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>',
     logo:     '<path d="M3 21V10l5 3V10l5 3V5h3l1 3h4v13z"/><path d="M7 17h2M12 17h2M17 17h2"/>',
+    inbox:    '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
     calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'
   };
   const F = (vb, body) => '<svg class="ico flag" viewBox="' + vb + '" aria-hidden="true">' + body + '</svg>';
@@ -36,7 +37,7 @@
   const EMO = /^\s*(\p{Extended_Pictographic}️?|⎋)\s*/u;
 
   const TAB = {c1:'overview', p1:'overview', c2:'machines', p3:'machines', c4:'arrange', c3:'library', p2:'analytics', p4:'evaluation', p5:'planning'};
-  const BTN = {btnUpd:'refresh', btnPick:'import', btnAdd:'add', btnAddM:'add', btnExport:'export', btnTrash:'trash', btnLog:'log', btnUsers:'users', btnPw:'key', btnLogout:'logout'};
+  const BTN = {btnUpd:'refresh', btnPick:'import', btnAdd:'add', btnAddM:'add', btnExport:'export', btnTrash:'trash', btnLog:'log', btnReq:'inbox', btnUsers:'users', btnPw:'key', btnLogout:'logout'};
   function nameFor(el){
     if(el.id in BTN) return BTN[el.id];
     if(el.id === 'btnTheme') return document.documentElement.dataset.theme === 'light' ? 'moon' : 'sun';
@@ -93,7 +94,9 @@
     try{ (root && root.querySelectorAll ? root : document).querySelectorAll(SEL).forEach(decorateEl); }
     finally{ attach(); }
   }
-  obs = new MutationObserver(decorate);
+  /* đồng hồ #updTime/#updDate đổi chữ mỗi giây: bỏ qua, không decorate lại mỗi tick */
+  const inClock = t => { const e = t && t.nodeType === 1 ? t : t && t.parentElement; return !!(e && e.closest && e.closest('#updTime, #updDate')); };
+  obs = new MutationObserver(recs => { if(Array.isArray(recs) && recs.length && recs.every(r => inClock(r.target))) return; decorate(); });
   window.ICONS = { svg: html, decorate };
   decorate();
 })();
