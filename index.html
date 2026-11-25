@@ -27,6 +27,7 @@
 <script src="combo.js"></script>
 <script src="page_fit.js"></script>
 <script src="users_admin.js"></script>
+<script src="audit_log.js"></script>
 <style>
 :root{color-scheme:dark;
   --bg:#0b1220; --panel:#121c31; --panel2:#17233d; --border:rgba(148,163,184,.14);
@@ -1096,9 +1097,7 @@ label:has(> .cb-src){position:relative}
 .ua-tbl td.act button{background:transparent;border:1px solid var(--border);border-radius:7px;padding:3px 8px;margin-left:4px;cursor:pointer;color:var(--txt);font-size:12px}
 .ua-tbl td.act button.ask{border-color:var(--st-bad);color:var(--st-bad);font-weight:700}
 .ua-tag{display:block;color:var(--muted);font-size:11px}
-.ua-log{margin-top:10px;font-size:12.5px;color:var(--muted)}
-.ua-log summary{cursor:pointer}
-.ua-log #uaLogB{max-height:24vh;overflow:auto;line-height:1.7;margin-top:6px;overflow-wrap:anywhere}
+.ua-hint{margin-top:10px;font-size:12.5px;color:var(--muted)}
 @media(max-width:640px){
   .add-grid.ua-form{grid-template-columns:1fr}
   .ua-tbl table,.ua-tbl tbody,.ua-tbl tr{display:block;width:100%;min-width:0}
@@ -1136,6 +1135,8 @@ label:has(> .cb-src){position:relative}
   #tb td.name{max-width:300px}
 }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&subset=vietnamese&display=swap">
 <link rel="stylesheet" href="theme.css">
 <script src="icons.js" defer></script>
 </head>
@@ -1159,6 +1160,7 @@ label:has(> .cb-src){position:relative}
   <button class="upd-btn mod-delivery" id="btnAdd" title="Add a new machine">➕ Add</button>
   <button class="upd-btn mod-delivery" id="btnExport" hidden title="Download the full list as an Excel file; the last column (System ID) is the key when you import it back — do not change it">⬇️ Excel</button>
   <button class="upd-btn mod-delivery" id="btnTrash" hidden title="Deleted machines — restore or delete permanently">🗑</button>
+  <button class="upd-btn" id="btnLog" hidden title="Activity log">📜</button>
   <button class="upd-btn" id="btnUsers" hidden title="Manage users">👥</button>
   <div class="who" id="whoMe" hidden><button type="button" class="who-btn" aria-haspopup="menu" aria-expanded="false"><span class="who-av" aria-hidden="true"></span><span class="who-t"><b></b><small></small></span></button><div class="who-menu" role="menu"><div class="who-mh"><b></b><small></small></div><button type="button" role="menuitem" data-a="pw">🔑 Change password</button><button type="button" role="menuitem" data-a="out">⎋ Sign out</button></div></div>
   <button class="upd-btn" id="btnPw" hidden title="Change password">🔑</button>
@@ -3512,7 +3514,7 @@ window.showDetail = i => {
         : `<div class="m-ok">✅ ${tr(`No delay note.`,`Không có giải trình.`)}</div>`}
     </div>`}
     <div class="dt-actions">
-      <button class="nbtn2 ghost" onclick="showHistory(${i})">${tr(`🕘 History`,`🕘 Lịch sử`)}</button>
+      ${window.__role==='admin' ? `<button class="nbtn2 ghost" onclick="showHistory(${i})">${tr(`🕘 History`,`🕘 Lịch sử`)}</button>` : ''}
       ${PERM.act('delivery','payment') && dS('value') ? `<button class="nbtn2 ghost" onclick="showPayments(${i})">${tr(`💳 Payments`,`💳 Thanh toán`)}</button>` : ''}
       ${dW('delete') ? `<button class="nbtn2 ghost" onclick="askDelete(${i})">${tr(`🗑 Delete machine`,`🗑 Xoá máy`)}</button>` : ''}
       ${dW('quick') ? `<button class="nbtn2 ghost" onclick="quickEdit(${i})">${tr(`⚡ Quick update`,`⚡ Cập nhật nhanh`)}</button>` : ''}
@@ -4532,7 +4534,32 @@ function showVal(k,v){
   if(k==='hinh_thuc_mua') return PT_LBL[v] || String(v);
   return String(v);
 }
+/* 1 dòng lịch sử cũ → mới (dùng chung Tiến độ, Danh mục, trang Nhật ký): keys = các trường được phép xem, lbl(k) = nhãn theo ngôn ngữ,
+   val(k, v) = chữ hiện cho giá trị (bỏ trống = showVal của Tiến độ) */
+window.__histRow = (h, keys, lbl, val = showVal) => {
+  const o = h.old_data||{}, n = h.new_data||{};
+  const action = String(h.action||'').replace(/^MMTB_/, '');
+  let act = tr('Edited','Sửa'), col = 'var(--blue)', body = '';
+  if(action==='INSERT'){ act=tr('Added','Thêm máy'); col='var(--green)'; }
+  else if(action==='DELETE'){ act=tr('Deleted permanently','Xoá hẳn'); col='var(--red)'; }
+  else if(n.deleted_at && !o.deleted_at){ act=tr('Moved to trash','Chuyển vào thùng rác'); col='var(--red)'; }
+  else if(o.deleted_at && !n.deleted_at){ act=tr('Restored','Khôi phục'); col='var(--green)'; }
+  else {
+    const nz = v => (v==='' || v===undefined) ? null : v;          // '' / undefined / null = trống như nhau: không hiện (trống) → (trống)
+    const ch = keys.filter(k=> JSON.stringify(nz(o[k])) !== JSON.stringify(nz(n[k])));
+    body = ch.length ? ch.map(k=>`<div>${lbl(k)}: <s>${escH(val(k,o[k]))}</s> → <ins>${escH(val(k,n[k]))}</ins></div>`).join('')
+                     : '<div style="color:var(--muted)">'+tr('No content changes','Không đổi nội dung')+'</div>';
+  }
+  return `<div class="hx-item"><div class="hx-head"><span class="hx-act" style="color:${col}">${act}</span>
+    <b>${escH(h.user_email || tr('Admin (SQL)','Quản trị (SQL)'))}</b><span>${fmtDT(h.at)}</span></div>${body?`<div class="hx-ch">${body}</div>`:''}</div>`;
+};
+/* trường + nhãn lịch sử Tiến độ (🕘 và 📜 Nhật ký dùng chung) */
+window.__dvHist = {
+  keys: () => REC_KEYS.concat(ACT_KEYS, LD_KEYS, ['hinh_thuc_mua']).filter(k=> dS(k)),   // không hiện thay đổi của trường bị ẩn
+  lbl: k => (LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k]
+};
 window.showHistory = async i => {
+  if(window.__role!=='admin') return;      // 2026-11-23: nhật ký chỉ admin xem (RLS cũng chặn)
   const x = DATA[i]; if(!x) return;
   mTitle.textContent = tr('🕘 History: ','🕘 Lịch sử: ') + unescH(x.ten);
   mSub.textContent = tr('Newest first. History starts from when the machine was added or the most recent Excel import.','Mới nhất ở trên. Lịch sử tính từ lần máy được thêm hoặc lần Nạp Excel gần nhất.');
@@ -4545,21 +4572,8 @@ window.showHistory = async i => {
     if(!data || !data.length){ mBody.innerHTML = '<div class="m-ok">'+tr('No changes recorded yet.','Chưa có thay đổi nào được ghi lại.')+'</div>'; return; }
     // bản ghi trong nhật ký cũng đã mã hoá: giải mã trước khi so sánh
     for(const h of data){ h.old_data = await window.__open(h.old_data); h.new_data = await window.__open(h.new_data); }
-    mBody.innerHTML = '<div class="hx-list">' + data.map(h=>{
-      const o = h.old_data||{}, n = h.new_data||{};
-      let act = tr('Edited','Sửa'), col = 'var(--blue)', body = '';
-      if(h.action==='INSERT'){ act=tr('Added','Thêm máy'); col='var(--green)'; }
-      else if(h.action==='DELETE'){ act=tr('Deleted permanently','Xoá hẳn'); col='var(--red)'; }
-      else if(n.deleted_at && !o.deleted_at){ act=tr('Moved to trash','Chuyển vào thùng rác'); col='var(--red)'; }
-      else if(o.deleted_at && !n.deleted_at){ act=tr('Restored','Khôi phục'); col='var(--green)'; }
-      else {
-        const ch = REC_KEYS.concat(ACT_KEYS, LD_KEYS, ['hinh_thuc_mua']).filter(k=> dS(k) && JSON.stringify(o[k]??null) !== JSON.stringify(n[k]??null));   // không hiện thay đổi của trường bị ẩn
-        body = ch.length ? ch.map(k=>`<div>${(LANG==='vi' ? REC_LABEL : REC_LABEL_EN)[k]}: <s>${escH(showVal(k,o[k]))}</s> → <ins>${escH(showVal(k,n[k]))}</ins></div>`).join('')
-                         : '<div style="color:var(--muted)">'+tr('No content changes','Không đổi nội dung')+'</div>';
-      }
-      return `<div class="hx-item"><div class="hx-head"><span class="hx-act" style="color:${col}">${act}</span>
-        <b>${escH(h.user_email || tr('Admin (SQL)','Quản trị (SQL)'))}</b><span>${fmtDT(h.at)}</span></div>${body?`<div class="hx-ch">${body}</div>`:''}</div>`;
-    }).join('') + '</div>';
+    const keys = window.__dvHist.keys(), lbl = window.__dvHist.lbl;
+    mBody.innerHTML = '<div class="hx-list">' + data.map(h=>window.__histRow(h, keys, lbl)).join('') + '</div>';
   }catch(err){ mBody.innerHTML = `<div class="m-gt">${dbErrText(err)}</div>`; }
 };
 
@@ -4775,7 +4789,7 @@ window.purgeTrash = j => {
   btnAdd.hidden = !dW('add'); btnPick.hidden = !dW('import');
   btnExp.hidden = !PERM.act('delivery','export');   // 📤 Xuất dữ liệu; ⬇️ Excel bên dưới vẫn chỉ người có quyền ghi (như trước)
   if(window.__canWrite && PERM.REG.delivery.groups.every(g=>dS(g.k))){ btnExport.hidden = false; btnExport.onclick = ()=>{ try{ exportExcel('TienDoMayVe'); }catch(e){ showNotice({type:'error', title:tr('Could not export the file','Chưa xuất được file'), sub:escH(e.message)}); } }; }
-  if(window.__role==='admin'){ btnTrash.hidden = false; btnTrash.onclick = openTrash; btnUsers.hidden = false; btnUsers.onclick = UA.open; }
+  if(window.__role==='admin'){ btnTrash.hidden = false; btnTrash.onclick = openTrash; btnUsers.hidden = false; btnUsers.onclick = UA.open; btnLog.hidden = false; btnLog.onclick = AL.open; }
   if(window.__userEmail){ btnLogout.hidden = false; btnLogout.title = tr('Sign out (','Đăng xuất (') + (window.__userName || window.__userEmail) + ')';
     btnPw.hidden = false; btnPw.onclick = openChangePw; showWho(); }
   btnLogout.onclick = async ()=>{ await appSignOut(); location.reload(); };
@@ -5231,6 +5245,7 @@ window.mmShow = id => {
       ch.map(c=>`<a onclick="mmShow('${c.id}')">↳ ${E(c.machine_code)} — ${E(c.name)}</a>`).join('')}</div></div>` : ''}
     ${x.notes && mS('notes') ? `<div class="dt-sec"><h5>${tr('Notes','Ghi chú')}</h5><div class="m-gt" style="white-space:pre-wrap">${E(x.notes)}</div></div>` : ''}
     <div class="dt-actions">
+      ${window.__role==='admin' ? `<button class="nbtn2 ghost" onclick="mmHistory('${x.id}')">${tr('🕘 History','🕘 Lịch sử')}</button>` : ''}
       ${PERM.act('mmtb','delete') ? `<button class="nbtn2 ghost" onclick="mmDelete('${x.id}')">${tr('🗑 Delete machine','🗑 Xoá máy')}</button>` : ''}
                 ${PERM.act('mmtb','split') && splitMax(x) >= 2 ? `<button class="nbtn2 ghost" onclick="mmSplit('${x.id}')" title="${tr('Split into separate machines (e.g. same model installed in 2 places)','Tách thành nhiều máy riêng (VD 2 máy giống nhau lắp ở 2 nơi)')}">${tr('✂️ Split','✂️ Tách máy')}</button>` : ''}
                 ${PERM.act('mmtb','clone') ? `<button class="nbtn2 ghost" onclick="mmClone('${x.id}')" title="${tr('Add a new machine pre-filled from this one','Thêm máy mới, điền sẵn từ máy này')}">${tr('📋 Clone','📋 Nhân bản')}</button>` : ''}
@@ -5238,6 +5253,62 @@ window.mmShow = id => {
     <div class="dt-note">${tr('Source','Nguồn')}: ${T(x.source_ref)} · ${tr('Last edited','Sửa lần cuối')}: ${x.updated_at ? new Date(x.updated_at).toLocaleString(NUMLOC) : '—'}${x.updated_by ? ' · ' + E(x.updated_by) : ''}</div>
   </div>`;
   openM(1);
+};
+
+/* 🕘 Lịch sử máy Danh mục (chỉ admin): nhãn trường + nhóm quyền xem; trường chưa có nhãn hiện tên khoá */
+window.MM_HIST_LBL = {name:['Machine name','Tên máy'], machine_code:['Code','Mã máy'], model:['Model','Model'], serial:['Serial number','Số serial'],
+  manufacturer:['Brand','Thương hiệu'], supplier_id:['Supplier','Nhà cung cấp'], origin:['Origin','Xuất xứ'], capacity:['Capacity','Công suất'],
+  capacity_unit:['Capacity unit','Đơn vị công suất'], equipment_type:['Equipment type','Loại thiết bị'], group_name:['Group','Nhóm'], role:['Role','Vai trò'],
+  line_id:['Production line','Chuyền'], area_id:['Area','Khu vực'], parent_machine_id:['Parent machine','Máy cha'], lifecycle_status:['Status','Trạng thái'],
+  commissioned_date:['Commissioned','Ngày nghiệm thu'], contract_amount:['Contract amount','Giá trị hợp đồng'], contract_currency:['Contract currency','Tiền tệ hợp đồng'],
+  engineer:['Engineer in charge','Kỹ sư phụ trách'], manager:['Manager','Người quản lý'], notes:['Notes','Ghi chú'], alias_names:['Other names / old names','Tên gọi khác / tên cũ'],
+  asset_code:['Asset code','Mã tài sản'], quantity:['Quantity','Số lượng'], locked_rate:['Locked exchange rate','Tỷ giá khoá'],
+  serial_number:['Serial number','Số serial'], capacity_value:['Capacity','Công suất'], company_id:['Plant','Nhà máy'], materials:['Materials','Nguyên liệu'],
+  approved_date:['Proposal approval date','Ngày duyệt ĐXĐT'], manufacturing_days:['Manufacturing days','Số ngày chế tạo máy']};
+const MM_HIST_GRP = {name:'name', alias_names:'name', machine_code:'code', asset_code:'code', model:'model', serial:'model', manufacturer:'supplier', supplier_id:'supplier',
+  origin:'origin', capacity:'capacity', capacity_unit:'capacity', equipment_type:'classify', group_name:'classify', role:'classify', line_id:'location', area_id:'location',
+  parent_machine_id:'location', lifecycle_status:'status', commissioned_date:'dates', contract_amount:'value', contract_currency:'value', locked_rate:'value',
+  engineer:'person', manager:'person', notes:'notes', quantity:'qty', serial_number:'model', capacity_value:'capacity', company_id:'location', approved_date:'dates', manufacturing_days:'dates'};
+/* giá trị hiện trong lịch sử Danh mục: khoá tham chiếu -> tên (tra MM đang tải; không thấy thì giữ giá trị gốc), mảng nối " · ", object JSON gọn */
+const mmHistRef = {
+  supplier_id: v => { const s = (MM.suppliers||[]).find(x=>x.id===v); return s && s.name; },
+  line_id: v => { const l = (MM.lines||[]).find(x=>x.id===v); return l && l.name; },
+  area_id: v => { const a = (MM.areas||[]).find(x=>x.id===v); return a && (a.name || a.code); },
+  company_id: v => { const c = (MM.companies||[]).find(x=>x.id===v); return c && (c.name ? c.code + ' · ' + c.name : c.code); },
+  parent_machine_id: v => { const m = byId.get(v); return m && [m.machine_code, m.name].filter(t=>t && t!=='🔒').join(' · '); }
+};
+const mmHistVal = (k, v) => {
+  if(v===null || v===undefined || v==='') return showVal(k, v);
+  if(mmHistRef[k]) return mmHistRef[k](v) || String(v);
+  if(k==='approved_date' || k==='commissioned_date') return String(v).slice(0,10).split('-').reverse().join('/');   // d/m/Y như các ngày khác
+  if(Array.isArray(v)) return v.map(x=> x!==null && typeof x==='object' ? JSON.stringify(x) : String(x)).join(' · ');
+  if(typeof v==='object') return JSON.stringify(v);
+  return showVal(k, v);
+};
+/* trường được xem: bỏ cột kỹ thuật; khoá chưa có trong MM_HIST_GRP vẫn hiện (lịch sử chỉ admin xem, không cần chặn theo nhóm) */
+const mmHistKeys = rows => {
+  const SKIP = ['id','sec','version','created_at','updated_at','updated_by','created_by','tracking_synced_at'], ks = new Set();
+  rows.forEach(h => [h.old_data, h.new_data].forEach(d => d && Object.keys(d).forEach(k => { if(!SKIP.includes(k) && k!=='__locked') ks.add(k); })));
+  return [...ks].filter(k => !MM_HIST_GRP[k] || mS(MM_HIST_GRP[k]));      // chỉ trường nhóm được phép xem
+};
+const mmHistLbl = k => { const l = window.MM_HIST_LBL[k]; return E(l ? l[LANG==='vi' ? 1 : 0] : k); };
+window.__mmHist = { keys: mmHistKeys, lbl: mmHistLbl, val: mmHistVal };   // 📜 Nhật ký dùng chung
+window.mmHistory = async id => {
+  if(window.__role!=='admin') return;
+  const x = byId.get(id); if(!x) return;
+  mTitle.textContent = tr('🕘 History: ','🕘 Lịch sử: ') + (mS('name') ? x.name : (mS('code') ? x.machine_code : ''));
+  mSub.textContent = tr('Newest first.','Mới nhất ở trên.');
+  mBody.innerHTML = '<div class="hx-list">'+(window.MO ? MO.skel(5) : '<div class="hx-item">'+tr('Loading…','Đang tải…')+'</div>')+'</div>';
+  openM(1);
+  try{
+    const { data, error } = await window.__sb.from('audit_log').select('at,user_email,action,old_data,new_data')
+      .eq('machine_id', id).like('action', 'MMTB_%').order('at', {ascending:false}).limit(100);
+    if(error) throw error;
+    if(!data || !data.length){ mBody.innerHTML = '<div class="m-ok">'+tr('No changes recorded yet.','Chưa có thay đổi nào được ghi lại.')+'</div>'; return; }
+    for(const h of data){ h.old_data = await window.__open(h.old_data); h.new_data = await window.__open(h.new_data); }
+    const keys = mmHistKeys(data);
+    mBody.innerHTML = '<div class="hx-list">' + data.map(h=>window.__histRow(h, keys, mmHistLbl, mmHistVal)).join('') + '</div>';
+  }catch(err){ mBody.innerHTML = `<div class="m-gt">${E(err && err.message || err)}</div>`; }
 };
 
 /* ===================== THÊM / SỬA / XOÁ ===================== */
@@ -6490,6 +6561,7 @@ const STATIC_VI = new Map([
   ['Sign out','Đăng xuất'],
   ['Change password','Đổi mật khẩu'],
   ['Manage users','Quản lý người dùng'],
+  ['Activity log','Nhật ký thao tác'],
   ['Total equipment','Tổng thiết bị'],
   ['Total value','Tổng giá trị'],
   ['Awaiting','Đang chờ về'],

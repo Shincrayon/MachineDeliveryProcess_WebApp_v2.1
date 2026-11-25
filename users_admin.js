@@ -372,15 +372,6 @@
     el('uaEmail').value = ''; el('uaName').value = ''; el('uaRole').value = 'viewer';
     loadList();
   }
-  async function loadLog() {
-    const box = el('uaLogB');
-    const { data, error } = await window.__sb.from('user_admin_log').select('*').order('at', { ascending: false }).limit(50);
-    if (error) { box.textContent = tr('Could not load the log. Migration 15 may not have been run.', 'Không tải được nhật ký. Có thể chưa chạy migration 15.'); return; }
-    const LBL = { create: tr('Added', 'Thêm'), set_role: tr('Changed permission', 'Đổi quyền'), set_perms: tr('Set permissions', 'Đặt quyền chi tiết'), reset_password: tr('Reset password', 'Đặt lại mật khẩu'), revoke: tr('Revoked', 'Thu hồi') };
-    box.innerHTML = (data || []).map(x => { const d = x.detail || {};
-      return `<div>${esc(fmtTime(x.at))} · ${esc(x.actor_email)} · ${esc(LBL[x.action] || x.action)} · <b>${esc(x.target_email)}</b>${d.to ? ` (${esc(d.from || '—')} → ${esc(d.to)})` : ''}</div>`; }).join('')
-      || tr('No entries yet.', 'Chưa có dòng nào.');
-  }
 
   /* kiểm tra mật khẩu mới, dùng chung cho màn hình bắt đổi và nút 🔑. '' = được.
      Ký tự ngoài ASCII in được: thường là bộ gõ tiếng Việt đang bật (2026-11-07 admin đặt xong không đăng nhập lại được) */
@@ -440,9 +431,8 @@
       <div id="uaMsg" class="ua-msg"></div>
       <div id="uaNew"></div>
       <div id="uaList" class="pay-tbl ua-tbl"></div>
-      <details id="uaLog" class="ua-log"><summary>${tr('Log (latest 50)', 'Nhật ký (50 dòng mới nhất)')}</summary><div id="uaLogB"></div></details></div>`;
+      <div class="ua-hint">${tr('Activity log: the 📜 button on the top bar', 'Nhật ký thao tác: nút 📜 trên thanh trên')}</div></div>`;   // 2026-11-23: nhật ký chuyển sang 📜 (audit_log.js)
     el('uaForm').onsubmit = addUser;
-    el('uaLog').ontoggle = () => { if (el('uaLog').open) loadLog(); };
     openM(true);
     loadList();
   };

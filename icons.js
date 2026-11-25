@@ -18,6 +18,7 @@
     add:      '<path d="M12 5v14M5 12h14"/>',
     export:   '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
     trash:    '<path d="M3 6h18M8 6V4h8v2"/><path d="M6 6l1 14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-14M10 11v6M14 11v6"/>',
+    log:      '<path d="M15 12h-5M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/>',
     users:    '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>',
     key:      '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/>',
     logout:   '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>',
@@ -35,7 +36,7 @@
   const EMO = /^\s*(\p{Extended_Pictographic}️?|⎋)\s*/u;
 
   const TAB = {c1:'overview', p1:'overview', c2:'machines', p3:'machines', c4:'arrange', c3:'library', p2:'analytics', p4:'evaluation', p5:'planning'};
-  const BTN = {btnUpd:'refresh', btnPick:'import', btnAdd:'add', btnAddM:'add', btnExport:'export', btnTrash:'trash', btnUsers:'users', btnPw:'key', btnLogout:'logout'};
+  const BTN = {btnUpd:'refresh', btnPick:'import', btnAdd:'add', btnAddM:'add', btnExport:'export', btnTrash:'trash', btnLog:'log', btnUsers:'users', btnPw:'key', btnLogout:'logout'};
   function nameFor(el){
     if(el.id in BTN) return BTN[el.id];
     if(el.id === 'btnTheme') return document.documentElement.dataset.theme === 'light' ? 'moon' : 'sun';

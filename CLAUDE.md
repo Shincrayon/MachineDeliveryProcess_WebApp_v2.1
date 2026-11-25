@@ -400,3 +400,13 @@ Triển khai: chạy `20261102_11_standard_name.sql` (sau 07 / 10; câu kiểm t
 - Luôn đặt trên nền trắng (`.dtr-logo` có nền #fff) để chữ xám RECYCLING đọc được ở giao diện tối.
 - Thanh trên: logo cao 22px (≤1300px: 20px); điện thoại ≤640px ẩn logo (chỉ còn ở thẻ đăng nhập). Logo chiếm chỗ nên tab Tiến độ bỏ icon ở ≤1900px, chữ Nạp ẩn ở ≤1560px. Dòng phụ " · Duy Tân Recycling" ẩn (logo đã có tên).
 - Test: `e2e_ui_b1_test.py` [8], `e2e_user_name_test.py` (tab không bị cắt ở mọi bề ngang).
+
+## 📜 Nhật ký + Lịch sử chỉ admin (2026-11-23)
+- Migration 25: `audit_log` chỉ admin đọc (`my_role() = 'admin'`); trigger vẫn ghi cho mọi người. 🕘 Lịch sử (chi tiết máy Tiến độ + Danh mục) chỉ hiện với admin; `showHistory` / `mmHistory` thoát ngay nếu không phải admin.
+- Nút **📜** (`#btnLog`, ngay trước 👥, chỉ admin, cả 2 phân hệ) → `AL.open()` (`audit_log.js`, window.AL). Chỉ đọc, không ghi DB.
+- Gộp nguồn `AL.sources` (`{key, label(), fetch(before, n)}` → Row `{key, at, who, module, kind, title, html, act?, code?}`): `audit_log` (2 phân hệ, giải mã `window.__open`; dòng `__locked` vẫn hiện, ghi "(không giải mã được)") + `user_admin_log` (chuyển từ 👥 sang; 👥 chỉ còn dòng gợi ý). Đợt 2 push thêm `change_requests`.
+- Tải `window.AL_PAGE || 200` dòng/lần. Mỗi nguồn nhớ con trỏ riêng (at dòng cuối + 1 ms, nguồn lọc `at < before`) và bỏ dòng đã thấy theo `key` → nhiều dòng cùng 1 `at` (nạp Excel) không mất / không lặp; trang đầy mà không có dòng mới thì lấy trang to gấp đôi.
+- Lọc (phân hệ · người · thao tác · khoảng ngày · tìm máy không dấu `DM.fold`) chạy trên dòng đã tải. Dòng gập: thời gian · người · hành động · máy · phân hệ; mở ra = cũ → mới.
+- Cũ → mới dùng chung `window.__histRow(h, keys, lbl, val)`: Tiến độ `window.__dvHist` (val mặc định `showVal`, không đổi), Danh mục `window.__mmHist` — `supplier_id/line_id/area_id/company_id/parent_machine_id` hiện TÊN tra từ MM đang tải (không thấy → giá trị gốc), mảng nối " · ", object JSON gọn; khoá chưa có nhãn vẫn hiện (chỉ admin xem).
+- Kiểu `.al-*` cuối theme.css. Icon `log` trong icons.js (`BTN.btnLog`).
+- Test: `e2e_audit_log_test.py` ([1] SQL, [2] 🕘, [3] 📜; ảnh `shots/al_dark.png`, `al_light.png`, `al_390.png`), `e2e_users_admin_test.py` [8].

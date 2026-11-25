@@ -45,7 +45,7 @@ body{background:var(--bg)}
 .upd-btn:hover{background:var(--panel2);color:var(--txt);transform:none}
 #btnAdd,#btnAddM{background:var(--accent);color:var(--on-accent);border-color:transparent;padding:0 12px}
 #btnAdd:hover,#btnAddM:hover{background:var(--accent);color:var(--on-accent);filter:brightness(1.08)}
-#btnUpd,#btnTrash,#btnPw,#btnLogout,#btnUsers{padding-left:8px;padding-right:8px}
+#btnUpd,#btnTrash,#btnPw,#btnLogout,#btnUsers,#btnLog{padding-left:8px;padding-right:8px}
 .topbar .updated{position:relative;display:flex;align-items:center;gap:6px;flex:none;border:0;background:transparent;padding:0 0 0 4px;border-radius:0;text-align:left!important;line-height:1.2!important;white-space:nowrap;font-size:12px;color:var(--muted)}
 @media(max-width:640px){.topbar .updated{display:none}}
 .topbar .updated b{color:var(--txt);font-weight:600}
@@ -92,7 +92,7 @@ body{background:var(--bg)}
 @media(max-width:1300px){
   .topbar{gap:4px;padding-left:8px;padding-right:8px}
   .topbar .tabs{gap:0}
-  .upd-btn,#btnUpd,#btnTrash,#btnPw,#btnLogout,#btnUsers{padding-left:5px;padding-right:5px;min-width:28px}}
+  .upd-btn,#btnUpd,#btnTrash,#btnPw,#btnLogout,#btnUsers,#btnLog{padding-left:5px;padding-right:5px;min-width:28px}}
 /* man hinh nho (dien thoai / may tinh bang doc): cho phep xuong dong, tab cuon ngang */
 @media(max-width:1239px){
   .topbar{flex-wrap:wrap}
@@ -360,3 +360,44 @@ body.dt-on .subtabs{display:flex}
 .brand .bt b{font-size:22px}
 @media(max-width:1300px){.brand .bt b{font-size:19px}}
 @media(max-width:640px){.brand .bt b{font-size:16px}.subtabs{margin:6px 0 -4px;overflow-x:auto}}
+
+/* tiêu đề app: VIẾT HOA, font Oswald 600 (user chọn 2026-11-23); không tải được font thì dùng Arial Narrow */
+.brand .bt b,.lg-brand b{font-family:'Oswald','Arial Narrow',Arial,sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.3px;line-height:1.1}
+
+/* ===== 📜 Nhật ký thao tác (audit_log.js, 2026-11-23): thanh lọc 1 hàng, danh sách cuộn trong popup, dòng gập / mở. Chỉ token sẵn có ===== */
+.al-wrap{display:flex;flex-direction:column;gap:8px;min-width:0}
+.al-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.al-bar select,.al-bar input{height:34px;padding:0 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--txt);font:inherit;font-size:13px;min-width:0}
+.al-bar select{flex:0 1 auto;max-width:132px}
+.al-bar input{flex:0 1 88px;width:88px}
+.al-bar input[type=search]{flex:1 1 90px;width:auto}
+.al-bar .al-clear{height:34px;flex:none;white-space:nowrap;padding:0 10px;border-radius:8px;font-size:13px}
+.al-bar input::placeholder{color:var(--muted);opacity:1}
+.al-bar select:focus,.al-bar input:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px var(--accent-soft)}
+.al-count{font-size:12px;color:var(--muted)}
+.al-list{display:flex;flex-direction:column;gap:6px;max-height:calc(100vh - 290px);min-height:120px;overflow:auto;padding-right:2px}
+.al-row{border:1px solid var(--border);border-radius:10px;background:var(--panel2);flex:none}
+.al-row>summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:8px 12px;cursor:pointer;list-style:none;font-size:12.5px;color:var(--muted)}
+.al-row>summary::-webkit-details-marker{display:none}
+.al-row>summary::before{content:'›';display:inline-block;width:8px;color:var(--muted);transition:transform .15s}
+.al-row[open]>summary::before{transform:rotate(90deg)}
+.al-row>summary:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;border-radius:10px}
+.al-at{white-space:nowrap;font-variant-numeric:tabular-nums}
+.al-who{color:var(--txt);overflow-wrap:anywhere}
+.al-act{font-weight:700;white-space:nowrap}
+.al-t{color:var(--txt);font-weight:600;flex:1 1 160px;min-width:0;overflow-wrap:anywhere}
+.al-t small{color:var(--muted);font-weight:400;margin-left:4px}
+.al-mod{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--border);white-space:nowrap}
+.al-body{padding:0 12px 10px 30px}
+.al-body .hx-item{border:0;padding:0;background:none}
+.al-body .hx-head{display:none}
+.al-body .hx-ch{margin-top:0}
+.al-none,.al-lock{font-size:12.5px;color:var(--muted)}
+.al-lock{font-style:italic}
+.al-more{align-self:center}
+.al-more[hidden],.al-err[hidden]{display:none!important}
+@media(max-width:640px){
+  .al-bar select{flex:1 1 calc(50% - 6px);max-width:none}
+  .al-bar input{flex:1 1 calc(50% - 6px);width:auto}
+  .al-list{max-height:calc(100vh - 360px)}
+  .al-body{padding-left:12px}}
