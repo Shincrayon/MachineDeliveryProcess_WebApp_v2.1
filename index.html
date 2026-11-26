@@ -2054,7 +2054,7 @@ async function submitAdd(){
   /* hàng chờ duyệt: đã gửi yêu cầu, dữ liệu máy KHÔNG đổi — đóng form, báo, vẽ lại Danh sách (nhãn ⏳) */
   if(res && res.requested){
     window.__editId = null; closeAdd(); render();
-    quToast('📨 ' + tr('Sent — waiting for admin approval','Đã gửi, chờ admin duyệt') + `: “${escH(ten)}”`);
+    quToast('📨 ' + tr('Sent — waiting for admin approval','Đã gửi, chờ admin duyệt') + `: “${escH(ten)}”` + (res.note ? '<br>🔀 ' + res.note : ''));
     return;
   }
 
@@ -3619,6 +3619,8 @@ function unescH(v){ return String(v==null?'':v).replace(/&quot;/g,'"').replace(/
 function dbErrText(e){
   const c = e && e.code;
   if(c==='conflict') return tr('Someone else just edited or deleted this machine. Press <b>🔄 Refresh</b> to see the latest version, then try again.','Máy này vừa được người khác sửa hoặc xoá. Bấm <b>🔄 Làm mới</b> để xem bản mới nhất rồi làm lại.');
+  // migration 27: máy chủ chỉ cho admin xoá / khôi phục / xoá hẳn máy (editor gửi yêu cầu xoá để admin duyệt)
+  if(c==='42501' && /Chỉ admin được (xoá|khôi phục)/.test((e && e.message) || '')) return tr('Only an admin can delete or restore machines. Send a delete request for an admin to approve.','Chỉ admin được xoá / khôi phục máy. Hãy gửi yêu cầu xoá để admin duyệt.');
   if(c==='42501' || c==='perm') return tr('Your account does not have permission to do this. Ask an admin for editor access.','Tài khoản của bạn không có quyền làm việc này. Nhờ admin cấp quyền editor.');
   if((c==='PGRST202' || c==='42883' || c==='42703' || c==='PGRST204') && /import_machines|ma_may/.test(e.message||'')) return tr('The database does not have machine codes yet. An admin needs to run <b>supabase/migrations/20261031_05_machine_code.sql</b> then <b>20261031_07_machine_code_on_arrival.sql</b> in Supabase > SQL Editor.','Cơ sở dữ liệu chưa có Mã máy. Admin cần chạy file <b>supabase/migrations/20261031_05_machine_code.sql</b> trong Supabase > SQL Editor.');
   if(c==='P0002' || c==='23505' || c==='22P02' || c==='23514') return escH(e.message||'');
@@ -3711,9 +3713,9 @@ async function saveMachine(m, editId, out){
   if(window.CR && CR.must('delivery', editId ? 'edit' : (CLONE_SRC ? 'clone' : 'add'))){
     const prev = cur ? dvPrev(cur) : null;   // như curLoad
     const before = cur ? dvNorm(Object.fromEntries(Object.keys(m).map(k=>[k, prev(k)]))) : null;
-    await CR.submit({ module:'delivery', kind: editId ? 'update' : 'insert', target_id: editId || null, base_version: cur ? cur._ver : null,
+    const q = await CR.submit({ module:'delivery', kind: editId ? 'update' : 'insert', target_id: editId || null, base_version: cur ? cur._ver : null,
       payload: dvNorm(m), before, title: cur ? dvTitle(cur) : String(m.ten || '') });
-    return { requested: true };
+    return { requested: true, note: (q && q.mergeNote) || '' };   // note = "Đã gộp với yêu cầu trước — …" (HTML đã thoát)
   }
   window.__selfWriting = true;
   const r0 = toRow(m);
@@ -5677,6 +5679,14 @@ function splitMax(x){
   // máy gốc sau khi tách đã giữ phần còn lại ở quantity; SL Tiến độ là tổng ban đầu nên trừ số máy đã tách
   return Math.min(20, Math.max(+x.quantity || 1, (+(trk && trk.sl) || 0) - done));
 }
+/* chia giá trị T0: ô có nhập giữ nguyên, ô để trống (null) chia đều phần còn lại theo số nguyên (máy gốc / ô trống đầu nhận phần lẻ);
+   null = tổng các ô vượt / không khớp. Dùng chung popup ✂️ và duyệt yêu cầu tách (giá trị hợp đồng đổi sau lúc gửi → chia lại). */
+function splitShares(T0, vals){
+  const dec = 0, blank = vals.map((v, i)=>v == null ? i : -1).filter(i=>i >= 0), rem = T0 - vals.reduce((s, v)=>s + (v || 0), 0);
+  if(rem < -0.005 || (!blank.length && Math.abs(rem) > 0.005)) return null;
+  const f = Math.pow(10, dec), each = blank.length ? Math.floor(rem / blank.length * f) / f : 0, out = vals.slice();
+  blank.forEach(i=>{ out[i] = each; }); if(blank.length) out[blank[0]] = Math.round((out[blank[0]] + rem - each * blank.length) * f) / f; return out;
+}
 window.mmSplit = id => {
   const x = byId.get(id); if(!x || !PERM.act('mmtb','split')) return;
   const trk = x.tracking_machine_id ? (window.__trackRows ? window.__trackRows() : []).find(t => t._id === x.tracking_machine_id) : null;
@@ -5686,11 +5696,7 @@ window.mmSplit = id => {
   const hasAmt = PERM.edit('mmtb', 'value') && x.contract_amount != null && x.contract_amount !== '' && !isNaN(+x.contract_amount), T0 = hasAmt ? +x.contract_amount : 0;
   const lkLoc = PERM.edit('mmtb', 'location') ? '' : ' disabled', noNote = !PERM.edit('mmtb', 'notes');
   const dec = 0;                                   // chia giá trị theo số nguyên (mọi loại tiền)
-  /* chia giá trị: ô có nhập giữ nguyên, ô để trống chia đều phần còn lại (máy gốc nhận phần lẻ); null = tổng các ô vượt / không khớp */
-  const shares = vals => { const blank = vals.map((v, i)=>v == null ? i : -1).filter(i=>i >= 0), rem = T0 - vals.reduce((s, v)=>s + (v || 0), 0);
-    if(rem < -0.005 || (!blank.length && Math.abs(rem) > 0.005)) return null;
-    const f = Math.pow(10, dec), each = blank.length ? Math.floor(rem / blank.length * f) / f : 0, out = vals.slice();
-    blank.forEach(i=>{ out[i] = each; }); if(blank.length) out[blank[0]] = Math.round((out[blank[0]] + rem - each * blank.length) * f) / f; return out; };
+  const shares = vals => splitShares(T0, vals);
   const n0 = nMax;
   const ar = MM.areas.filter(a=>a.company_id===x.company_id).sort((a,b)=>String(a.name).localeCompare(b.name));
   const ln = MM.lines.filter(l=>l.company_id===x.company_id).sort((a,b)=>String(a.name).localeCompare(b.name));
@@ -5722,48 +5728,34 @@ window.mmSplit = id => {
     spRows.innerHTML = Array.from({ length:n }, (_, i)=>row(i)).join('');
     [...spRows.querySelectorAll('.sp-card')].forEach((r, i)=>{ const o = old[i]; if(!o) return; r.querySelector('.sp-area').value = o.a; r.querySelector('.sp-line').value = o.l; r.querySelector('.sp-loc').value = o.n; if(r.querySelector('.sp-val')) r.querySelector('.sp-val').value = o.v; });
     spRows.querySelectorAll('.sp-val').forEach(e=>e.addEventListener('input', hint)); hint();
-    spGo.textContent = tr(`✂️ Split into ${n} machines`, `✂️ Tách thành ${n} máy`); };
+    spGo.textContent = window.CR && CR.must('mmtb', 'split') ? tr(`📨 Send for approval: split into ${n}`, `📨 Gửi duyệt tách thành ${n} máy`)   // editor: hàng chờ duyệt
+      : tr(`✂️ Split into ${n} machines`, `✂️ Tách thành ${n} máy`); };
   spN.onchange = drawRows; drawRows(); openM();
   spForm.onsubmit = async e => {
     e.preventDefault();
     const rows = keep(), sb = window.__sb; if(!sb) return;
-    const amts = hasAmt ? shares(valsOf(rows)) : null;
+    const vals = hasAmt ? valsOf(rows) : null, amts = hasAmt ? shares(vals) : null;
     if(hasAmt && !amts){ hint(); return; }
-    spGo.disabled = true; window.__selfWritingM = true; let made = 0;
-    const withLoc = (notes, loc) => [notes, loc ? tr('Location: ','Vị trí: ') + loc : ''].filter(Boolean).join('\n') || null;
+    // mọi thứ popup thu được (máy gốc + từng máy mới) — dùng chung cho tách thẳng (admin) và yêu cầu tách (editor; admin duyệt mới ghi)
+    const plan = { hasAmt, currency: x.contract_currency || null, vals,
+      orig: Object.assign({ area_id: rows[0].a || null, line_id: rows[0].l || null, loc: rows[0].n, quantity: Math.max(1, nMax - (rows.length - 1)) },   // máy gốc giữ phần số lượng còn lại
+                          hasAmt ? { contract_amount: amts[0] } : {}),
+      news: rows.slice(1).map((r, i) => Object.assign({ area_id: r.a || null, line_id: r.l || null, loc: r.n }, hasAmt ? { contract_amount: amts[i + 1] } : {})) };
+    spGo.disabled = true;
+    // hàng chờ duyệt: editor gửi YÊU CẦU tách (không ghi máy nào; mã tạm máy mới cấp lúc admin duyệt). Chờ CR dò bảng xong rồi mới quyết định.
+    if(window.CR && !PERM.isAdmin()) await CR.loaded;
+    if(window.CR && CR.must('mmtb', 'split')){
+      try{
+        const before = mmNorm(Object.fromEntries(SPLIT_KEYS.filter(k => k in x).map(k => [k, x[k] === undefined ? null : x[k]])));
+        const q = await CR.submit({ module:'mmtb', kind:'split', target_id:x.id, base_version:x.version, payload:plan, before, title:mmTitle(x) });
+        mBg.classList.remove('show');
+        toast('📨 ' + tr('Split request sent — waiting for admin approval','Đã gửi yêu cầu tách máy, chờ admin duyệt') + ': <b>' + E(x.name) + '</b>' + (q && q.mergeNote ? '<br>🔀 ' + q.mergeNote : ''));
+      }catch(ex){ spErr.textContent = tr('Could not send the request: ','Chưa gửi được yêu cầu: ') + errText(ex); spGo.disabled = false; }
+      return;
+    }
+    window.__selfWritingM = true; let made = 0;
     try{
-      const SF = SEC.mmtb_machines.f.filter(k => k in x);
-      // 1) máy gốc: khu vực, chuyền, số lượng 1, ghi chú vị trí (ghi chú nằm trong sec -> mã hoá lại cả gói)
-      const r0 = rows[0], upd = { area_id: r0.a || null, line_id: r0.l || null, quantity: Math.max(1, nMax - (rows.length - 1)) };   // máy gốc giữ phần số lượng còn lại
-      if(r0.n.trim() || hasAmt){ const s0 = {}; SF.forEach(k => { s0[k] = x[k] ?? null; });
-        if(r0.n.trim()) s0.notes = withLoc(x.notes, r0.n.trim());
-        if(hasAmt) s0.contract_amount = amts[0];                 // máy gốc nhận phần giá trị của mình
-        Object.assign(upd, await window.__seal('mmtb_machines', s0)); }
-      const { data:d0, error:e0 } = await sb.from('mmtb_machines').update(upd).eq('id', x.id).eq('version', x.version == null ? 1 : x.version).is('deleted_at', null).select('id');
-      if(e0) throw e0; if(!d0 || !d0.length) throw { code:'conflict' };
-      // 2) máy mới
-      const used = new Set(MM.machines.flatMap(m=>[m.machine_code, m.legacy_code]).filter(Boolean));
-      const COLS = ['company_id','role','supplier_id','materials','contract_currency','lifecycle_status','commissioned_date','approved_date',
-                    'manufacturing_days','group_name','equipment_type','origin','needs_info'];
-      const ms = msBy.get(x.id) || {};
-      for(let i = 1; i < rows.length; i++){
-        const code = randCode(x.company_code || 'M', used); used.add(code);
-        const nr = { machine_code: code, area_id: rows[i].a || null, line_id: rows[i].l || null, parent_machine_id: null, quantity: 1,
-                     source_ref: tr('Split from ','Tách từ ') + x.machine_code + (x.source_ref ? ' · ' + x.source_ref : '') };
-        COLS.forEach(k => { if(k in x) nr[k] = x[k] ?? null; });
-        if(nr.role === 'sub_unit') nr.role = 'main';
-        if('code_temp' in x) nr.code_temp = true;
-        SF.forEach(k => { nr[k] = x[k] ?? null; });
-        ['serial_number','asset_code','contract_amount'].forEach(k => { if(k in nr) nr[k] = null; });
-        if(hasAmt) nr.contract_amount = amts[i];                  // phần giá trị của máy mới (nhập tay hoặc tự chia đều)
-        nr.notes = withLoc(x.notes, rows[i].n.trim());
-        const { data, error } = await sb.from('mmtb_machines').insert(await window.__seal('mmtb_machines', nr)).select('id').single();
-        if(error) throw error;
-        const mrows = Object.values(ms).filter(m => m.actual_date || m.planned_date || m.forecast_date)
-          .map(m => ({ machine_id: data.id, milestone: m.milestone, actual_date: m.actual_date || null, planned_date: m.planned_date || null, forecast_date: m.forecast_date || null }));
-        if(mrows.length){ const { error: em } = await sb.from('delivery_milestones').upsert(mrows, { onConflict:'machine_id,milestone' }); if(em) throw em; }
-        made++;
-      }
+      await mmSplitWrite(x, plan, { onMade: n => { made = n; } });
       mBg.classList.remove('show'); await reload();
       toast('✂️ ' + tr(`Split into ${rows.length} machines`, `Đã tách thành ${rows.length} máy`) + ': <b>' + E(x.name) + '</b>');
     }catch(ex){
@@ -5773,6 +5765,118 @@ window.mmSplit = id => {
     }finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
   };
 };
+/* các trường máy gốc mà ✂️ Tách đổi / dựa vào — before của yêu cầu tách (admin duyệt: khác hiện tại → cảnh báo "Máy đã thay đổi từ lúc gửi") */
+const SPLIT_KEYS = ['area_id','line_id','parent_machine_id','quantity','contract_amount','notes'];
+/* GHI ✂️ Tách — DÙNG CHUNG cho admin tách thẳng (mmSplit) và duyệt yêu cầu tách (CR.appliers.mmtb.split) → 2 đường không bao giờ lệch nhau.
+   x = máy gốc HIỆN TẠI (byId, đã giải mã). plan = { hasAmt, currency, vals, orig: { area_id, line_id, loc, quantity, contract_amount? },
+   news: [{ area_id, line_id, loc, contract_amount? }] } (loc = ghi chú vị trí, nối vào notes "Vị trí: …"; contract_amount chỉ khi hasAmt).
+   1) máy gốc: khu vực, chuyền, số lượng còn lại, ghi chú vị trí + phần giá trị (trong sec → mã hoá lại cả gói), kiểm version;
+   2) máy mới: chép cột + trường sec, mã tạm randCode cấp LÚC GHI (trên MM hiện tại), code_temp, bỏ serial / mã tài sản / giá trị (trừ phần chia),
+      source_ref "Tách từ <mã> · <nguồn>", chép mốc. opt.ids[i] = ID máy mới thứ i (duyệt: suy ra từ ID yêu cầu); máy có ID đó đã có
+      (lần duyệt trước ghi được) → không thêm lần 2, chỉ ghi lại mốc (upsert, vô hại). opt.skipOrig = máy gốc đã ghi ở lần trước.
+      opt.onMade(n) = số máy mới đã tạo (báo lỗi giữa chừng). Trả về [id máy gốc, ...id máy mới]. */
+async function mmSplitWrite(x, plan, opt = {}){
+  const sb = window.__sb; if(!sb) throw {};
+  const withLoc = (notes, loc) => [notes, loc ? tr('Location: ','Vị trí: ') + loc : ''].filter(Boolean).join('\n') || null;
+  const SF = SEC.mmtb_machines.f.filter(k => k in x), hasAmt = !!plan.hasAmt, news = plan.news || [];
+  // duyệt lại (skipOrig): máy gốc đã ghi ở lần trước nên notes đã có dòng "Vị trí: <vị trí máy gốc>" → bỏ dòng đó trước khi chép sang máy mới
+  let notes0 = x.notes;
+  const locO = String((plan.orig || {}).loc || '').trim();
+  if(opt.skipOrig && locO){ const ls = String(x.notes || '').split('\n');
+    if(['Location: ' + locO, 'Vị trí: ' + locO].includes(ls[ls.length - 1])){ ls.pop(); notes0 = ls.join('\n') || null; } }
+  if(!opt.skipOrig){
+    // 1) máy gốc: khu vực, chuyền, số lượng còn lại, ghi chú vị trí (ghi chú nằm trong sec -> mã hoá lại cả gói)
+    const r0 = plan.orig, loc0 = String(r0.loc || '').trim(), upd = { area_id: r0.area_id || null, line_id: r0.line_id || null, quantity: r0.quantity };
+    if(loc0 || hasAmt){ const s0 = {}; SF.forEach(k => { s0[k] = x[k] ?? null; });
+      if(loc0) s0.notes = withLoc(x.notes, loc0);
+      if(hasAmt) s0.contract_amount = r0.contract_amount;           // máy gốc nhận phần giá trị của mình
+      Object.assign(upd, await window.__seal('mmtb_machines', s0)); }
+    const { data:d0, error:e0 } = await sb.from('mmtb_machines').update(upd).eq('id', x.id).eq('version', x.version == null ? 1 : x.version).is('deleted_at', null).select('id');
+    if(e0) throw e0; if(!d0 || !d0.length) throw { code:'conflict' };
+    if(opt.onOrig) opt.onOrig();
+  }
+  // 2) máy mới
+  const have = new Set(), ids = opt.ids || [];
+  if(ids.length){ const { data, error } = await sb.from('mmtb_machines').select('id').in('id', ids); if(error) throw error; (data || []).forEach(r => have.add(r.id)); }
+  const used = new Set(MM.machines.flatMap(m=>[m.machine_code, m.legacy_code]).filter(Boolean));
+  const COLS = ['company_id','role','supplier_id','materials','contract_currency','lifecycle_status','commissioned_date','approved_date',
+                'manufacturing_days','group_name','equipment_type','origin','needs_info'];
+  const ms = msBy.get(x.id) || {}, out = [x.id];
+  let made = 0;
+  for(let i = 0; i < news.length; i++){
+    const o = news[i], nid = ids[i] || null;
+    let id = nid;
+    if(!nid || !have.has(nid)){
+      const code = randCode(x.company_code || 'M', used); used.add(code);
+      const nr = { machine_code: code, area_id: o.area_id || null, line_id: o.line_id || null, parent_machine_id: null, quantity: 1,
+                   source_ref: tr('Split from ','Tách từ ') + x.machine_code + (x.source_ref ? ' · ' + x.source_ref : '') };
+      if(nid) nr.id = nid;
+      COLS.forEach(k => { if(k in x) nr[k] = x[k] ?? null; });
+      if(nr.role === 'sub_unit') nr.role = 'main';
+      if('code_temp' in x) nr.code_temp = true;
+      SF.forEach(k => { nr[k] = x[k] ?? null; });
+      ['serial_number','asset_code','contract_amount'].forEach(k => { if(k in nr) nr[k] = null; });
+      if(hasAmt) nr.contract_amount = o.contract_amount;           // phần giá trị của máy mới (nhập tay hoặc tự chia đều)
+      nr.notes = withLoc(notes0, String(o.loc || '').trim());
+      const { data, error } = await sb.from('mmtb_machines').insert(await window.__seal('mmtb_machines', nr)).select('id').single();
+      if(error) throw error;
+      id = data.id; made++;
+    }
+    const mrows = Object.values(ms).filter(m => m.actual_date || m.planned_date || m.forecast_date)
+      .map(m => ({ machine_id: id, milestone: m.milestone, actual_date: m.actual_date || null, planned_date: m.planned_date || null, forecast_date: m.forecast_date || null }));
+    if(mrows.length){ const { error: em } = await sb.from('delivery_milestones').upsert(mrows, { onConflict:'machine_id,milestone' }); if(em) throw em; }
+    if(opt.onMade) opt.onMade(made);
+    out.push(id);
+  }
+  return out;
+}
+/* ID máy mới của yêu cầu tách: suy ra cố định từ ID yêu cầu (SHA-256 "split:<id>:<i>" → UUID) → duyệt lại sau lần ghi được mà chưa đổi trạng thái
+   thấy máy đã có, không tạo trùng (như Thêm: ID máy mới = ID yêu cầu) */
+async function splitIds(rid, n){
+  const out = [];
+  for(let i = 1; i <= n; i++){
+    const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('split:' + rid + ':' + i)));
+    h[6] = (h[6] & 0x0f) | 0x50; h[8] = (h[8] & 0x3f) | 0x80;
+    const s = [...h.slice(0, 16)].map(v => v.toString(16).padStart(2, '0')).join('');
+    out.push(`${s.slice(0,8)}-${s.slice(8,12)}-${s.slice(12,16)}-${s.slice(16,20)}-${s.slice(20,32)}`);
+  }
+  return out;
+}
+/* yêu cầu tách lúc admin duyệt (CR.checks.mmtb.split + applier): so máy gốc HIỆN TẠI với lúc gửi + dựng bản sẽ ghi. Trả về:
+   { gone } máy không còn · { block } không còn tách được (số lượng / SL Tiến độ không đủ; giá trị đổi mà các ô nhập tay không còn khớp) ·
+   { resume, done, total, skipOrig } lần duyệt trước đã ghi một phần / hết (đã có máy mới mang ID suy ra, hoặc máy gốc đã ở trạng thái đích) → ghi tiếp phần thiếu ·
+   luôn kèm now (máy gốc hiện tại cùng khoá before, mmNorm — change_req.js so → "Máy đã thay đổi từ lúc gửi"), live (plan sẽ ghi: số lượng máy gốc
+   tính lại theo splitMax hiện tại; tổng hợp đồng không đổi → đúng phần editor gửi, đã đổi → chia lại từ các ô editor nhập), ids. */
+async function splitLive(req, d){
+  const x = byId.get(req.target_id); if(!x) return { gone: true };
+  const p = (d && d.payload) || {}, news = Array.isArray(p.news) ? p.news : [], o = p.orig || {};
+  const ids = await splitIds(req.id, news.length);
+  const { data, error } = await window.__sb.from('mmtb_machines').select('id').in('id', ids); if(error) throw error;
+  const done = (data || []).length;
+  const now = mmNorm(Object.fromEntries(SPLIT_KEYS.filter(k => k in x).map(k => [k, x[k] === undefined ? null : x[k]])));
+  const max = splitMax(x), qty = Math.max(1, max - news.length), lastLine = String(x.notes || '').split('\n').pop(), loc0 = String(o.loc || '').trim();
+  const atTarget = (x.area_id || null) === (o.area_id || null) && (x.line_id || null) === (o.line_id || null) && [Number(o.quantity), qty].includes(Number(x.quantity))
+    && (!loc0 || lastLine === 'Location: ' + loc0 || lastLine === 'Vị trí: ' + loc0)
+    && (!p.hasAmt || Number(x.contract_amount) === Number(o.contract_amount));
+  const live = JSON.parse(JSON.stringify(p));
+  if(done || atTarget) return { resume: true, done, total: news.length, skipOrig: true, ids, now, live };
+  if(news.length + 1 > max)
+    return { block: tr(`The machine can no longer be split into ${news.length + 1} (now at most ${max}) — the request can only be rejected.`,
+                       `Máy không còn tách được thành ${news.length + 1} máy (hiện tối đa ${max}) — chỉ Từ chối được.`), now };
+  live.orig.quantity = qty;
+  if(p.hasAmt){
+    const T0 = Number(x.contract_amount), T1 = Number((d.before || {}).contract_amount);
+    if(x.contract_amount == null || x.contract_amount === '' || isNaN(T0))
+      return { block: tr('The contract amount is now empty, so it cannot be split as requested — the request can only be rejected.', 'Giá trị hợp đồng hiện đang trống nên không chia được như đề xuất — chỉ Từ chối được.'), now };
+    if(T0 !== T1){
+      const sh = splitShares(T0, p.vals || []);
+      if(!sh) return { block: tr(`The contract amount changed (${N(T1)} → ${N(T0)}) and the amounts typed in the request no longer add up — the request can only be rejected.`,
+                                 `Giá trị hợp đồng đã đổi (${N(T1)} → ${N(T0)}), các ô giá trị nhập tay không còn khớp tổng — chỉ Từ chối được.`), now };
+      live.orig.contract_amount = sh[0]; live.news.forEach((n, i) => { n.contract_amount = sh[i + 1]; });
+    }
+  }
+  return { ids, now, live };
+}
 function toast(msg){
   let t = document.querySelector('.mm-toast'); if(!t){ t = document.createElement('div'); t.className = 'mm-toast'; document.body.appendChild(t); }
   t.innerHTML = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2600);
@@ -5930,10 +6034,10 @@ async function save(){
       const cur = editId ? byId.get(editId) : null;
       const before = cur ? { row: mmNorm(Object.fromEntries(Object.keys(row).map(k=>[k, cur[k] === undefined ? null : cur[k]]))),
                              ms: mmMsNorm(Object.fromEntries(Object.keys(ms).map(k=>[k, old[k] ? old[k].actual_date : null]))) } : null;
-      await CR.submit({ module:'mmtb', kind: editId ? 'update' : 'insert', target_id: editId || null, base_version: cur ? cur.version : null,
+      const q = await CR.submit({ module:'mmtb', kind: editId ? 'update' : 'insert', target_id: editId || null, base_version: cur ? cur.version : null,
         payload: { row: mmNorm(row), ms: mmMsNorm(ms) }, before, title: mmTitle(cur || row) });
       mmClose();
-      toast('📨 ' + tr('Sent — waiting for admin approval','Đã gửi, chờ admin duyệt') + ': <b>' + E(shownName) + '</b>');
+      toast('📨 ' + tr('Sent — waiting for admin approval','Đã gửi, chờ admin duyệt') + ': <b>' + E(shownName) + '</b>' + (q && q.mergeNote ? '<br>🔀 ' + q.mergeNote : ''));
       return;
     }
     window.__selfWritingM = true;
@@ -6030,6 +6134,30 @@ if(window.CR) CR.appliers.mmtb = {
       if(!data || !data.length) throw { code:'conflict' };
     }finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
     await reload(); return [x.id];
+  },
+  /* ✂️ Tách: d.payload = plan của popup (KHÔNG gộp với hiện tại). splitLive dựng bản sẽ ghi trên máy gốc HIỆN TẠI (CR.approve đã kiểm gone / block /
+     xác nhận khi máy đổi sau lúc gửi); ID máy mới suy ra từ ID yêu cầu → duyệt lại không tạo trùng; mã tạm cấp lúc ghi. Ghi qua mmSplitWrite như admin tách thẳng. */
+  split: async (req, d) => {
+    const x = byId.get(req.target_id); if(!x) throw { code:'conflict' };
+    if(x.__locked) throw { code:'locked' };
+    const L = await splitLive(req, d);
+    if(L.gone) throw { code:'conflict' };
+    if(L.block) throw { message: L.block };
+    // máy gốc đổi giữa lúc CR.check (admin đã xem / tick xác nhận) và lúc ghi (vd realtime tải lại) → dừng, admin mở lại để xem bản mới
+    const C = d.check;
+    if(C && (JSON.stringify(C.now || null) !== JSON.stringify(L.now || null) || !!C.resume !== !!L.resume)) throw { code:'conflict' };
+    window.__selfWritingM = true;
+    let ids, wrote = false;
+    try{ ids = await mmSplitWrite(x, L.live, { ids: L.ids, skipOrig: !!L.skipOrig, onOrig: () => { wrote = true; }, onMade: n => { if(n) wrote = true; } }); }
+    catch(e){
+      if(!wrote) throw e;
+      // đã ghi máy gốc / vài máy mới rồi mới lỗi → báo "ghi một phần" (change_req.js vẽ lại: hiện "Lần duyệt trước đã ghi một phần"; duyệt lại ghi tiếp, không trùng)
+      try{ await reload(); }catch(e2){ console.warn('[Chờ duyệt]', e2); }
+      throw { partial: true, message: tr('The split was partly saved before an error (', 'Tách máy mới ghi được một phần thì lỗi (') + String((e && (e.message || e.code)) || '?')   // chữ thường: dbErrText thoát khi hiện
+        + tr('). Approve again to write the rest — no duplicates.', '). Duyệt lại để ghi tiếp phần còn thiếu, không tạo trùng.') };
+    }
+    finally{ setTimeout(()=>{ window.__selfWritingM = false; }, 1500); }
+    await reload(); return ids;
   }
 };
 /* hàng chờ duyệt (admin duyệt): bản hiện tại {row, ms} cùng dạng before (mmNorm / mmMsNorm); sync: máy đã xoá / version khác → tải lại;
@@ -6054,6 +6182,10 @@ if(window.CR){
     const ks = new Set(Object.keys(loc).concat(Object.keys(db)));
     if([...ks].some(k => D(loc[k] && loc[k].actual_date) !== (db[k] ?? null))) await reload();
   };
+  /* kiểm riêng theo loại lúc admin xem / duyệt (change_req.js: CR.checks[mod][kind]) — ✂️ Tách: xem splitLive */
+  CR.checks.mmtb = { split: (req, d) => splitLive(req, d),
+    arrange: (req, d) => window.AR.check(req, d) };      // 🧩 Sắp xếp (arrange.js): máy bị xếp lại / đã xoá / đã đúng sau lúc gửi
+  CR.appliers.mmtb.arrange = (req, d) => window.AR.apply(req, d);   // ghi như arrange.js write (version hiện tại), cha trước con, bỏ qua máy đã đúng
   CR.derive.mmtb = (m, cur) => {
     if(!MM.hasGroups || !m.machine_code || m.machine_code === cur.machine_code) return {};
     return Object.assign({ code_temp: false }, cur.legacy_code ? {} : { legacy_code: cur.machine_code });

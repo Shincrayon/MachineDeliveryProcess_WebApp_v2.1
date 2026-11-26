@@ -12,10 +12,18 @@
    Giao diện: thanh tiến độ "đã xếp" · mỗi chuyền 1 thẻ (viền màu theo xưởng, đếm ⭐◇↳, thanh trạng thái nhỏ) · cây có
    đường nối · hộp chờ xếp có lọc + "chọn tất cả" · thẻ cảnh báo có nút · kéo-thả có nhãn vùng thả · dòng vừa xếp nháy 1 lần.
    index.html (mmtbSrc) đưa ngữ cảnh qua window.__mmCtx(); vẽ vào trang #c4.
+   NHÁP + DUYỆT (2026-11-25, feature/cr-merge): người không phải admin mà CR.must('mmtb','arrange') (await CR.loaded) → mọi thao tác chỉ vào NHÁP
+   S.drafts (nhà máy → Map(id → patch các khoá KEYS)), phủ lên dòng thật khi dựng model (thao tác sau tính trên nháp); khoá về đúng giá trị thật thì rơi khỏi nháp.
+   Lưu localStorage 'ar-draft:<email>:<nhà máy>' (try/catch). Máy trong nháp: viền đứt + "📝 nháp"; máy trong yêu cầu Sắp xếp đang chờ của mình: "⏳".
+   Thanh nháp: 📨 Gửi duyệt (N máy) → CR.submit kind 'arrange' (target_id null, payload { company_id, items: [{ id, patch, name }] },
+   before { company_id, items: [{ id, v }] } — máy đổi vị trí: v đủ nhóm POS); Bỏ nháp (xác nhận ngay trên thanh). ↩ Hoàn tác trong nháp = trả nháp về trước thao tác cuối.
+   Nháp trỏ tới chuyền / khu vực / máy cha đã xoá → bỏ máy đó khỏi nháp. Duyệt "lấy đề xuất" ghi đủ nhóm POS theo lúc gửi.
+   Admin (và khi CR.missing) ghi thẳng như cũ. window.AR = { writePatches, check, apply } — duyệt yêu cầu (index.html đăng ký CR.appliers/checks.mmtb.arrange).
    ===================================================================== */
 (function(){
 const UTIL_CODE = 'PHUTRO';
-const S = { co: '', q: '', fq: '', sel: new Set(), open: new Set(), tab: 'tree', undo: null, busy: false, flash: new Set() };
+const S = { co: '', q: '', fq: '', sel: new Set(), open: new Set(), tab: 'tree', undo: null, busy: false, flash: new Set(),
+  drafts: new Map(), dundo: null, dask: false, pend: new Set(), pendKey: '', hooked: false };
 const X = () => window.__mmCtx();
 const E = v => escH(v == null ? '' : v);
 const L = (en, vi) => tr(en, vi);
@@ -97,6 +105,11 @@ const css = `
 #c4 .ar-row:hover .mv{opacity:1}
 #c4 .mv button{width:22px;height:22px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:9px;padding:0}
 #c4 .mv button:hover{color:var(--sky);border-color:var(--sky)}
+#c4 .ar-row.drf{outline:1.5px dashed var(--amber);outline-offset:-2px}
+#c4 .ar-tag{flex:none;font-size:10.5px;font-weight:700;color:var(--amber);white-space:nowrap}
+#c4 .ar-draft{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding:8px 12px;border-radius:14px;
+  background:var(--panel2);border:1.5px dashed var(--amber);font-size:13px;box-shadow:var(--shadow-1)}
+#c4 .ar-draft .t{flex:1 1 200px;min-width:0} #c4 .ar-draft .t small{display:block;color:var(--muted);font-size:11.5px}
 #c4 .ar-row[draggable=true]{cursor:grab}
 #c4 .ar-row.dragging{opacity:.4}
 /* vùng thả */
@@ -173,11 +186,68 @@ const st = document.createElement('style'); st.textContent = css; document.head.
 
 /* ---------- dữ liệu ---------- */
 const so = (a, b) => (+a.sort_order || 0) - (+b.sort_order || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'vi');
+
+/* ---------- nháp (editor gửi duyệt) ---------- */
+const KEYS = ['line_id', 'area_id', 'parent_machine_id', 'role', 'sort_order'];
+const POS = ['line_id', 'area_id', 'parent_machine_id', 'role'];   // vị trí của 1 máy đi cùng nhau (DB: role = sub_unit ⇔ có máy cha): gửi / gộp / lấy đề xuất cả nhóm
+const posOf = p => Object.keys(p || {}).some(k => POS.includes(k));
+const neq = (k, a, b) => (a ?? null) !== (b ?? null) && !(k === 'sort_order' && +a === +b);
+const me = () => String(window.__userEmail || '').trim().toLowerCase();
+const dm = () => !!window.CR && CR.must('mmtb', 'arrange');                 // vẽ: đang ở chế độ nháp không
+const draftOn = async () => { if(!window.CR) return false; try{ await CR.loaded; }catch(e){} return CR.must('mmtb', 'arrange'); };
+const dKey = co => 'ar-draft:' + me() + ':' + co;
+function dMap(){
+  let m = S.drafts.get(S.co);
+  if(!m){ m = new Map(); try{ const a = JSON.parse(localStorage.getItem(dKey(S.co)) || '[]'); if(Array.isArray(a)) a.forEach(([id, p]) => { if(id && p && typeof p === 'object') m.set(id, p); }); }catch(e){}
+    S.drafts.set(S.co, m); }
+  return m;
+}
+function dSave(){ const m = dMap(); try{ if(m.size) localStorage.setItem(dKey(S.co), JSON.stringify([...m])); else localStorage.removeItem(dKey(S.co)); }catch(e){} }
+/* chỉ giữ khoá khác giá trị thật; máy không còn / khác nhà máy → bỏ */
+function dPrune(MM){
+  const m = dMap(); if(!m.size) return;
+  const by = new Map(MM.machines.map(x => [x.id, x])); let ch = false;
+  // nháp trỏ tới chuyền / khu vực đã xoá, máy cha đã xoá / khác nhà máy → bỏ cả máy đó khỏi nháp (gửi lên sẽ lỗi khi duyệt)
+  const ok = (k, v) => !v || (k === 'line_id' ? (MM.lines || []).some(l => l.id === v && l.company_id === S.co)
+    : k === 'area_id' ? (MM.areas || []).some(a => a.id === v && a.company_id === S.co)
+    : k === 'parent_machine_id' ? !!by.get(v) && by.get(v).company_id === S.co : true);
+  [...m].forEach(([id, p]) => { const x = by.get(id);
+    const q = x && x.company_id === S.co && Object.keys(p).every(k => ok(k, p[k])) ? Object.fromEntries(Object.keys(p).filter(k => KEYS.includes(k) && neq(k, x[k], p[k])).map(k => [k, p[k]])) : {};
+    if(!Object.keys(q).length){ m.delete(id); ch = true; } else if(Object.keys(q).length !== Object.keys(p).length){ m.set(id, q); ch = true; } });
+  if(ch) dSave();
+}
+function dFold(list){
+  const m = dMap(), by = new Map(X().MM.machines.map(x => [x.id, x]));
+  list.forEach(o => { const real = by.get(o.x.id); if(!real) return;
+    const p = Object.assign({}, m.get(o.x.id) || {}, o.patch), q = {};
+    Object.keys(p).forEach(k => { if(neq(k, real[k], p[k])) q[k] = p[k]; });
+    Object.keys(q).length ? m.set(o.x.id, q) : m.delete(o.x.id); });
+  dSave();
+}
+const nameOf = x => x ? [x.name, x.machine_code].filter(v => v && v !== '🔒').join(' · ') : '';
+/* máy trong yêu cầu Sắp xếp đang chờ của mình (nhà máy đang xem) → nhãn ⏳ */
+async function pendRefresh(){
+  const ids = new Set();
+  if(window.CR && CR.ready && dm()){
+    const rs = CR.list.filter(r => r.status === 'pending' && r.module === 'mmtb' && r.kind === 'arrange' && String(r.requested_by || '').toLowerCase() === me());
+    for(const r of rs){ let d = null; try{ d = await CR.open(r); }catch(e){}
+      if(d && d.payload && d.payload.company_id === S.co) (d.payload.items || []).forEach(it => it && it.id && ids.add(it.id)); }
+  }
+  const k = S.co + '|' + [...ids].sort().join(',');
+  if(k === S.pendKey) return;
+  const changed = [...ids].sort().join(',') !== [...S.pend].sort().join(',');
+  S.pend = ids; S.pendKey = k;
+  const h = document.getElementById('c4');
+  if(changed && h && h.classList.contains('active') && !S.busy) draw();
+}
+
 function model(){
   const C = X(), MM = C.MM;
   const coId = S.co;
-  const ms = MM.machines.filter(x => x.company_id === coId);
-  const byId = new Map(MM.machines.map(x => [x.id, x]));
+  const D = dm() ? dMap() : null;
+  const allM = D && D.size ? MM.machines.map(x => D.has(x.id) ? Object.assign({}, x, D.get(x.id)) : x) : MM.machines;   // nháp phủ lên dòng thật
+  const ms = allM.filter(x => x.company_id === coId);
+  const byId = new Map(allM.map(x => [x.id, x]));
   const kids = new Map();
   ms.forEach(x => { const p = x.parent_machine_id && byId.get(x.parent_machine_id);
     if(p && p.company_id === coId){ if(!kids.has(p.id)) kids.set(p.id, []); kids.get(p.id).push(x); } });
@@ -199,14 +269,14 @@ function model(){
     if((x.line_id || null) !== (r.line_id || null))
       iss.push({ x, t: L('sub-unit is on a different line from its main machine', 'máy con khác chuyền với máy cha'), fix: 'line' });
   });
-  MM.machines.forEach(x => { const p = x.parent_machine_id && byId.get(x.parent_machine_id);
+  allM.forEach(x => { const p = x.parent_machine_id && byId.get(x.parent_machine_id);
     if(x.company_id === coId && p && p.company_id !== coId) iss.push({ x, t: L('parent machine belongs to another plant', 'máy cha thuộc nhà máy khác') }); });
   lines.forEach(l => { const r = inLine.get(l.id);
     if(l.code !== UTIL_CODE && r.length && !r.some(x => x.role === 'main')) iss.push({ line: l, t: L('line has no ⭐ main machine', 'chuyền chưa có ⭐ máy chính') }); });
   const count = x => 1 + desc(x.id).length;
   const all = x => [x, ...desc(x.id)];
   const areas = MM.areas.filter(a => a.company_id === coId).sort((a, b) => String(a.code).localeCompare(String(b.code)));
-  return { C, MM, ms, byId, kids, roots, lines, inLine, free, desc, rootOf, iss, count, all, areas, util: lines.find(l => l.code === UTIL_CODE) };
+  return { C, MM, ms, byId, kids, roots, lines, inLine, free, desc, rootOf, iss, count, all, areas, util: lines.find(l => l.code === UTIL_CODE), draft: D };
 }
 
 /* ---------- vẽ ---------- */
@@ -219,10 +289,13 @@ function nodeHTML(M, x, can){
   const sub = [x.model, x.manufacturer].filter(Boolean).map(E).join(' · ');
   const kids = M.kids.get(x.id) || [];
   const busy = x.lifecycle_status !== 'in_operation';
-  return `<li><div class="ar-row ${x.role || 'main'}${S.sel.has(x.id) ? ' sel' : ''}${hit(x) ? ' hit' : ''}${S.flash.has(x.id) ? ' flash' : ''}" data-id="${x.id}"${can ? ' draggable="true"' : ''}>
+  const drf = M.draft && M.draft.has(x.id), pend = M.draft && S.pend.has(x.id);
+  return `<li><div class="ar-row ${x.role || 'main'}${S.sel.has(x.id) ? ' sel' : ''}${hit(x) ? ' hit' : ''}${S.flash.has(x.id) ? ' flash' : ''}${drf ? ' drf' : ''}" data-id="${x.id}"${can ? ' draggable="true"' : ''}>
       ${can ? `<input type="checkbox" data-ck="${x.id}"${S.sel.has(x.id) ? ' checked' : ''} aria-label="${L('Select', 'Chọn')}">` : ''}
       <span class="ic" title="${ROLE_T()[x.role] || ''}">${ROLE_IC[x.role] || '•'}</span>
       <span class="nm" data-show="${x.id}" title="${E(x.name)}">${E(x.name)}${sub ? `<small>${sub}</small>` : ''}</span>
+      ${drf ? `<span class="ar-tag ar-tag-d" title="${L('Draft — not sent for approval yet', 'Nháp — chưa gửi duyệt')}">📝 ${L('draft', 'nháp')}</span>` : ''}
+      ${pend ? `<span class="ar-tag ar-tag-p" title="${L('In your arrange request waiting for admin approval', 'Trong yêu cầu sắp xếp của bạn đang chờ admin duyệt')}">⏳</span>` : ''}
       <span class="ar-st" title="${E(ll(x.lifecycle_status))}"><i style="background:${lc(x.lifecycle_status)}"></i>${busy ? `<span>${E(ll(x.lifecycle_status))}</span>` : ''}</span>
       ${can ? `<span class="mv"><button data-up="${x.id}" title="${L('Move up', 'Lên')}">▲</button><button data-dn="${x.id}" title="${L('Move down', 'Xuống')}">▼</button></span>` : ''}
     </div>${kids.length ? `<ul class="ar-kids">${kids.map(c => nodeHTML(M, c, can)).join('')}</ul>` : ''}</li>`;
@@ -247,6 +320,51 @@ function lineHTML(M, l, can){
     ${op ? `<div class="ar-body">${r.length ? treeHTML(M, r, can) : `<div class="ar-empty">${can ? L('Empty line — drag machines here or use 📦 Move to…', 'Chuyền trống — kéo máy vào đây hoặc dùng 📦 Đưa vào…') : L('No machines yet', 'Chưa có máy')}</div>`}</div>` : ''}
   </div>`;
 }
+/* thanh nháp (chỉ chế độ nháp): "📝 Nháp: N máy thay đổi" + 📨 Gửi duyệt (N máy) + Bỏ nháp (xác nhận ngay trên thanh) */
+function draftBarHTML(M){
+  if(!M.draft) return '';
+  const n = M.draft.size, np = S.pend.size;
+  if(!n && !np) return '';
+  const pendT = np ? `⏳ ${L(`${np} machine(s) in your request waiting for approval`, `${np} máy trong yêu cầu đang chờ duyệt`)}` : '';
+  if(!n) return `<div class="ar-draft" id="arDraft"><span class="t">${pendT}</span></div>`;
+  if(S.dask) return `<div class="ar-draft" id="arDraft"><span class="t"><b>${L(`Discard the draft (${n} machine(s))?`, `Bỏ nháp (${n} máy)?`)}</b><small>${L('The board goes back to the saved positions.', 'Sơ đồ trở về vị trí đang lưu.')}</small></span>
+    <button class="ar-ib pri" id="arDYes">${L('Discard draft', 'Bỏ nháp')}</button><button class="ar-ib" id="arDNo">${L('Keep', 'Giữ lại')}</button></div>`;
+  return `<div class="ar-draft" id="arDraft"><span class="t">📝 <b>${L(`Draft: ${n} machine(s) changed`, `Nháp: ${n} máy thay đổi`)}</b>
+      <small>${L('Not saved yet — send for admin approval when done.', 'Chưa lưu — xếp xong bấm Gửi duyệt để admin duyệt.')}${pendT ? ' · ' + pendT : ''}</small></span>
+    <button class="ar-ib pri" id="arDSend"${S.busy ? ' disabled' : ''}>📨 ${L(`Send for approval (${n} machine(s))`, `Gửi duyệt (${n} máy)`)}</button>
+    <button class="ar-ib" id="arDDrop">${L('Discard draft', 'Bỏ nháp')}</button></div>`;
+}
+function wireDraft(){
+  if(window.arDSend) arDSend.onclick = () => send();
+  if(window.arDDrop) arDDrop.onclick = () => { S.dask = true; draw(); };
+  if(window.arDNo) arDNo.onclick = () => { S.dask = false; draw(); };
+  if(window.arDYes) arDYes.onclick = () => { S.dask = false; dMap().clear(); dSave(); S.dundo = null; hideToast(); draw(); toast('🗑 ' + L('Draft discarded', 'Đã bỏ nháp'), false); };
+}
+async function send(){
+  if(S.busy || !window.CR) return;
+  const C = X(), m = dMap(); if(!m.size) return;
+  const by = new Map(C.MM.machines.map(x => [x.id, x])), co = C.MM.companies.find(c => c.id === S.co) || {};
+  const items = [...m].filter(([id]) => by.has(id)).map(([id, patch]) => ({ id, patch: Object.assign({}, patch), name: nameOf(by.get(id)) }));
+  if(!items.length) return;
+  // before = giá trị lúc gửi của các khoá trong patch; máy đổi vị trí → cả nhóm POS (để admin thấy máy bị xếp lại + "lấy đề xuất" ghi đủ nhóm)
+  const before = { company_id: S.co, items: items.map(it => ({ id: it.id,
+    v: Object.fromEntries([...new Set(Object.keys(it.patch).concat(posOf(it.patch) ? POS : []))].map(k => [k, by.get(it.id)[k] ?? null])) })) };
+  S.busy = true; if(window.arDSend) arDSend.disabled = true;
+  let req;
+  try{
+    req = await CR.submit({ module: 'mmtb', kind: 'arrange', target_id: null, payload: { company_id: S.co, items }, before,
+      title: L('Arrange — ', 'Sắp xếp — ') + [co.code, co.name].filter(Boolean).join(' · ') });
+  }catch(e){
+    S.busy = false; draw();
+    showNotice({ type: 'error', title: L('Could not send the request', 'Chưa gửi được yêu cầu'), sub: dbErrText(e) });
+    return;
+  }
+  S.busy = false; m.clear(); dSave(); S.dundo = null; S.dask = false;
+  await pendRefresh().catch(() => {});
+  draw();
+  toast('📨 ' + L(`Arrange request for ${items.length} machine(s) sent, waiting for admin approval`, `Đã gửi yêu cầu sắp xếp ${items.length} máy, chờ admin duyệt`)
+    + (req && req.mergeNote ? `<br><small>${req.mergeNote}</small>` : ''), false);
+}
 function draw(){
   const host = document.getElementById('c4'); if(!host) return;
   const C = X(); if(!C || C.MM.err || !C.MM.machines.length){ host.innerHTML = C ? C.emptyHTML() : ''; return; }
@@ -255,6 +373,9 @@ function draw(){
     const n = c => C.MM.machines.filter(x => x.company_id === c.id).length;
     S.co = (cos.slice().sort((a, b) => n(b) - n(a))[0] || {}).id || '';
   }
+  if(window.CR && !S.hooked){ S.hooked = true; CR.onChange.push(() => { pendRefresh().catch(e => console.warn('[Sắp xếp]', e)); }); }
+  if(dm()) dPrune(C.MM);
+  pendRefresh().catch(e => console.warn('[Sắp xếp]', e));
   const M = model(), can = !!C.canW && !!window.PERM && PERM.act('mmtb', 'arrange');   // kéo thả / nút ghi: theo quyền Sắp xếp từng người
   if(S.q) M.lines.forEach(l => { if(M.inLine.get(l.id).some(x => M.all(x).some(hit))) S.open.add(l.id); });
   const nFree = M.free.reduce((a, x) => a + M.count(x), 0), nIn = M.ms.length - nFree, pct = M.ms.length ? Math.round(nIn / M.ms.length * 100) : 0;
@@ -277,6 +398,7 @@ function draw(){
         ${M.iss.length ? `<button class="ar-chip warn" id="arIssGo">⚠ <b>${M.iss.length}</b> ${L('to review', 'cần xem lại')}</button>` : ''}
       </div>
     </div>
+    ${can ? draftBarHTML(M) : ''}
     <div class="ar-tabs"><button data-tab="tree"${S.tab === 'tree' ? ' class="on"' : ''}>⛓ ${L('Lines', 'Cây chuyền')} (${nIn})</button><button data-tab="side"${S.tab === 'side' ? ' class="on"' : ''}>📥 ${L('Waiting', 'Chưa xếp')} (${nFree})${M.iss.length ? ' · ⚠' + M.iss.length : ''}</button></div>
     <div class="ar-grid" data-tab="${S.tab}">
       <div class="ar-tree">
@@ -303,13 +425,14 @@ function draw(){
 }
 function wire(M, can){
   const host = document.getElementById('c4');
-  arCo.onchange = e => { S.co = e.target.value; S.sel.clear(); S.open.clear(); S.fq = ''; draw(); };
+  arCo.onchange = e => { S.co = e.target.value; S.sel.clear(); S.open.clear(); S.fq = ''; S.dundo = null; S.dask = false; draw(); };
   const refocus = id => { const q = document.getElementById(id); if(q){ q.focus(); q.setSelectionRange(q.value.length, q.value.length); } };
   arQ.oninput = e => { S.q = e.target.value.trim().toLowerCase(); clearTimeout(arQ._t); arQ._t = setTimeout(() => { draw(); refocus('arQ');
     const h = host.querySelector('.ar-row.hit'); if(h) h.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 250); };
   if(window.arFq) arFq.oninput = e => { S.fq = e.target.value.trim().toLowerCase(); clearTimeout(arFq._t); arFq._t = setTimeout(() => { draw(); refocus('arFq'); }, 200); };
   arAll.onclick = () => { if(S.open.size) S.open.clear(); else M.lines.forEach(l => S.open.add(l.id)); draw(); };
   if(window.arUtil) arUtil.onclick = () => makeUtil(M);
+  wireDraft();
   if(window.arIssGo) arIssGo.onclick = () => { S.tab = 'side'; draw(); const h = document.getElementById('arIssH'); if(h) h.scrollIntoView({ block: 'start', behavior: 'smooth' }); };
   if(window.arSelAll) arSelAll.onclick = () => { host.querySelectorAll('#arFree [data-ck]').forEach(c => S.sel.add(c.dataset.ck)); draw(); };
   host.querySelectorAll('.ar-tabs button').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; draw(); });
@@ -474,7 +597,6 @@ function move(M, id, dir){
 }
 
 /* ---------- ghi xuống DB (+ hoàn tác) ---------- */
-const KEYS = ['line_id', 'area_id', 'parent_machine_id', 'role', 'sort_order'];
 async function run(M, ids, fn, msg){
   if(S.busy) return;
   const P = planner(M);
@@ -483,6 +605,15 @@ async function run(M, ids, fn, msg){
   const list = [...P.ch.values()].map(o => { const patch = {}; Object.keys(o.patch).forEach(k => { if((o.x[k] ?? null) !== (o.patch[k] ?? null) && !(k === 'sort_order' && +o.x[k] === +o.patch[k])) patch[k] = o.patch[k]; }); return { x: o.x, patch }; })
     .filter(o => Object.keys(o.patch).length);
   if(!list.length){ if(msg) toast(L('Nothing to change.', 'Không có gì thay đổi.')); return; }
+  if(await draftOn()){                // editor: chỉ vào nháp, không ghi DB
+    const snap = [...dMap()].map(([id, p]) => [id, Object.assign({}, p)]);
+    dFold(list);
+    S.undo = null; S.dundo = snap; S.sel.clear();
+    list.forEach(o => S.flash.add(o.x.id));
+    draw();
+    if(msg) toast('📝 ' + msg + ` (${list.length} ${L('machines', 'máy')}) — ` + L('in draft, not saved yet', 'vào nháp, chưa lưu'), true);
+    return;
+  }
   const before = list.map(o => ({ id: o.x.id, v: Object.fromEntries(KEYS.map(k => [k, o.x[k] ?? null])) }));
   const fail = await write(list);
   await M.C.reload();
@@ -512,6 +643,11 @@ async function write(list){
   return fail;
 }
 async function undo(){
+  if(S.dundo){                        // nháp: trả nháp về trước thao tác cuối
+    const snap = S.dundo; S.dundo = null; hideToast();
+    const m = dMap(); m.clear(); snap.forEach(([id, p]) => m.set(id, p)); dSave(); draw();
+    toast('↩ ' + L('Undone', 'Đã hoàn tác'), false); return;
+  }
   const u = S.undo; S.undo = null; hideToast(); if(!u) return;
   const M = model();
   const list = u.map(b => ({ x: M.byId.get(b.id), patch: b.v })).filter(o => o.x);
@@ -547,5 +683,73 @@ document.addEventListener('themechange', () => { const h = document.getElementBy
   const els = []; for(let e = h; e; e = e.parentElement) els.push(e);
   const top = els.map(e => e.scrollTop), wx = window.scrollX, wy = window.scrollY;
   draw(); els.forEach((e, k) => { e.scrollTop = top[k]; }); window.scrollTo(wx, wy); });
+/* ---------- duyệt yêu cầu Sắp xếp (admin; index.html: CR.checks.mmtb.arrange / CR.appliers.mmtb.arrange) ----------
+   Đọc lại dòng HIỆN TẠI từ DB (chỉ cột KEYS — không mã hoá). Mỗi máy: gone (đã xoá / khác nhà máy) · done (đã đúng đề xuất → bỏ qua, idempotent)
+   · conflict (khoá trong before ≠ hiện tại: người khác đã xếp lại) · todo. */
+async function curRows(ids){
+  const sb = window.__sb; if(!sb) throw { message: L('no connection', 'chưa kết nối') };
+  if(!ids.length) return new Map();
+  const { data, error } = await sb.from('mmtb_machines').select('id,version,company_id,line_id,area_id,parent_machine_id,role,sort_order').in('id', ids).is('deleted_at', null);
+  if(error) throw error;
+  return new Map((data || []).map(r => [r.id, r]));
+}
+function reqPlan(d, cur){
+  const p = (d && d.payload) || {}, items = Array.isArray(p.items) ? p.items : [];
+  const bv = new Map((((d && d.before) || {}).items || []).filter(Boolean).map(b => [b.id, b.v || {}]));
+  const MMby = new Map(((X() || {}).MM || { machines: [] }).machines.map(x => [x.id, x]));
+  return items.filter(it => it && it.id && it.patch && typeof it.patch === 'object').map(it => {
+    const c = cur.get(it.id), v = bv.get(it.id) || {}, ks = Object.keys(it.patch).filter(k => KEYS.includes(k));
+    // bản đề xuất đủ nhóm: khoá trong patch + (máy đổi vị trí) các khoá POS còn lại lấy theo lúc gửi — tránh ghi role 'main' mà còn máy cha (vi phạm check DB)
+    const want = Object.assign(posOf(it.patch) ? Object.fromEntries(POS.filter(k => k in v).map(k => [k, v[k] ?? null])) : {}, Object.fromEntries(ks.map(k => [k, it.patch[k] ?? null])));
+    const name = it.name || nameOf(MMby.get(it.id)) || it.id;
+    if(!c || (p.company_id && c.company_id !== p.company_id)) return { it, name, st: 'gone' };
+    if(ks.every(k => !neq(k, c[k], it.patch[k]))) return { it, name, c, st: 'done' };
+    const drift = Object.keys(want).filter(k => (k in v) && neq(k, c[k], v[k]));
+    return { it, name, c, ks, want, st: drift.length ? 'conflict' : 'todo', drift: drift.map(k => ({ k, was: v[k] ?? null, now: c[k] ?? null, want: want[k] })) };
+  });
+}
+async function reqCheck(req, d){
+  const items = ((d && d.payload) || {}).items || [];
+  const P = reqPlan(d, await curRows(items.filter(it => it && it.id).map(it => it.id)));
+  const out = { arrange: true, conflicts: P.filter(o => o.st === 'conflict').map(o => ({ key: 'm:' + o.it.id, id: o.it.id, name: o.name, drift: o.drift })),
+    missing: P.filter(o => o.st === 'gone').map(o => ({ id: o.it.id, name: o.name })), st: Object.fromEntries(P.map(o => [o.it.id, o.st])),
+    done: P.filter(o => o.st === 'done').length, total: P.length };
+  if(!P.length || P.every(o => o.st === 'gone'))
+    out.block = L('All machines in this request have been deleted — the request can only be rejected.', 'Mọi máy trong yêu cầu đã bị xoá — chỉ Từ chối được.');
+  return out;
+}
+/* ghi: máy "giữ hiện tại" (choices['m:<id>'] = 'theirs') / đã xoá / đã đúng → bỏ qua; máy cha trước máy con (theo cây SAU khi xếp).
+   Lỗi giữa chừng (đã ghi được ≥ 1 máy) → tải lại + ném { partial } — duyệt lại chỉ ghi phần còn thiếu (máy đã ghi thành done). */
+async function reqApply(req, d){
+  const items = ((d && d.payload) || {}).items || [], ids = items.filter(it => it && it.id).map(it => it.id);
+  const cur = await curRows(ids), P = reqPlan(d, cur), choices = (d && d.choices) || {};
+  const seen = new Set((((d && d.check) || {}).conflicts || []).map(c => c.id));
+  if(P.some(o => o.st === 'conflict' && !seen.has(o.it.id))) throw { code: 'conflict' };     // máy bị xếp lại sau lúc admin xem → mở lại để chọn
+  if(P.some(o => o.st === 'conflict' && choices['m:' + o.it.id] !== 'mine' && choices['m:' + o.it.id] !== 'theirs'))
+    throw { message: L('Choose "keep current" or "use proposal" for every machine moved by someone else.', 'Chọn "giữ hiện tại" hoặc "lấy đề xuất" cho mọi máy đã bị người khác xếp lại.') };
+  const todo = P.filter(o => o.st === 'todo' || (o.st === 'conflict' && choices['m:' + o.it.id] === 'mine'));
+  const byP = new Map(P.map(o => [o.it.id, o])), MMby = new Map(X().MM.machines.map(x => [x.id, x]));
+  const par = id => { const o = byP.get(id); if(o && o.want && 'parent_machine_id' in o.want) return o.want.parent_machine_id; const c = cur.get(id) || MMby.get(id); return c ? c.parent_machine_id : null; };
+  const depth = id => { let n = 0, x = par(id); const vis = new Set([id]); while(x && !vis.has(x) && n < 50){ vis.add(x); n++; x = par(x); } return n; };
+  todo.sort((a, b) => depth(a.it.id) - depth(b.it.id));
+  const list = todo.map(o => ({ x: { id: o.it.id, version: o.c.version, name: o.name },
+    patch: Object.fromEntries(Object.keys(o.want).filter(k => neq(k, o.c[k], o.want[k])).map(k => [k, o.want[k]])) }));
+  const fail = list.length ? await write(list) : [];
+  if(fail.length){
+    const ok = list.length - fail.length, why = fail.map(f => `${f.x.name}: ${String(f.why || '').replace(/<[^>]*>/g, '')}`).join('; ');
+    try{ await X().reload(); }catch(e){ console.warn('[Sắp xếp]', e); }
+    if(ok > 0) throw { partial: true, message: L(`Arrange partly saved (${ok}/${list.length} machines) — `, `Sắp xếp mới ghi được một phần (${ok}/${list.length} máy) — `) + why
+      + L('. Approve again to write the rest — no double changes.', '. Duyệt lại để ghi tiếp phần còn lại, không ghi trùng.') };
+    throw { message: why };
+  }
+  await X().reload();
+  const out = P.filter(o => o.st === 'done').map(o => o.it.id).concat(list.map(o => o.x.id));
+  const gone = P.filter(o => o.st === 'gone'), kept = P.filter(o => o.st === 'conflict' && choices['m:' + o.it.id] === 'theirs');
+  const nt = [gone.length ? L(`Skipped ${gone.length} deleted machine(s): `, `Bỏ qua ${gone.length} máy đã bị xoá: `) + gone.map(o => o.name).join(', ') : '',
+    kept.length ? L(`Kept current position for ${kept.length} machine(s): `, `Giữ vị trí hiện tại ${kept.length} máy: `) + kept.map(o => o.name).join(', ') : ''].filter(Boolean).join(' · ');
+  if(nt) out.note = nt;
+  return out;
+}
+window.AR = { writePatches: write, check: reqCheck, apply: reqApply, KEYS };
 window.ARR = { draw, state: S, leave: () => { const b = document.querySelector('.ar-act'); if(b) b.classList.remove('show'); } };
 })();

@@ -409,6 +409,8 @@ body.dt-on .subtabs{display:flex}
 .cr-st[data-s="pending"]{color:var(--amber,#d9a441);border-color:color-mix(in srgb,var(--amber,#d9a441) 55%,var(--border))}
 .cr-st[data-s="approved"]{color:var(--green);border-color:color-mix(in srgb,var(--green) 55%,var(--border))}
 .cr-st[data-s="rejected"]{color:var(--red);border-color:color-mix(in srgb,var(--red) 55%,var(--border))}
+.cr-st[data-s="merged"],.cr-st[data-s="replaced"]{color:var(--muted);border-color:var(--border)}   /* = nhãn Đã rút (status DB vẫn withdrawn) */
+.cr-merged-note{margin:0 0 6px;font-size:11.5px;color:var(--muted)}
 .cr-why{margin:0 0 6px;font-size:12.5px;color:var(--red)}
 .cr-note{font-size:12.5px;color:var(--txt)}
 .cr-meta{margin-top:6px;font-size:11.5px;color:var(--muted)}
@@ -419,6 +421,8 @@ body.dt-on .subtabs{display:flex}
 .cr-warn,.cr-gone{margin:0 0 8px;padding:6px 10px;border-radius:8px;font-size:12.5px;line-height:1.45;border:1px solid color-mix(in srgb,var(--amber,#d9a441) 50%,var(--border));background:color-mix(in srgb,var(--amber,#d9a441) 10%,transparent);color:var(--txt)}
 .cr-gone{border-color:color-mix(in srgb,var(--red) 50%,var(--border));background:color-mix(in srgb,var(--red) 9%,transparent)}
 .cr-cf{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.cr-sp-orig,.cr-sp-new{margin-top:3px}   /* ✂️ yêu cầu tách: máy gốc + từng máy mới */
+.cr-drift-lb{display:flex;align-items:center;gap:6px;margin-top:6px;font-weight:600;cursor:pointer}
 .cr-cfh{font-size:12.5px;font-weight:600;color:var(--txt)}
 .cr-cfk{display:flex;flex-direction:column;gap:3px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);font-size:12.5px}
 .cr-cfk label{display:flex;gap:6px;align-items:baseline;cursor:pointer;overflow-wrap:anywhere}
