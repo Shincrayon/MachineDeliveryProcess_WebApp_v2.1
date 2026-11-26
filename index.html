@@ -130,6 +130,8 @@ html.booting .topbar .mods,html.booting .topbar .tabs,html.booting .topbar .upd-
 .lib-gen{display:flex;gap:6px}.lib-gen input{flex:1;min-width:0}
 .lib-gen button{flex:none;width:38px;border-radius:9px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:16px}
 .lib-gen button:hover{border-color:var(--sky)}
+.rate-fetch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}.rate-fetch .nbtn2{height:30px;padding:0 10px;font-size:12.5px}
+#lfRateSrc{font-size:11.5px;color:var(--muted)}#lfRateSrc.bad{color:var(--st-warn)}
 /* 📋 Nhân bản máy: ô tìm máy nguồn trên đầu form Thêm (2 phân hệ) + dòng "Đang nhân bản từ…" */
 .clone-bar{position:relative;display:flex;align-items:center;gap:8px;margin:-4px 0 12px;padding:8px 10px;border:1.5px dashed var(--border);border-radius:12px}
 .clone-bar input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--txt);font:inherit;font-size:13px}
@@ -6477,6 +6479,46 @@ function libInput(f, val, editing){
                      : `<input id="${id}" type="text" value="${E(val ?? '')}"${f.lockEdit && editing ? ' readonly' : ''}${f.upper ? ' style="text-transform:uppercase"' : ''}>`;
   }
 }
+/* 💱 Lấy tỷ giá theo ngày (2026-11-26, user chọn nguồn A = tỷ giá thị trường trung bình, không phải giá ngân hàng VN).
+   Nguồn: fawazahmed0/currency-api (miễn phí, công khai, có từng ngày) qua jsDelivr, dự phòng currency-api.pages.dev.
+   Chỉ gửi loại tiền + ngày (không dữ liệu nào của app). Chỉ ĐIỀN ô — người dùng vẫn sửa tay / bấm Thêm như cũ. */
+async function rateFetch(cur, day){
+  const c = String(cur || '').toLowerCase(), tag = day >= DM.todayIso() ? 'latest' : day;
+  const urls = [`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${tag}/v1/currencies/${c}.json`,
+                `https://${tag}.currency-api.pages.dev/v1/currencies/${c}.json`];
+  for(const u of urls){
+    try{
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch(u, { signal: ctl.signal }); clearTimeout(t);
+      if(!r.ok) continue;
+      const j = await r.json(), v = j && j[c] && +j[c].vnd;
+      if(v > 0) return { rate: Math.round(v * 100) / 100, date: j.date || day };
+    }catch(e){}
+  }
+  return null;
+}
+function rateFetchUi(){
+  const inp = document.getElementById('lf_rate_to_vnd'), cu = document.getElementById('lf_currency'), dt = document.getElementById('lf_effective_date');
+  if(!inp || !cu || !dt) return;
+  const box = document.createElement('div'); box.className = 'rate-fetch';
+  box.innerHTML = `<button type="button" class="nbtn2 ghost" id="lfRateGet">${tr('🌐 Get rate for this date','🌐 Lấy tỷ giá theo ngày')}</button><small id="lfRateSrc"></small>`;
+  inp.insertAdjacentElement('afterend', box);
+  const btn = box.querySelector('#lfRateGet'), src = box.querySelector('#lfRateSrc');
+  const clear = () => { src.textContent = ''; src.className = ''; };
+  cu.addEventListener('change', clear); dt.addEventListener('change', clear); inp.addEventListener('input', clear);
+  btn.onclick = async () => {
+    const day = dt.value;
+    if(!day){ src.className = 'bad'; src.textContent = tr('Pick the effective date first.','Hãy chọn Ngày áp dụng trước.'); return; }
+    btn.disabled = true; src.className = ''; src.textContent = tr('Fetching…','Đang lấy…');
+    const r = await rateFetch(cu.value, day);
+    btn.disabled = false;
+    if(!r){ src.className = 'bad'; src.textContent = tr('No rate found for this date (or no network) — type it in.','Không lấy được tỷ giá ngày này (hoặc mất mạng) — hãy nhập tay.'); return; }
+    inp.value = r.rate;
+    const dd = String(r.date).slice(0, 10).split('-').reverse().join('/');
+    src.textContent = tr(`Market average rate on ${dd} (not a VN bank rate) — you can edit it.`,
+                         `Tỷ giá thị trường trung bình ngày ${dd} (không phải giá ngân hàng VN) — có thể sửa.`);
+  };
+}
 function libRead(f){
   const el = document.getElementById('lf_' + f.k);
   if(f.type==='multi') return [...document.querySelectorAll('.lf_' + f.k + ':checked')].map(c=>c.value);
@@ -6501,6 +6543,7 @@ window.libEdit = (k, id) => {
     <div class="add-actions"><button type="button" class="nbtn2 ghost" onclick="mBg.classList.remove('show')">${tr('Cancel','Hủy')}</button>
       <button type="submit" class="nbtn2" id="lfSave">${cur ? tr('💾 Save','💾 Lưu') : tr('➕ Add','➕ Thêm')}</button></div></form>`;
   openM();
+  if(k === 'rates') rateFetchUi();
   // nhà xưởng lọc theo nhà máy đang chọn
   const ws = d.fields.find(f=>f.type==='workshop'), co = document.getElementById('lf_company_id');
   const fillWs = () => { if(!ws) return; const el = document.getElementById('lf_' + ws.k);
