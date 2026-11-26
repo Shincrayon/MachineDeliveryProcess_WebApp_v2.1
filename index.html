@@ -766,6 +766,8 @@ td.qu-c input,th.qu-h input{width:16px;height:16px;vertical-align:middle;accent-
 @media(max-width:1400px){.tab{padding:9px 7px}.upd-btn{padding-left:8px;padding-right:8px}.brand .logo{display:none}}
 .pw-wrap{position:relative;display:flex}
 .pw-wrap input{flex:1;min-width:0;padding-right:46px}
+/* ô có nút 👁 của app (lgEye) → tắt nút hiện mật khẩu có sẵn của Edge / IE, tránh 2 con mắt (2026-11-26) */
+.pw-wrap input::-ms-reveal,.pw-wrap input::-ms-clear{display:none}
 .login-card .pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:transparent;border:0;
   padding:6px 9px;font-size:17px;line-height:1;cursor:pointer;color:var(--muted);border-radius:8px}
 .login-card .pw-eye:hover{background:rgba(148,163,184,.12)}
