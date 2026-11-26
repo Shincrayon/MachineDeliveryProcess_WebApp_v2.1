@@ -388,7 +388,7 @@ function draw(){
         <select id="arCo" aria-label="${L('Plant', 'Nhà máy')}">${cos.map(c => `<option value="${c.id}"${c.id === S.co ? ' selected' : ''}>🏭 ${E(c.code)} — ${E(c.name)}</option>`).join('')}</select>
         <div class="search"><input id="arQ" type="text" value="${E(S.q)}" placeholder="${L('Find a machine in the lines…', 'Tìm máy trong các chuyền…')}"></div>
         <button class="ar-ib" id="arAll">${S.open.size ? '⊟ ' + L('Collapse all', 'Thu hết') : '⊞ ' + L('Expand all', 'Mở hết')}</button>
-        ${can && !M.util ? `<button class="ar-ib pri" id="arUtil">＋ ${L('Utilities line', 'Chuyền Phụ trợ')}</button>` : ''}
+        ${can && !M.util && window.__role === 'admin' ? `<button class="ar-ib pri" id="arUtil">＋ ${L('Utilities line', 'Chuyền Phụ trợ')}</button>` : ''}
       </div>
       <div class="ar-prog">
         <span class="lbl">${L('Arranged', 'Đã xếp')} <b>${nIn}</b> / ${M.ms.length} ${L('machines', 'máy')}</span>

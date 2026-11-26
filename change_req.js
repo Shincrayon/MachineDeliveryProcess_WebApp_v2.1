@@ -53,6 +53,7 @@
     loaded: new Promise(r => { doneLoad = r; }),
     DERIVED: { delivery: new Set(['vekh', 'vedukienn', 'danhgia']), mmtb: new Set(['code_temp', 'legacy_code']) } };   // trường tự tính (mmtb: cờ mã tạm / mã cũ đi theo Mã máy): hiện trong cũ → mới, không coi là editor đổi / xung đột
   const DAYS = 30;
+  const REJ_MAX = 500;   // lý do Từ chối tối đa 500 ký tự (2026-11-26)
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const me = () => String(window.__userEmail || '').trim().toLowerCase();
   const isAdmin = () => window.__role === 'admin';
@@ -601,7 +602,7 @@
     return { ids: applied, note };
   };
   CR.reject = async (id, note) => {
-    note = String(note == null ? '' : note).trim();
+    note = String(note == null ? '' : note).trim().slice(0, REJ_MAX);   // lý do tối đa REJ_MAX ký tự (ô nhập cũng giới hạn)
     if(!note) throw { message: tr('Enter a reason.', 'Cần nhập lý do.') };
     const { data, error } = await sb().from('change_requests').update({ status: 'rejected', reject_note: note })
       .eq('id', id).eq('status', 'pending').select('id');
@@ -664,14 +665,15 @@
       + (cf ? `<div class="cr-cf"><div class="cr-cfh">${esc(tr('Changed by both sides — choose which value to keep:', 'Trường bị cả 2 bên đổi — chọn giữ bên nào:'))}</div>${cf}</div>` : '')
       + (acf ? `<div class="cr-cf"><div class="cr-cfh">${esc(tr('Moved by someone else after the request was sent — choose for each machine:', 'Máy đã bị xếp lại sau lúc gửi — chọn cho từng máy:'))}</div>${acf}</div>` : '')
       + `<div class="cr-acts">${can ? `<button type="button" class="nbtn2 cr-ok"${cfKeys.length || ck.drift.length ? ' disabled' : ''}>${esc(tr('✅ Approve', '✅ Duyệt'))}</button>` : ''}</div>
-        <div class="cr-rej"><textarea class="cr-why-in" rows="2" maxlength="500" placeholder="${esc(tr('Reason for rejecting (required)', 'Lý do từ chối (bắt buộc)'))}"></textarea>
+        <div class="cr-rej"><div class="cr-rejw"><textarea class="cr-why-in" rows="2" maxlength="${REJ_MAX}" placeholder="${esc(tr('Reason for rejecting (required)', 'Lý do từ chối (bắt buộc)'))}"></textarea><small class="cr-cnt">0/${REJ_MAX}</small></div>
         <button type="button" class="nbtn2 ghost cr-no" disabled>${esc(tr('❌ Reject', '❌ Từ chối'))}</button></div>`;
     const ok = host.querySelector('.cr-ok'), no = host.querySelector('.cr-no'), why = host.querySelector('.cr-why-in'), dok = host.querySelector('.cr-drift-ok');
     const choices = () => Object.fromEntries(cfKeys.map(k => { const i = host.querySelector(`.cr-cfk[data-k="${CSS.escape(k)}"] input:checked`); return [k, i ? i.value : null]; }));
     const okState = () => { if(ok) ok.disabled = Object.values(choices()).some(v => !v) || (!!dok && !dok.checked); };   // xung đột chưa chọn / máy đổi mà chưa tick xác nhận
     host.querySelectorAll('.cr-cfk input').forEach(i => i.onchange = okState);
     if(dok) dok.onchange = okState;
-    why.oninput = () => { no.disabled = !why.value.trim(); };
+    const cnt = host.querySelector('.cr-cnt');
+    why.oninput = () => { no.disabled = !why.value.trim(); if(cnt){ cnt.textContent = why.value.length + '/' + REJ_MAX; cnt.classList.toggle('full', why.value.length >= REJ_MAX); } };
     const run = async (btn, fn) => {
       if(CR.busy) return;
       CR.busy = true; btn.disabled = true;
