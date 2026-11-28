@@ -13,7 +13,7 @@
   const G = (k, en, vi, fields) => ({ k, en, vi, fields });
   const A = (k, en, vi, write) => ({ k, en, vi, write });
 
-  /* nút ghi (chỉ editor) + nút chỉ đọc (viewer tick được), RIÊNG từng phân hệ (chỉ liệt kê nút thật sự có ở phân hệ đó). Phải khớp perm_can_write() trong migration 22.
+  /* nút ghi (chỉ editor) + nút chỉ đọc (viewer tick được), RIÊNG từng phân hệ (chỉ liệt kê nút thật sự có ở phân hệ đó). Khớp perm_has_action() (migration 28a); nút ghi khớp perm_can_write() (migration 22). 📂 Nạp Excel (import) không còn là nút tick: chỉ admin (khoá lạ).
      🏷 Gán mã không có ở đây: máy chủ (assign_machine_codes) chỉ cho admin, UI chỉ hiện cho admin. */
   const ACT = {
     export: A('export', 'Export Excel', 'Xuất Excel', false),
@@ -25,7 +25,7 @@
   };
   const ACTS = {
     mmtb: ['add', 'edit', 'delete', 'clone', 'split', 'arrange'],
-    delivery: ['export', 'add', 'edit', 'delete', 'import', 'quick', 'clone', 'confirm', 'payment']
+    delivery: ['export', 'add', 'edit', 'delete', 'quick', 'clone', 'confirm', 'payment']
   };
   const actionsOf = m => ACTS[m].map(k => Object.assign({}, ACT[k]));
   const writeOf = m => ACTS[m].filter(k => ACT[k].write);

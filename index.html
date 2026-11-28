@@ -15,6 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="perms.js"></script>
+<script src="seal.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
 <script src="chart_theme.js"></script>
 <script src="metrics.js"></script>
@@ -3707,6 +3708,7 @@ const dvPrev = cur => { const old = dvOld(cur);
 async function saveMachine(m, editId, out){
   const sb = window.__sb; if(!sb) throw {code:'nodb'};
   const cur = editId ? DATA.find(x=>x._id===editId) : null;
+  if(cur && (cur._locked || cur.ten==='🔒')) throw {code:'locked'};     // máy có nhóm chưa giải mã được: ghi lại sẽ đè nhóm đó bằng giá trị trống
   const old = cur ? dvOld(cur) : null;
   // phân quyền trường: trường không được sửa lấy giá trị cũ (máy mới: bỏ). Hình thức mua / loại tiền không mã hoá → bỏ hẳn (không gửi = giữ, không "xác nhận")
   if(!PERM.isAdmin()){
@@ -3934,11 +3936,11 @@ async function quSaveOne(x,ch){
   const txt = QU_TEXT.filter(k=>k in ch);
   if(txt.length){
     // giải trình / ghi chú lắp đặt nằm trong sec cùng các trường nhạy cảm khác: mã hoá lại cả gói, chỉ trường vừa sửa đổi
-    if(CRYPTO.on && x.ten==='🔒') throw {code:'locked'};
+    if(CRYPTO.on && (x.ten==='🔒' || x._locked)) throw {code:'locked'};
     const s = {}; SEC.machines.f.forEach(k=>{ s[k] = (k==='vnd'||k==='usd') ? (Number(x[k])||0) : unescH(x[k]||''); });
     txt.forEach(k=>{ s[k] = ch[k]; });
     const sealed = await window.__seal('machines', s);
-    if(sealed.sec){ upd.sec = sealed.sec; txt.forEach(k=>{ upd[k] = null; }); } else txt.forEach(k=>{ upd[k] = ch[k]; });
+    if('sec' in sealed){ Object.assign(upd, window.__sealCols(sealed)); txt.forEach(k=>{ upd[k] = null; }); } else txt.forEach(k=>{ upd[k] = ch[k]; });   // 'sec' in: cả dạng cũ (e1:) lẫn dạng nhóm (sec null + s_*)
   }
   const { data, error } = await sb.from('machines').update(upd)
     .eq('id', x._id).eq('version', x._ver).is('deleted_at', null).select('*');
@@ -4392,10 +4394,11 @@ async function mcRun(){
   for(const [n,o] of MC.trim.entries()){
     msg.style.color = 'var(--muted)'; msg.textContent = tr(`Trimming names ${n+1}/${MC.trim.length}…`,`Đang cắt khoảng trắng tên ${n+1}/${MC.trim.length}…`);
     try{
+      if(o.r.__locked || o.r._locked || o.r.ten==='🔒') throw { code:'locked' };     // nhóm hỏng: không ghi đè bằng giá trị trống
       const s = {}; SEC.machines.f.forEach(k=>{ s[k] = (k==='vnd'||k==='usd') ? (Number(o.r[k])||0) : (o.r[k]==null ? '' : String(o.r[k])); });
       s.ten = o.raw.trim();
       const sealed = await window.__seal('machines', s);
-      const upd = sealed.sec ? { sec: sealed.sec, ten: '' } : { ten: s.ten };
+      const upd = 'sec' in sealed ? Object.assign({ ten: '' }, window.__sealCols(sealed)) : { ten: s.ten };
       const { data, error } = await sb.from('machines').update(upd).eq('id', o.r.id).eq('version', o.r.version).select('id');
       if(error) throw error;
       if(!data || !data.length) throw { code:'conflict' };
@@ -4903,7 +4906,7 @@ async function openTrash(){
   mBody.innerHTML = '<div class="hx-list">'+(window.MO ? MO.skel(5) : '<div class="hx-item">'+tr('Loading…','Đang tải…')+'</div>')+'</div>';
   openM(1);
   try{
-    const { data, error } = await window.__sb.from('machines').select('id,ten,ncc,phutrach,deleted_at,deleted_by,sec')
+    const { data, error } = await window.__sb.from('machines').select('id,ten,ncc,phutrach,deleted_at,deleted_by,sec' + (SEAL.on.machines ? ',' + SEAL.cols('machines').join(',') : ''))
       .not('deleted_at', 'is', null).order('deleted_at', {ascending:false});
     if(error) throw error;
     window.__trash = await Promise.all((data || []).map(window.__open));
@@ -5450,7 +5453,7 @@ const mmHistVal = (k, v) => {
 /* trường được xem: bỏ cột kỹ thuật; khoá chưa có trong MM_HIST_GRP vẫn hiện (lịch sử chỉ admin xem, không cần chặn theo nhóm) */
 const mmHistKeys = rows => {
   const SKIP = ['id','sec','version','created_at','updated_at','updated_by','created_by','tracking_synced_at'], ks = new Set();
-  rows.forEach(h => [h.old_data, h.new_data].forEach(d => d && Object.keys(d).forEach(k => { if(!SKIP.includes(k) && k!=='__locked') ks.add(k); })));
+  rows.forEach(h => [h.old_data, h.new_data].forEach(d => d && Object.keys(d).forEach(k => { if(!SKIP.includes(k) && k!=='__locked' && !/^s_/.test(k)) ks.add(k); })));
   return [...ks].filter(k => !mmHistGrp(k) || mS(mmHistGrp(k)));      // chỉ trường nhóm được phép xem
 };
 const mmHistLbl = k => { if(k.startsWith('ms.')) return E(MSL[k.slice(3)] || k.slice(3)); const l = window.MM_HIST_LBL[k]; return E(l ? l[LANG==='vi' ? 1 : 0] : k); };
@@ -6206,7 +6209,7 @@ if(window.CR) CR.appliers.mmtb = {
    null (duyệt Thêm) → tải lại để kiểm mã trùng trên dữ liệu mới. derive: mã máy đổi (giống save) → hết "tạm", giữ mã cũ ở legacy_code */
 if(window.CR){
   CR.getters.mmtb = id => { const x = byId.get(id); if(!x) return null; const o = msBy.get(id) || {};
-    const row = mmNorm(Object.fromEntries(Object.keys(x).filter(k => k !== 'sec' && !k.startsWith('__')).map(k=>[k, x[k]])));
+    const row = mmNorm(Object.fromEntries(Object.keys(x).filter(k => k !== 'sec' && !/^s_/.test(k) && !k.startsWith('__')).map(k=>[k, x[k]])));
     return { row: { row, ms: mmMsNorm(Object.fromEntries(Object.keys(o).map(k=>[k, o[k].actual_date]))) }, version: x.version }; };
   /* luôn đọc lại dòng + mốc của máy từ DB: catalog_sync.js (writeMs) ghi delivery_milestones KHÔNG tăng version của máy */
   CR.sync.mmtb = async id => {
@@ -7381,7 +7384,17 @@ const SEC = {
   site_readiness:  { f:['owner','note'], blank:{ owner:null, note:null } }
 };
 /* mã hoá 1 dòng trước khi ghi (chỉ khi dòng có trường nhạy cảm; chưa bật mã hoá thì giữ nguyên) */
-window.__seal = async (table, row) => {
+window.__seal = async (table, row, cur, get) => {
+  if(CRYPTO.on && SEAL.on[table]){      // máy chủ có cột s_*: niêm phong theo nhóm (cur / get chỉ dùng ở nhánh này)
+    const fill = [];     // TODO(task4/5): bỏ đoạn điền trống này khi mọi đường ghi truyền cur (hiện đường cũ chưa truyền cur)
+    if(cur === undefined){            // đường ghi cũ chưa truyền cur: nhóm có 1 phần trường → trường thiếu = trống trong gói nhóm (như gói sec cũ: sec thay cả gói), nhưng KHÔNG gửi cột đó
+      row = Object.assign({}, row);
+      Object.values(SEAL.GROUPS[table] || {}).forEach(f => { if(f.some(k => k in row)) f.forEach(k => { if(!(k in row)){ row[k] = SEAL.BLANK[table][k]; fill.push(k); } }); });
+    }
+    const out = await SEAL.sealGroups(table, row, cur, get);
+    fill.forEach(k => { delete out[k]; });
+    return out;
+  }
   const d = SEC[table]; if(!CRYPTO.on || !d || !d.f.some(k=>k in row)) return row;
   const s = {}; d.f.forEach(k=>{ if(k in row) s[k] = row[k]; });
   const out = Object.assign({}, row);
@@ -7390,12 +7403,15 @@ window.__seal = async (table, row) => {
   out.sec = await CRYPTO.encObj(s);
   return out;
 };
-/* giải mã 1 dòng sau khi đọc: dòng có sec thì lấy giá trị trong sec đè lên cột gốc */
+/* giải mã 1 dòng sau khi đọc: đọc được sec (gói cũ), s_* (theo nhóm) và dạng lai; giá trị giải mã đè lên cột gốc */
 window.__open = async row => {
-  if(!row || !row.sec || !CRYPTO.on) return row;
-  try{ return Object.assign({}, row, await CRYPTO.decObj(row.sec)); }
-  catch(e){ return Object.assign({}, row, { __locked:true }); }
+  const o = await SEAL.openRow(row);
+  /* gói nhóm có thể chứa khoá của cột chưa có trên máy chủ (nhóm luôn niêm phong đủ trường): chỉ giữ khoá có cột thật, như gói sec cũ → "k in dòng" vẫn dò đúng cột nào có */
+  if(o && row && o !== row) Object.keys(o).forEach(k => { if(!(k in row) && k !== '__locked') delete o[k]; });
+  return o;
 };
+/* phần niêm phong của kết quả __seal: sec (dạng cũ) + các cột s_* (dạng nhóm) — để đường ghi chỉ cập nhật cột niêm phong */
+window.__sealCols = sealed => Object.fromEntries(Object.entries(sealed).filter(([k]) => k === 'sec' || k.startsWith('s_')));
 const openAll = rows => Promise.all((rows || []).map(window.__open));
 
 /* màn hình tạo / nhập mật khẩu dữ liệu; trả về true khi đã có khoá (hoặc admin chọn "Để sau") */
@@ -7524,7 +7540,9 @@ const ENC_TABLES = ['machines','mmtb_machines','suppliers','production_lines'];
 async function countPlain(sb){
   let n = 0;
   for(const t of ENC_TABLES){
-    const { count, error } = await sb.from(t).select('id', { count:'exact', head:true }).is('sec', null);
+    let q = sb.from(t).select('id', { count:'exact', head:true }).is('sec', null);
+    if(SEAL.on[t]) q = q.is('s_name', null);               // dòng đã niêm phong theo nhóm (g1) không phải "chưa mã hoá"
+    const { count, error } = await q;
     if(!error) n += count || 0;
   }
   return n;
@@ -7535,7 +7553,9 @@ window.encryptExisting = async () => {
   try{
     const all = {};
     for(const t of ENC_TABLES){
-      const { data, error } = await sb.from(t).select('*').is('sec', null);
+      let q = sb.from(t).select('*').is('sec', null);
+      if(SEAL.on[t]) q = q.is('s_name', null);
+      const { data, error } = await q;
       if(error){ if(/does not exist|schema cache/i.test(error.message || '')) continue; throw error; }
       all[t] = data || [];
     }
@@ -7547,9 +7567,10 @@ window.encryptExisting = async () => {
     let done = 0, total = Object.values(all).reduce((s,r)=>s+r.length, 0);
     for(const [t, rows] of Object.entries(all)){
       for(const r of rows){
-        const d = SEC[t], plain = {}; d.f.forEach(k=>{ if(k in r) plain[k] = r[k]; });   // cột chưa có (chưa chạy migration) thì bỏ qua
+        const d = SEC[t], plain = {}; (SEAL.on[t] ? SEAL.fields(t) : d.f).forEach(k=>{ if(k in r) plain[k] = r[k]; });   // cột chưa có (chưa chạy migration) thì bỏ qua
         if(t==='suppliers') plain.id = r.id;
-        const sealed = await window.__seal(t, plain); delete sealed.id;
+        const sealed = await window.__seal(t, plain, SEAL.on[t] ? null : undefined); delete sealed.id;
+        if(SEAL.on[t]) Object.keys(sealed).forEach(k=>{ if(k !== 'sec' && !k.startsWith('s_') && !(k in r)) delete sealed[k]; });   // cột chưa có (chưa chạy migration) thì không gửi
         const { error } = await sb.from(t).update(sealed).eq('id', r.id);
         if(error) throw error;
         done++; if(btn) btn.textContent = tr('Encrypting… ','Đang mã hoá… ') + done + '/' + total;
@@ -7580,6 +7601,7 @@ window.encryptExisting = async () => {
     if(o._th && !SEC.machines.f.includes('thuong_hieu')){ SEC.machines.f.push('thuong_hieu'); SEC.machines.blank.thuong_hieu = null; }   // mã hoá cùng gói sec
     o._pt = 'hinh_thuc_mua' in d;                        // cơ sở dữ liệu đã chạy migration 13
     o._gt = 'gia_tien_te' in d; o.gia_tien_te = d.gia_tien_te || '';   // migration 21
+    o._fmt = SEAL.fmtOf(d); o._locked = !!d.__locked;     // dạng lưu của dòng (g1 / sec / plain) + có nhóm hỏng: ghi theo nhóm cần biết (sealGroups từ chối khi _locked)
     o.hinh_thuc_can_xn = d.hinh_thuc_can_xn === true;
     return o;
   }
@@ -7807,6 +7829,7 @@ window.encryptExisting = async () => {
   window.__canWriteM = PERM.canWrite('mmtb');
   await cryptoGate(sb, me.role, card, session.user.email);
   await UA.forceChangePw(sb, session.user, card, appSignOut, me.role);   // sau cryptoGate: cần khoá để gói lại
+  await SEAL.probe(sb);           // máy chủ đã có cột s_* (migration 28a) → ghi / đọc theo nhóm
   window.__MMTB = await loadMmtb(sb);
 
   const { data: rows0, error } = await sb.from('machines').select('*').is('deleted_at', null).order('sort_order', { ascending:true });

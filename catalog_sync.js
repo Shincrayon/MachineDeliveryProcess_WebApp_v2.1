@@ -534,7 +534,7 @@ async function writeTrack(x, ch){
   const F = (typeof SEC !== 'undefined' && SEC.machines) ? SEC.machines.f : [];
   const upd = {}; Object.keys(ch).forEach(k => { if(!F.includes(k)) upd[k] = ch[k]; });
   if(F.some(k => k in ch)){
-    if(typeof CRYPTO !== 'undefined' && CRYPTO.on && x.ten === '🔒') throw { code:'locked' };
+    if(typeof CRYPTO !== 'undefined' && CRYPTO.on && (x.ten === '🔒' || x._locked)) throw { code:'locked' };
     const s = {}; F.forEach(k => { s[k] = k in ch ? ch[k] : (k === 'vnd' || k === 'usd') ? (Number(x[k]) || 0) : un(x[k]); });
     Object.assign(upd, await window.__seal('machines', s));
     delete upd.ten; if(upd.sec === undefined) F.filter(k => !(k in ch)).forEach(k => { delete upd[k]; });
