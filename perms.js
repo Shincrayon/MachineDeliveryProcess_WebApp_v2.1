@@ -60,7 +60,7 @@
         G('code', 'Machine code', 'Mã máy', ['ma_may', 'sysid']),
         G('location', 'Installation site', 'Nơi lắp đặt', ['noilapdat']),
         G('status', 'Status / rating', 'Trạng thái / đánh giá', ['status', 'danhgia']),
-        G('dates', 'Progress dates', 'Các ngày tiến độ', ['duyet', 'dathang', 'ctu', 'tamungtt', 'ditaukh', 'ditautt', 'lanhkh', 'lanhtt', 'xuatxuong', 'sonagyctm', 'workingday',
+        G('dates', 'Progress dates', 'Các ngày tiến độ', ['duyet', 'dathang', 'ctu', 'tamungtt', 'ngay_xn_ct', 'ditaukh', 'ditautt', 'lanhkh', 'lanhtt', 'xuatxuong', 'sonagyctm', 'workingday',
           'vekh', 'vedukienn', 'tauchay_tt', 'capcang_tt', 'venm_tt', 'nghiemthu_kh', 'lapdat_tt', 'chaythu_tt', 'nghiemthu_tt']),
         G('model', 'Model / serial', 'Model / số serial', ['model', 'serial']),
         G('qty', 'Quantity', 'Số lượng', ['sl']),

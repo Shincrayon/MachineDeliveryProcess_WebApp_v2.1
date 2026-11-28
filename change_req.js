@@ -390,7 +390,10 @@
      (Editor cố tình gõ TT = KH khi TT đang trống cũng cho cùng kết quả tính ngày nên bỏ qua là vô hại.) */
   const SOFT = { delivery: { ditautt: 'ditaukh', lanhtt: 'lanhkh' } };
   /* đầu vào của trường tự tính: người khác đổi 1 trong các khoá này (hoặc chính trường tự tính) sau lúc gửi → tính lại từ bản đã gộp */
-  const INPUTS = { delivery: ['dathang', 'xuatxuong', 'ctu', 'sonagyctm', 'ditaukh', 'ditautt', 'lanhkh', 'lanhtt', 'workingday'], mmtb: ['machine_code'] };
+  const INPUTS0 = { delivery: ['dathang', 'xuatxuong', 'ctu', 'sonagyctm', 'ditaukh', 'ditautt', 'lanhkh', 'lanhtt', 'workingday'], mmtb: ['machine_code'] };
+  /* tamungtt + ngay_xn_ct (migration 29): mốc tính ngày về NM khi máy chưa có xuất xưởng → cũng là đầu vào.
+     Chỉ khi DB đã có cột (window.__hasXN); chưa chạy 29 → danh sách như cũ (1B giữ nguyên trường tự tính khi editor chỉ đổi tạm ứng TT) */
+  const INPUTS = new Proxy(INPUTS0, { get: (o, mod) => mod === 'delivery' && window.__hasXN && window.__hasXN() ? o.delivery.concat(['tamungtt', 'ngay_xn_ct']) : o[mod] });
   const isSoft = (mod, k, b, p) => { const kh = (SOFT[mod] || {})[k]; return !!kh && !(Number(nz(b[k])) || 0) && same(p[k], p[kh]); };
   /* editor có thật sự đổi ô ngày (đầu vào của trường tự tính) không — 1B (user chọn 2026-11-25): không đổi thì khi duyệt GIỮ NGUYÊN
      các trường tự tính đang có (không ghi lại theo công thức như form Sửa), và không hiện chúng trong cũ → mới */

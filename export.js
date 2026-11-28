@@ -70,7 +70,7 @@ const DEF = [
   ['ma_may','s',1], ['ten','s',1], ['sl','n',1], ['noilapdat','s',1], ['ncc','s',1], ['xuatxu','s',1], ['hinh_thuc_mua','s',0], ['phutrach','s',1],
   ['vnd','n',1], ['usd','n',1], ['dathang','d',1], ['vekh','d',1], ['vedukienn','d',1], ['status','s',1], ['arrival_kind','s',0], ['danhgia','s',1],
   ['company','s',0], ['daysleft','n',0], ['congsuat','s',0], ['model','s',0], ['serial','s',0], ['duyet','d',0],
-  ['ctu','n',0], ['tamungtt','d',0], ['tamung_days','n',0], ['ditaukh','n',0], ['ditautt','n',0], ['lanhkh','n',0], ['lanhtt','n',0],
+  ['ctu','n',0], ['tamungtt','d',0], ['ngay_xn_ct','d',0], ['tamung_days','n',0], ['ditaukh','n',0], ['ditautt','n',0], ['lanhkh','n',0], ['lanhtt','n',0],
   ['sonagyctm','n',0], ['workingday','s',0], ['xuatxuong','d',0], ['tauchay_tt','d',0], ['capcang_tt','d',0],
   ['venm_tt','d',0], ['giaitrinh','s',0],
   // lắp đặt – nghiệm thu (migrations/20261031_09); số ngày tính lúc xuất, thiếu ngày -> ô trống
@@ -85,7 +85,8 @@ const TYPE = Object.fromEntries(DEF.map(([k,t])=>[k,t]));
    Cột tính → nhóm nguồn; trường thật → nhóm của nó trong PERM.REG (vd vnd/usd → value). */
 const SEEK = { status:'status', install_status:'status', arrival_kind:'dates', daysleft:'dates', tamung_days:'dates', wait_install_days:'dates',
                install_accept_days:'dates', accept_delay_days:'dates', company:'location', sysid:'code' };
-const okF = k => !window.PERM || PERM.see('delivery', SEEK[k] || k);
+/* ngay_xn_ct (migration 29): chưa có cột trong DB → không có trường */
+const okF = k => (k !== 'ngay_xn_ct' || !window.__hasXN || window.__hasXN()) && (!window.PERM || PERM.see('delivery', SEEK[k] || k));
 function label(k){
   const L = CTX().labels;
   const extra = { status: tr('Status','Trạng thái'), company: tr('Company','Công ty'), daysleft: tr('Days to arrival','Số ngày còn lại'),
