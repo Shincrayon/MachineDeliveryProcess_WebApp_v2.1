@@ -16,6 +16,7 @@
 <script src="config.js"></script>
 <script src="perms.js"></script>
 <script src="seal.js"></script>
+<script src="seal_tool.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
 <script src="chart_theme.js"></script>
 <script src="metrics.js"></script>
@@ -6426,7 +6427,7 @@ function drawHealth(){
   const G = dataIssues(), bad = G.filter(g=>g.items.length), ok = G.filter(g=>!g.items.length);
   const row = it => `<tr${it.id ? ` style="cursor:pointer" onclick="mmShow('${it.id}')"` : it.track ? ` style="cursor:pointer" onclick="window.__goTracking('${it.track}')"` : ''}>
       <td style="white-space:nowrap"><b>${E(it.code || '—')}</b></td><td class="name">${E(it.name || '')}</td><td style="color:var(--muted)">${E(it.why || '')}</td></tr>`;
-  libBody.innerHTML = `<div class="lib-note">${tr('Read-only check of the decrypted data in this browser — nothing is changed. Click a row to open the machine and fix it.',
+  libBody.innerHTML = `${isAdmin ? '<div id="hcSealBox"></div>' : ''}<div class="lib-note">${tr('Read-only check of the decrypted data in this browser — nothing is changed. Click a row to open the machine and fix it.',
       'Kiểm tra chỉ đọc trên dữ liệu đã giải mã ngay trong trình duyệt — không sửa gì. Bấm một dòng để mở máy và sửa.')}
       <b>${N(bad.reduce((s,g)=>s + g.items.length, 0))}</b> ${tr('items in','mục trong')} <b>${bad.length}</b> ${tr('checks','nhóm kiểm tra')} · ✅ ${ok.length} ${tr('checks OK','nhóm đạt')}</div>
     ${bad.map(g=>`<details class="hc-g ${g.lv}" data-k="${g.key}"${bad.length <= 3 ? ' open' : ''}><summary><span class="hc-lv">${g.lv === 'err' ? '⛔' : '⚠'}</span> ${E(g.title)} <b>${N(g.items.length)}</b></summary>
@@ -6434,6 +6435,7 @@ function drawHealth(){
       ${g.items.length > 300 ? `<div class="hc-hint">${tr('showing first 300','đang hiện 300 dòng đầu')}</div>` : ''}</details>`).join('')}
     <div class="hc-ok">${ok.map(g=>`<span>✅ ${E(g.title)}</span>`).join('')}</div>`;
   const ns = document.getElementById('hcNameSync'); if(ns) ns.onclick = syncLinkedNames;
+  if(isAdmin && window.SEALT) SEALT.mount(document.getElementById('hcSealBox'));   // 🔐 Chuyển sang gói theo nhóm / ♻️ Khôi phục (seal_tool.js, chỉ admin; tự ẩn khi chưa bật mã hoá / chưa chạy 28a)
 }
 /* chỉ đồng bộ TÊN cho máy đã liên kết: tên Danh mục = tên Tiến độ, tên cũ vào Tên gọi khác (qua CS.plan / CS.apply, chỉ giữ name + alias_names) */
 async function syncLinkedNames(){
