@@ -208,7 +208,7 @@ async function apply(p, C){
     let data, error;
     for(let i = 0; i < 3; i++){           // mã tạm ngẫu nhiên trùng (rất hiếm) -> cấp lại
       const row = Object.assign({ machine_code: window.__tempCode ? window.__tempCode(co.code) : co.code + '-' + Date.now() }, base);
-      ({ data, error } = await sb.from('mmtb_machines').insert(await window.__seal('mmtb_machines', row)).select('id,machine_code').single());
+      ({ data, error } = await sb.from('mmtb_machines').insert(await window.__seal('mmtb_machines', row, typeof CRYPTO !== 'undefined' && CRYPTO.on && typeof SEAL !== 'undefined' && SEAL.on.mmtb_machines ? null : undefined)).select('id,machine_code').single());
       if(!error || !(error.code === '23505' && /machine_code/.test(error.message || ''))) break;
     }
     if(error) throw error;
@@ -220,8 +220,14 @@ async function apply(p, C){
   const F = SECF();
   if(F.some(k => k in p.set)){            // trường nhạy cảm nằm trong sec: mã hoá lại cả gói, chỉ các trường vừa đổi
     // chỉ các trường có trên dòng (cột của migration chưa chạy thì bỏ qua — VD alias_names của migration 11)
-    const s = {}; F.forEach(k => { if(k in p.set || k in cat) s[k] = k in p.set ? p.set[k] : (cat[k] === undefined ? null : cat[k]); });
-    Object.assign(upd, await window.__seal('mmtb_machines', s));
+    if(typeof CRYPTO !== 'undefined' && CRYPTO.on && typeof SEAL !== 'undefined' && SEAL.on.mmtb_machines){      // đã bật nhóm: chỉ trường vừa đổi, __seal so với hồ sơ hiện tại (từ chối khi hồ sơ có nhóm hỏng)
+      const part = {}; F.forEach(k => { if(k in p.set) part[k] = p.set[k]; });
+      F.forEach(k => { delete upd[k]; });                     // bản rõ không bao giờ đi theo: nhóm đổi → cột blank + s_*, nhóm không đổi → bỏ
+      Object.assign(upd, await window.__seal('mmtb_machines', part, cat));
+    } else {
+      const s = {}; F.forEach(k => { if(k in p.set || k in cat) s[k] = k in p.set ? p.set[k] : (cat[k] === undefined ? null : cat[k]); });
+      Object.assign(upd, await window.__seal('mmtb_machines', s));
+    }
   }
   if(Object.keys(p.set).length){
     const { data, error } = await sb.from('mmtb_machines').update(upd).eq('id', cat.id).eq('version', cat.version).is('deleted_at', null).select('id');
@@ -535,9 +541,15 @@ async function writeTrack(x, ch){
   const upd = {}; Object.keys(ch).forEach(k => { if(!F.includes(k)) upd[k] = ch[k]; });
   if(F.some(k => k in ch)){
     if(typeof CRYPTO !== 'undefined' && CRYPTO.on && (x.ten === '🔒' || x._locked)) throw { code:'locked' };
-    const s = {}; F.forEach(k => { s[k] = k in ch ? ch[k] : (k === 'vnd' || k === 'usd') ? (Number(x[k]) || 0) : un(x[k]); });
-    Object.assign(upd, await window.__seal('machines', s));
-    delete upd.ten; if(upd.sec === undefined) F.filter(k => !(k in ch)).forEach(k => { delete upd[k]; });
+    const get = (c, k) => (k === 'vnd' || k === 'usd') ? (Number(c[k]) || 0) : un(c[k]);
+    if(typeof CRYPTO !== 'undefined' && CRYPTO.on && typeof SEAL !== 'undefined' && SEAL.on.machines){
+      const part = {}; F.forEach(k => { if(k in ch) part[k] = ch[k]; });        // chỉ trường SEC vừa đổi: __seal chỉ niêm phong nhóm có trường đổi
+      Object.assign(upd, await window.__seal('machines', part, x, get));
+    } else {
+      const s = {}; F.forEach(k => { s[k] = k in ch ? ch[k] : get(x, k); });
+      Object.assign(upd, await window.__seal('machines', s));
+      delete upd.ten; if(upd.sec === undefined) F.filter(k => !(k in ch)).forEach(k => { delete upd[k]; });
+    }
   }
   window.__selfWriting = true;
   try{

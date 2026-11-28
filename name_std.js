@@ -125,8 +125,9 @@ async function rename(x, newName){
   if(x.__locked) throw { code: 'locked' };
   const ch = { name: newName, alias_names: addAlias(x.alias_names, x.name) };
   const F = (typeof SEC !== 'undefined' && SEC.mmtb_machines) ? SEC.mmtb_machines.f : ['name'];
-  const s = {}; F.forEach(k => { if(k in ch || k in x) s[k] = k in ch ? ch[k] : (x[k] === undefined ? null : x[k]); });
-  const upd = await window.__seal('mmtb_machines', s);
+  const grp = typeof CRYPTO !== 'undefined' && CRYPTO.on && typeof SEAL !== 'undefined' && SEAL.on.mmtb_machines;    // đã bật nhóm: chỉ nhóm "name" (name + alias_names)
+  const s = {}; F.forEach(k => { if(k in ch || (!grp && k in x)) s[k] = k in ch ? ch[k] : (x[k] === undefined ? null : x[k]); });
+  const upd = grp ? await window.__seal('mmtb_machines', s, x) : await window.__seal('mmtb_machines', s);
   const { data, error } = await sb.from('mmtb_machines').update(upd).eq('id', x.id).eq('version', x.version).is('deleted_at', null).select('id');
   if(error) throw error;
   if(!data || !data.length) throw { code: 'conflict' };
